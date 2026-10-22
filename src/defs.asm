@@ -1,0 +1,143 @@
+; Fat Chip 64 - hardware addresses, constants, variables
+
+; ------------------------------------------------------------ hardware
+VIC_CTRL1   equ $D011
+VIC_IRQEN   equ $D01A
+VIC_IRQ     equ $D019
+BORDER      equ $D020
+BGCOL       equ $D021
+
+SID         equ $D400
+SID_VOL     equ $D418
+
+CIA1_PRA    equ $DC00          ; keyboard columns (out)
+CIA1_PRB    equ $DC01          ; keyboard rows (in)
+CIA1_DDRA   equ $DC02
+CIA1_DDRB   equ $DC03
+CIA1_TALO   equ $DC04
+CIA1_TAHI   equ $DC05
+CIA1_ICR    equ $DC0D
+CIA1_CRA    equ $DC0E
+CIA2_ICR    equ $DD0D
+
+; Kerberos MIDI, DATEL emulation (MC6850 ACIA at $DE04-$DE07).
+; Flash Fat Chip 64 with MIDI emulation = DATEL / Siel / JMS.
+ACIA_CTRL   equ $DE04
+ACIA_TX     equ $DE05
+ACIA_STAT   equ $DE06
+ACIA_RX     equ $DE07
+ACIA_RESET  equ $03            ; master reset
+ACIA_MODE   equ $16            ; /64 (31250 baud), 8N1, no interrupts
+ACIA_TDRE   equ $02            ; status: transmit register empty
+
+SCREEN      equ $0400
+COLRAM      equ $D800
+
+; ------------------------------------------------------------ timing
+TICK_LATCH  equ 340            ; CIA1 timer A: 341 cycles = 1/3 ms (NTSC), about one
+                               ; MIDI byte time, so the ACIA is fed even while
+                               ; the main loop is busy; every third IRQ is a tick
+SCAN_EVERY  equ 4              ; keyboard scan every 4 ms
+GB_GAP      equ 3              ; ms between messages to the Game Boy (measured safe: 2)
+NES_GAP     equ 1              ; ms between messages to the MidiNES (wire-limited)
+DOUBLE_TAP  equ 350            ; ms: second RESTORE press within this = double tap
+RESTORE_DEBOUNCE equ 40        ; ms
+
+; ------------------------------------------------------------ devices
+DEV_SID     equ 0
+DEV_GB      equ 1
+DEV_NES     equ 2
+NUM_VOICES  equ 9
+NO_NOTE     equ $FF
+BASE_NOTE   equ 48             ; lowest overlay key (Q) = MIDI 48 (C3)
+VELOCITY    equ 100
+
+; Fat Chip GB global CCs (fat-chip-gb/docs/fatchip-protocol.md)
+GCC_PROFILE equ 102
+GCC_TUNE    equ 103
+GCC_WARBLE  equ 104
+GCC_WSPEED  equ 105
+GCC_DOWNBEAT equ 109
+GCC_LATCH   equ 110
+GCC_PANIC   equ 111
+GCC_DISPLAY equ 112
+PROFILE_F   equ 70
+
+; key codes from the matrix map (keymap): 0-23 = overlay notes
+K_F1        equ $81
+K_F3        equ $82
+K_F5        equ $83
+K_F7        equ $84
+K_CRSR_DOWN equ $85
+K_CRSR_RIGHT equ $86
+K_INSTDEL   equ $87
+K_LSHIFT    equ $88
+K_RSHIFT    equ $89
+K_SPACE     equ $8A
+K_RETURN    equ $8B
+K_CTRL      equ $8C
+K_NONE      equ $FF
+
+; ------------------------------------------------------------ zero page
+	seg.u zp
+	org $10
+ticks       ds 2               ; 1 ms counter (IRQ)
+scanAt      ds 1               ; low byte of ticks for the next scan
+lastStatus  ds 1               ; running status on the wire
+wireHead    ds 1               ; wire ring: head = write, tail = read
+wireTail    ds 1
+gbqHead     ds 1               ; Game Boy message queue (64 entries)
+gbqTail     ds 1
+gbNext      ds 2               ; tick when the next GB message may go
+nesqHead    ds 1
+nesqTail    ds 1
+nesNext     ds 2
+nmiCount    ds 1               ; RESTORE presses seen by the NMI handler
+nmiTick     ds 2
+nmiSeen     ds 1
+mS          ds 1               ; message being queued: status, data 1, data 2
+mD1         ds 1
+mD2         ds 1
+t0          ds 1
+t1          ds 1
+t2          ds 1
+t3          ds 1
+ptr         ds 2
+ptr2        ds 2
+irqT        ds 1               ; IRQ-only temporary
+subTick     ds 1               ; IRQs since the last 1 ms tick (0-2)
+
+; ------------------------------------------------------------ RAM ($C000-$CFFF)
+	seg.u ram
+	org $C000
+wireBuf     ds 256
+gbqS        ds 64
+gbqD1       ds 64
+gbqD2       ds 64
+nesqS       ds 64
+nesqD1      ds 64
+nesqD2      ds 64
+keyNow      ds 8
+keyPrev     ds 8
+noteHeld    ds 24              ; 1 = overlay key held
+notePressed ds 24              ; 1 = pressed since the last voice update
+heldList    ds 8               ; held notes, ascending (indexes 0-23)
+heldCount   ds 1
+covered     ds 8
+vWant       ds NUM_VOICES      ; note each voice should play (index) or NO_NOTE
+vNote       ds NUM_VOICES      ; note each voice plays now
+vRetrig     ds NUM_VOICES      ; SID: gate back on at the next scan
+devOn       ds 3               ; SID, GB, NES enabled
+gbBase      ds 1               ; MIDI channel 0-15 of the Game Boy's pulse 1
+nesBase     ds 1               ; MIDI channel 0-15 of the MidiNES pulse 1
+shiftDown   ds 1
+reallocFlag ds 1
+screenDirty ds 1
+videoMode   ds 1               ; 0 normal, 1 screen off
+lastRestore ds 2
+restoreFlash ds 1
+sidGate     ds 3               ; current control register value per SID voice
+statSent    ds 2               ; messages sent (for the status line)
+ksBits      ds 1               ; key scan state (KeyDown/KeyUp may call
+ksCol       ds 1               ;  routines that use t0-t3)
+ksRow       ds 1

@@ -1,0 +1,1965 @@
+------- FILE main.asm LEVEL 1 PASS 2
+      1  1623 ????						; Fat Chip 64 - main program
+      2  1623 ????						; A live rig controller: plays the SID and drives a Game Boy (Fat Chip GB)
+      3  1623 ????						; and an NES (MidiNES) over the Kerberos MIDI out, as one fat instrument.
+      4  1623 ????						; Build: dasm src/main.asm -f1 -obin/fatchip64.prg -sbin/fatchip64.sym -lbin/fatchip64.lst
+      5  1623 ????
+      6  1623 ????				      processor	6502
+------- FILE defs.asm LEVEL 2 PASS 2
+      0  1623 ????				      include	"defs.asm"
+      1  1623 ????						; Fat Chip 64 - hardware addresses, constants, variables
+      2  1623 ????
+      3  1623 ????						; ------------------------------------------------------------ hardware
+      4  1623 ????	       d0 11	   VIC_CTRL1  equ	$D011
+      5  1623 ????	       d0 1a	   VIC_IRQEN  equ	$D01A
+      6  1623 ????	       d0 19	   VIC_IRQ    equ	$D019
+      7  1623 ????	       d0 20	   BORDER     equ	$D020
+      8  1623 ????	       d0 21	   BGCOL      equ	$D021
+      9  1623 ????
+     10  1623 ????	       d4 00	   SID	      equ	$D400
+     11  1623 ????	       d4 18	   SID_VOL    equ	$D418
+     12  1623 ????
+     13  1623 ????	       dc 00	   CIA1_PRA   equ	$DC00	; keyboard columns (out)
+     14  1623 ????	       dc 01	   CIA1_PRB   equ	$DC01	; keyboard rows (in)
+     15  1623 ????	       dc 02	   CIA1_DDRA  equ	$DC02
+     16  1623 ????	       dc 03	   CIA1_DDRB  equ	$DC03
+     17  1623 ????	       dc 04	   CIA1_TALO  equ	$DC04
+     18  1623 ????	       dc 05	   CIA1_TAHI  equ	$DC05
+     19  1623 ????	       dc 0d	   CIA1_ICR   equ	$DC0D
+     20  1623 ????	       dc 0e	   CIA1_CRA   equ	$DC0E
+     21  1623 ????	       dd 0d	   CIA2_ICR   equ	$DD0D
+     22  1623 ????
+     23  1623 ????						; Kerberos MIDI, DATEL emulation (MC6850 ACIA at $DE04-$DE07).
+     24  1623 ????						; Flash Fat Chip 64 with MIDI emulation = DATEL / Siel / JMS.
+     25  1623 ????	       de 04	   ACIA_CTRL  equ	$DE04
+     26  1623 ????	       de 05	   ACIA_TX    equ	$DE05
+     27  1623 ????	       de 06	   ACIA_STAT  equ	$DE06
+     28  1623 ????	       de 07	   ACIA_RX    equ	$DE07
+     29  1623 ????	       00 03	   ACIA_RESET equ	$03	; master reset
+     30  1623 ????	       00 16	   ACIA_MODE  equ	$16	; /64 (31250 baud), 8N1, no interrupts
+     31  1623 ????	       00 02	   ACIA_TDRE  equ	$02	; status: transmit register empty
+     32  1623 ????
+     33  1623 ????	       04 00	   SCREEN     equ	$0400
+     34  1623 ????	       d8 00	   COLRAM     equ	$D800
+     35  1623 ????
+     36  1623 ????						; ------------------------------------------------------------ timing
+     37  1623 ????	       01 54	   TICK_LATCH equ	340	; CIA1 timer A: 341 cycles = 1/3 ms (NTSC), about one
+     38  1623 ????						; MIDI byte time, so the ACIA is fed even while
+     39  1623 ????						; the main loop is busy; every third IRQ is a tick
+     40  1623 ????	       00 04	   SCAN_EVERY equ	4	; keyboard scan every 4 ms
+     41  1623 ????	       00 03	   GB_GAP     equ	3	; ms between messages to the Game Boy (measured safe: 2)
+     42  1623 ????	       00 01	   NES_GAP    equ	1	; ms between messages to the MidiNES (wire-limited)
+     43  1623 ????	       01 5e	   DOUBLE_TAP equ	350	; ms: second RESTORE press within this = double tap
+     44  1623 ????	       00 28	   RESTORE_DEBOUNCE equ	40	; ms
+     45  1623 ????
+     46  1623 ????						; ------------------------------------------------------------ devices
+     47  1623 ????	       00 00	   DEV_SID    equ	0
+     48  1623 ????	       00 01	   DEV_GB     equ	1
+     49  1623 ????	       00 02	   DEV_NES    equ	2
+     50  1623 ????	       00 09	   NUM_VOICES equ	9
+     51  1623 ????	       00 ff	   NO_NOTE    equ	$FF
+     52  1623 ????	       00 30	   BASE_NOTE  equ	48	; lowest overlay key (Q) = MIDI 48 (C3)
+     53  1623 ????	       00 64	   VELOCITY   equ	100
+     54  1623 ????
+     55  1623 ????						; Fat Chip GB global CCs (fat-chip-gb/docs/fatchip-protocol.md)
+     56  1623 ????	       00 66	   GCC_PROFILE equ	102
+     57  1623 ????	       00 67	   GCC_TUNE   equ	103
+     58  1623 ????	       00 68	   GCC_WARBLE equ	104
+     59  1623 ????	       00 69	   GCC_WSPEED equ	105
+     60  1623 ????	       00 6d	   GCC_DOWNBEAT equ	109
+     61  1623 ????	       00 6e	   GCC_LATCH  equ	110
+     62  1623 ????	       00 6f	   GCC_PANIC  equ	111
+     63  1623 ????	       00 70	   GCC_DISPLAY equ	112
+     64  1623 ????	       00 46	   PROFILE_F  equ	70
+     65  1623 ????
+     66  1623 ????						; key codes from the matrix map (keymap): 0-23 = overlay notes
+     67  1623 ????	       00 81	   K_F1       equ	$81
+     68  1623 ????	       00 82	   K_F3       equ	$82
+     69  1623 ????	       00 83	   K_F5       equ	$83
+     70  1623 ????	       00 84	   K_F7       equ	$84
+     71  1623 ????	       00 85	   K_CRSR_DOWN equ	$85
+     72  1623 ????	       00 86	   K_CRSR_RIGHT equ	$86
+     73  1623 ????	       00 87	   K_INSTDEL  equ	$87
+     74  1623 ????	       00 88	   K_LSHIFT   equ	$88
+     75  1623 ????	       00 89	   K_RSHIFT   equ	$89
+     76  1623 ????	       00 8a	   K_SPACE    equ	$8A
+     77  1623 ????	       00 8b	   K_RETURN   equ	$8B
+     78  1623 ????	       00 8c	   K_CTRL     equ	$8C
+     79  1623 ????	       00 ff	   K_NONE     equ	$FF
+     80  1623 ????
+     81  1623 ????						; ------------------------------------------------------------ zero page
+     82 U002f ????				      seg.u	zp
+     83 U0010					      org	$10
+     84 U0010		       00 00	   ticks      ds	2	; 1 ms counter (IRQ)
+     85 U0012		       00	   scanAt     ds	1	; low byte of ticks for the next scan
+     86 U0013		       00	   lastStatus ds	1	; running status on the wire
+     87 U0014		       00	   wireHead   ds	1	; wire ring: head = write, tail = read
+     88 U0015		       00	   wireTail   ds	1
+     89 U0016		       00	   gbqHead    ds	1	; Game Boy message queue (64 entries)
+     90 U0017		       00	   gbqTail    ds	1
+     91 U0018		       00 00	   gbNext     ds	2	; tick when the next GB message may go
+     92 U001a		       00	   nesqHead   ds	1
+     93 U001b		       00	   nesqTail   ds	1
+     94 U001c		       00 00	   nesNext    ds	2
+     95 U001e		       00	   nmiCount   ds	1	; RESTORE presses seen by the NMI handler
+     96 U001f		       00 00	   nmiTick    ds	2
+     97 U0021		       00	   nmiSeen    ds	1
+     98 U0022		       00	   mS	      ds	1	; message being queued: status, data 1, data 2
+     99 U0023		       00	   mD1	      ds	1
+    100 U0024		       00	   mD2	      ds	1
+    101 U0025		       00	   t0	      ds	1
+    102 U0026		       00	   t1	      ds	1
+    103 U0027		       00	   t2	      ds	1
+    104 U0028		       00	   t3	      ds	1
+    105 U0029		       00 00	   ptr	      ds	2
+    106 U002b		       00 00	   ptr2       ds	2
+    107 U002d		       00	   irqT       ds	1	; IRQ-only temporary
+    108 U002e		       00	   subTick    ds	1	; IRQs since the last 1 ms tick (0-2)
+    109 U002f
+    110 U002f							; ------------------------------------------------------------ RAM ($C000-$CFFF)
+    111 Uc300 ????				      seg.u	ram
+    112 Uc000					      org	$C000
+    113 Uc000		       00 00 00 00*wireBuf    ds	256
+    114 Uc100		       00 00 00 00*gbqS       ds	64
+    115 Uc140		       00 00 00 00*gbqD1      ds	64
+    116 Uc180		       00 00 00 00*gbqD2      ds	64
+    117 Uc1c0		       00 00 00 00*nesqS      ds	64
+    118 Uc200		       00 00 00 00*nesqD1     ds	64
+    119 Uc240		       00 00 00 00*nesqD2     ds	64
+    120 Uc280		       00 00 00 00*keyNow     ds	8
+    121 Uc288		       00 00 00 00*keyPrev    ds	8
+    122 Uc290		       00 00 00 00*noteHeld   ds	24	; 1 = overlay key held
+    123 Uc2a8		       00 00 00 00*notePressed ds	24	; 1 = pressed since the last voice update
+    124 Uc2c0		       00 00 00 00*heldList   ds	8	; held notes, ascending (indexes 0-23)
+    125 Uc2c8		       00	   heldCount  ds	1
+    126 Uc2c9		       00 00 00 00*covered    ds	8
+    127 Uc2d1		       00 00 00 00*vWant      ds	NUM_VOICES	; note each voice should play (index) or NO_NOTE
+    128 Uc2da		       00 00 00 00*vNote      ds	NUM_VOICES	; note each voice plays now
+    129 Uc2e3		       00 00 00 00*vRetrig    ds	NUM_VOICES	; SID: gate back on at the next scan
+    130 Uc2ec		       00 00 00    devOn      ds	3	; SID, GB, NES enabled
+    131 Uc2ef		       00	   gbBase     ds	1	; MIDI channel 0-15 of the Game Boy's pulse 1
+    132 Uc2f0		       00	   nesBase    ds	1	; MIDI channel 0-15 of the MidiNES pulse 1
+    133 Uc2f1		       00	   shiftDown  ds	1
+    134 Uc2f2		       00	   reallocFlag ds	1
+    135 Uc2f3		       00	   screenDirty ds	1
+    136 Uc2f4		       00	   videoMode  ds	1	; 0 normal, 1 screen off
+    137 Uc2f5		       00 00	   lastRestore ds	2
+    138 Uc2f7		       00	   restoreFlash ds	1
+    139 Uc2f8		       00 00 00    sidGate    ds	3	; current control register value per SID voice
+    140 Uc2fb		       00 00	   statSent   ds	2	; messages sent (for the status line)
+    141 Uc2fd		       00	   ksBits     ds	1	; key scan state (KeyDown/KeyUp may call
+    142 Uc2fe		       00	   ksCol      ds	1	;  routines that use t0-t3)
+    143 Uc2ff		       00	   ksRow      ds	1
+------- FILE main.asm
+      8 Uc300
+      9  1623 ????				      seg	code
+     10  0801					      org	$0801
+     11  0801							; BASIC stub: 10 SYS 2064
+     12  0801		       0b 08 0a 00*	      .byte.b	$0B,$08,$0A,$00,$9E,"2064",$00,$00,$00
+     13  0810					      org	$0810
+     14  0810
+     15  0810				   Start
+     16  0810					      subroutine
+     17  0810		       78		      sei
+     18  0811		       d8		      cld
+     19  0812		       a2 ff		      ldx	#$FF
+     20  0814		       9a		      txs
+     21  0815		       a9 35		      lda	#$35	; RAM at $A000/$E000, I/O on (no BASIC/KERNAL)
+     22  0817		       85 01		      sta	$01
+     23  0819		       20 71 08 	      jsr	InitHardware
+     24  081c		       20 bf 08 	      jsr	InitState
+     25  081f		       20 f6 0f 	      jsr	ScreenInit
+     26  0822		       20 7b 0c 	      jsr	SidInit
+     27  0825		       20 4a 09 	      jsr	MidiInit
+     28  0828		       58		      cli
+     29  0829		       20 6c 0a 	      jsr	GbStartup
+     30  082c		       20 b8 0a 	      jsr	NesStartup
+     31  082f		       20 2d 10 	      jsr	ScreenDrawAll
+     32  0832
+     33  0832							;------------------------------------------------------------- main loop
+     34  0832				   Loop
+     35  0832					      subroutine
+     36  0832		       20 6b 09 	      jsr	TxService
+     37  0835							; keyboard scan every SCAN_EVERY ms
+     38  0835		       a5 10		      lda	ticks
+     39  0837		       38		      sec
+     40  0838		       e5 12		      sbc	scanAt
+     41  083a		       30 32		      bmi	.noScan
+     42  083c		       a5 10		      lda	ticks
+     43  083e		       18		      clc
+     44  083f		       69 04		      adc	#SCAN_EVERY
+     45  0841		       85 12		      sta	scanAt
+     46  0843		       20 aa 0c 	      jsr	SidRetrig
+     47  0846		       20 fc 0a 	      jsr	KeyScan
+     48  0849		       20 e0 0b 	      jsr	RestoreCheck
+     49  084c		       ad f2 c2 	      lda	reallocFlag
+     50  084f		       f0 10		      beq	.noAlloc
+     51  0851		       20 d5 0c 	      jsr	Allocate
+     52  0854		       20 8b 0d 	      jsr	ApplyVoices
+     53  0857		       a9 00		      lda	#0
+     54  0859		       8d f2 c2 	      sta	reallocFlag
+     55  085c		       a9 01		      lda	#1
+     56  085e		       8d f3 c2 	      sta	screenDirty
+     57  0861				   .noAlloc
+     58  0861		       ad f3 c2 	      lda	screenDirty
+     59  0864		       f0 08		      beq	.noScan
+     60  0866		       20 98 10 	      jsr	ScreenUpdate
+     61  0869		       a9 00		      lda	#0
+     62  086b		       8d f3 c2 	      sta	screenDirty
+     63  086e				   .noScan
+     64  086e		       4c 32 08 	      jmp	Loop
+     65  0871
+     66  0871							;------------------------------------------------------------- init
+     67  0871				   InitHardware
+     68  0871					      subroutine
+     69  0871		       a9 7f		      lda	#$7F
+     70  0873		       8d 0d dc 	      sta	CIA1_ICR	; no CIA1 interrupts yet
+     71  0876		       8d 0d dd 	      sta	CIA2_ICR	; no CIA2 NMIs: only RESTORE raises an NMI
+     72  0879		       ad 0d dc 	      lda	CIA1_ICR
+     73  087c		       ad 0d dd 	      lda	CIA2_ICR
+     74  087f		       a9 00		      lda	#0
+     75  0881		       8d 1a d0 	      sta	VIC_IRQEN
+     76  0884		       a9 ff		      lda	#$FF
+     77  0886		       8d 19 d0 	      sta	VIC_IRQ
+     78  0889		       8d 02 dc 	      sta	CIA1_DDRA	; port A = keyboard columns out
+     79  088c		       a9 00		      lda	#0
+     80  088e		       8d 03 dc 	      sta	CIA1_DDRB	; port B = rows in
+     81  0891		       a9 ff		      lda	#$FF
+     82  0893		       8d 00 dc 	      sta	CIA1_PRA
+     83  0896							; vectors (KERNAL is banked out)
+     84  0896		       a9 06		      lda	#<Irq
+     85  0898		       8d fe ff 	      sta	$FFFE
+     86  089b		       a9 09		      lda	#>Irq
+     87  089d		       8d ff ff 	      sta	$FFFF
+     88  08a0		       a9 3d		      lda	#<Nmi
+     89  08a2		       8d fa ff 	      sta	$FFFA
+     90  08a5		       a9 09		      lda	#>Nmi
+     91  08a7		       8d fb ff 	      sta	$FFFB
+     92  08aa							; 1 ms timer
+     93  08aa		       a9 54		      lda	#<TICK_LATCH
+     94  08ac		       8d 04 dc 	      sta	CIA1_TALO
+     95  08af		       a9 01		      lda	#>TICK_LATCH
+     96  08b1		       8d 05 dc 	      sta	CIA1_TAHI
+     97  08b4		       a9 11		      lda	#$11	; start, force load, continuous
+     98  08b6		       8d 0e dc 	      sta	CIA1_CRA
+     99  08b9		       a9 81		      lda	#$81	; enable timer A interrupt
+    100  08bb		       8d 0d dc 	      sta	CIA1_ICR
+    101  08be		       60		      rts
+    102  08bf
+    103  08bf				   InitState
+    104  08bf					      subroutine
+    105  08bf							; clear zero page variables and the RAM block
+    106  08bf		       a9 00		      lda	#0
+    107  08c1		       a2 10		      ldx	#$10
+    108  08c3				   .zp
+    109  08c3		       95 00		      sta	$00,x
+    110  08c5		       e8		      inx
+    111  08c6		       e0 80		      cpx	#$80
+    112  08c8		       d0 f9		      bne	.zp
+    113  08ca		       aa		      tax
+    114  08cb				   .ram
+    115  08cb		       9d 00 c0 	      sta	$C000,x
+    116  08ce		       9d 00 c1 	      sta	$C100,x
+    117  08d1		       9d 00 c2 	      sta	$C200,x
+    118  08d4		       9d 00 c3 	      sta	$C300,x
+    119  08d7		       e8		      inx
+    120  08d8		       d0 f1		      bne	.ram
+    121  08da		       a2 08		      ldx	#NUM_VOICES-1
+    122  08dc		       a9 ff		      lda	#NO_NOTE
+    123  08de				   .v
+    124  08de		       9d da c2 	      sta	vNote,x
+    125  08e1		       9d d1 c2 	      sta	vWant,x
+    126  08e4		       ca		      dex
+    127  08e5		       10 f7		      bpl	.v
+    128  08e7		       a9 01		      lda	#1
+    129  08e9		       8d ec c2 	      sta	devOn+DEV_SID
+    130  08ec		       8d ed c2 	      sta	devOn+DEV_GB
+    131  08ef		       8d ee c2 	      sta	devOn+DEV_NES
+    132  08f2		       a9 00		      lda	#0	; Game Boy on channels 1-5 (Fat Chip GB default)
+    133  08f4		       8d ef c2 	      sta	gbBase
+    134  08f7		       a9 05		      lda	#5	; MidiNES on channels 6-10 (set with the NES D-pad)
+    135  08f9		       8d f0 c2 	      sta	nesBase
+    136  08fc		       a9 ff		      lda	#$FF
+    137  08fe		       85 13		      sta	lastStatus
+    138  0900		       a9 80		      lda	#$80	; "long ago": the first RESTORE press is a single tap
+    139  0902		       8d f6 c2 	      sta	lastRestore+1
+    140  0905		       60		      rts
+    141  0906
+    142  0906							;------------------------------------------------------------- interrupts
+    143  0906							; Every 1/3 ms: feed the ACIA one byte (fast path). Every third time (1 ms):
+    144  0906							; count a tick and move paced messages onto the wire.
+    145  0906				   Irq
+    146  0906					      subroutine
+    147  0906		       48		      pha
+    148  0907		       8a		      txa
+    149  0908		       48		      pha
+    150  0909		       ad 0d dc 	      lda	CIA1_ICR	; acknowledge
+    151  090c		       a6 15		      ldx	wireTail
+    152  090e		       e4 14		      cpx	wireHead
+    153  0910		       f0 0f		      beq	.noByte
+    154  0912		       ad 06 de 	      lda	ACIA_STAT
+    155  0915		       29 02		      and	#ACIA_TDRE
+    156  0917		       f0 08		      beq	.noByte
+    157  0919		       bd 00 c0 	      lda	wireBuf,x
+    158  091c		       8d 05 de 	      sta	ACIA_TX
+    159  091f		       e6 15		      inc	wireTail
+    160  0921				   .noByte
+    161  0921		       c6 2e		      dec	subTick
+    162  0923		       10 14		      bpl	.out
+    163  0925		       a9 02		      lda	#2
+    164  0927		       85 2e		      sta	subTick
+    165  0929		       98		      tya
+    166  092a		       48		      pha
+    167  092b		       e6 10		      inc	ticks
+    168  092d		       d0 02		      bne	.t
+    169  092f		       e6 11		      inc	ticks+1
+    170  0931				   .t
+    171  0931		       20 72 09 	      jsr	Schedule
+    172  0934		       20 55 09 	      jsr	TxByte	; start a just-scheduled message now if the ACIA is free
+    173  0937		       68		      pla
+    174  0938		       a8		      tay
+    175  0939				   .out
+    176  0939		       68		      pla
+    177  093a		       aa		      tax
+    178  093b		       68		      pla
+    179  093c		       40		      rti
+    180  093d
+    181  093d							; RESTORE: the only NMI source. Count presses; the main loop acts on them.
+    182  093d				   Nmi
+    183  093d					      subroutine
+    184  093d		       48		      pha
+    185  093e		       e6 1e		      inc	nmiCount
+    186  0940		       a5 10		      lda	ticks
+    187  0942		       85 1f		      sta	nmiTick
+    188  0944		       a5 11		      lda	ticks+1
+    189  0946		       85 20		      sta	nmiTick+1
+    190  0948		       68		      pla
+    191  0949		       40		      rti
+    192  094a
+------- FILE midi.asm LEVEL 2 PASS 2
+      0  094a					      include	"midi.asm"
+      1  094a							; Fat Chip 64 - MIDI out
+      2  094a							;
+      3  094a							; Each device has its own queue of 3-byte messages. Every 1 ms the IRQ moves
+      4  094a							; at most one message per device onto the wire buffer, no sooner than that
+      5  094a							; device's gap (GB_GAP / NES_GAP) after its previous one. The Game Boy link
+      6  094a							; drops messages when MIDI arrives at full speed (measured on Reeve's
+      7  094a							; Teensyboy Pro: 1 per 2 ms is clean, 1 per 1 ms loses), so its queue is
+      8  094a							; paced; the MidiNES only gets the wire's own limit for now.
+      9  094a							; The wire uses running status. The main loop and the IRQ both feed the ACIA.
+     10  094a
+     11  094a				   MidiInit
+     12  094a					      subroutine
+     13  094a		       a9 03		      lda	#ACIA_RESET
+     14  094c		       8d 04 de 	      sta	ACIA_CTRL
+     15  094f		       a9 16		      lda	#ACIA_MODE
+     16  0951		       8d 04 de 	      sta	ACIA_CTRL
+     17  0954		       60		      rts
+     18  0955
+     19  0955							; IRQ: send one wire byte if the ACIA is ready.
+     20  0955				   TxByte
+     21  0955					      subroutine
+     22  0955		       a6 15		      ldx	wireTail
+     23  0957		       e4 14		      cpx	wireHead
+     24  0959		       f0 0f		      beq	.done
+     25  095b		       ad 06 de 	      lda	ACIA_STAT
+     26  095e		       29 02		      and	#ACIA_TDRE
+     27  0960		       f0 08		      beq	.done
+     28  0962		       bd 00 c0 	      lda	wireBuf,x
+     29  0965		       8d 05 de 	      sta	ACIA_TX
+     30  0968		       e6 15		      inc	wireTail
+     31  096a				   .done
+     32  096a		       60		      rts
+     33  096b
+     34  096b							; Main loop: same, with interrupts off around it.
+     35  096b				   TxService
+     36  096b					      subroutine
+     37  096b		       08		      php
+     38  096c		       78		      sei
+     39  096d		       20 55 09 	      jsr	TxByte
+     40  0970		       28		      plp
+     41  0971		       60		      rts
+     42  0972
+     43  0972							; IRQ: pace device queues onto the wire.
+     44  0972				   Schedule
+     45  0972					      subroutine
+     46  0972							; ---- Game Boy
+     47  0972		       a5 17		      lda	gbqTail
+     48  0974		       c5 16		      cmp	gbqHead
+     49  0976		       f0 37		      beq	.nes
+     50  0978		       a5 10		      lda	ticks	; due? (ticks - gbNext) >= 0
+     51  097a		       38		      sec
+     52  097b		       e5 18		      sbc	gbNext
+     53  097d		       a5 11		      lda	ticks+1
+     54  097f		       e5 19		      sbc	gbNext+1
+     55  0981		       30 2c		      bmi	.nes
+     56  0983							; only onto an empty wire, so the gap holds on the cable itself (NES
+     57  0983							; bytes already waiting would otherwise delay this one and squeeze it
+     58  0983							; against the next)
+     59  0983		       a5 14		      lda	wireHead
+     60  0985		       c5 15		      cmp	wireTail
+     61  0987		       d0 26		      bne	.nes
+     62  0989		       a6 17		      ldx	gbqTail
+     63  098b		       bd 00 c1 	      lda	gbqS,x
+     64  098e		       bc 80 c1 	      ldy	gbqD2,x
+     65  0991		       84 2d		      sty	irqT
+     66  0993		       bc 40 c1 	      ldy	gbqD1,x
+     67  0996		       20 f7 09 	      jsr	WireMsg
+     68  0999		       a5 17		      lda	gbqTail
+     69  099b		       18		      clc
+     70  099c		       69 01		      adc	#1
+     71  099e		       29 3f		      and	#63
+     72  09a0		       85 17		      sta	gbqTail
+     73  09a2		       a5 10		      lda	ticks
+     74  09a4		       18		      clc
+     75  09a5		       69 03		      adc	#GB_GAP
+     76  09a7		       85 18		      sta	gbNext
+     77  09a9		       a5 11		      lda	ticks+1
+     78  09ab		       69 00		      adc	#0
+     79  09ad		       85 19		      sta	gbNext+1
+     80  09af				   .nes
+     81  09af		       a5 1b		      lda	nesqTail
+     82  09b1		       c5 1a		      cmp	nesqHead
+     83  09b3		       f0 38		      beq	.done
+     84  09b5		       a5 10		      lda	ticks
+     85  09b7		       38		      sec
+     86  09b8		       e5 1c		      sbc	nesNext
+     87  09ba		       a5 11		      lda	ticks+1
+     88  09bc		       e5 1d		      sbc	nesNext+1
+     89  09be		       30 2d		      bmi	.done
+     90  09c0		       20 ee 09 	      jsr	WireFree
+     91  09c3		       c9 03		      cmp	#3
+     92  09c5		       90 26		      bcc	.done
+     93  09c7		       a6 1b		      ldx	nesqTail
+     94  09c9		       bd c0 c1 	      lda	nesqS,x
+     95  09cc		       bc 40 c2 	      ldy	nesqD2,x
+     96  09cf		       84 2d		      sty	irqT
+     97  09d1		       bc 00 c2 	      ldy	nesqD1,x
+     98  09d4		       20 f7 09 	      jsr	WireMsg
+     99  09d7		       a5 1b		      lda	nesqTail
+    100  09d9		       18		      clc
+    101  09da		       69 01		      adc	#1
+    102  09dc		       29 3f		      and	#63
+    103  09de		       85 1b		      sta	nesqTail
+    104  09e0		       a5 10		      lda	ticks
+    105  09e2		       18		      clc
+    106  09e3		       69 01		      adc	#NES_GAP
+    107  09e5		       85 1c		      sta	nesNext
+    108  09e7		       a5 11		      lda	ticks+1
+    109  09e9		       69 00		      adc	#0
+    110  09eb		       85 1d		      sta	nesNext+1
+    111  09ed				   .done
+    112  09ed		       60		      rts
+    113  09ee
+    114  09ee							; A = free bytes in the wire ring
+    115  09ee				   WireFree
+    116  09ee					      subroutine
+    117  09ee		       a5 15		      lda	wireTail
+    118  09f0		       38		      sec
+    119  09f1		       e5 14		      sbc	wireHead
+    120  09f3		       38		      sec
+    121  09f4		       e9 01		      sbc	#1
+    122  09f6		       60		      rts
+    123  09f7
+    124  09f7							; Put a message on the wire (IRQ only): A = status, Y = data 1, irqT = data 2.
+    125  09f7							; Program change / channel pressure have one data byte.
+    126  09f7				   WireMsg
+    127  09f7					      subroutine
+    128  09f7		       c5 13		      cmp	lastStatus
+    129  09f9		       f0 05		      beq	.rs
+    130  09fb		       85 13		      sta	lastStatus
+    131  09fd		       20 1a 0a 	      jsr	WirePut
+    132  0a00				   .rs
+    133  0a00		       98		      tya
+    134  0a01		       20 1a 0a 	      jsr	WirePut
+    135  0a04		       a5 13		      lda	lastStatus
+    136  0a06		       29 e0		      and	#$E0
+    137  0a08		       c9 c0		      cmp	#$C0	; $Cx and $Dx: one data byte
+    138  0a0a		       f0 05		      beq	.done
+    139  0a0c		       a5 2d		      lda	irqT
+    140  0a0e		       20 1a 0a 	      jsr	WirePut
+    141  0a11				   .done
+    142  0a11		       ee fb c2 	      inc	statSent
+    143  0a14		       d0 03		      bne	.x
+    144  0a16		       ee fc c2 	      inc	statSent+1
+    145  0a19				   .x
+    146  0a19		       60		      rts
+    147  0a1a
+    148  0a1a				   WirePut
+    149  0a1a					      subroutine
+    150  0a1a		       a6 14		      ldx	wireHead
+    151  0a1c		       9d 00 c0 	      sta	wireBuf,x
+    152  0a1f		       e6 14		      inc	wireHead
+    153  0a21		       60		      rts
+    154  0a22
+    155  0a22							; ------------------------------------------------------------ queueing (main loop)
+    156  0a22							; Message in mS / mD1 / mD2. Dropped if the queue is full (63 messages).
+    157  0a22				   GbPut
+    158  0a22					      subroutine
+    159  0a22							; write the slot at head first (always free: one slot stays empty),
+    160  0a22							; then publish head unless the queue is full. Uses only A and X.
+    161  0a22		       a6 16		      ldx	gbqHead
+    162  0a24		       a5 22		      lda	mS
+    163  0a26		       9d 00 c1 	      sta	gbqS,x
+    164  0a29		       a5 23		      lda	mD1
+    165  0a2b		       9d 40 c1 	      sta	gbqD1,x
+    166  0a2e		       a5 24		      lda	mD2
+    167  0a30		       9d 80 c1 	      sta	gbqD2,x
+    168  0a33		       8a		      txa
+    169  0a34		       18		      clc
+    170  0a35		       69 01		      adc	#1
+    171  0a37		       29 3f		      and	#63
+    172  0a39		       c5 17		      cmp	gbqTail
+    173  0a3b		       f0 02		      beq	.full
+    174  0a3d		       85 16		      sta	gbqHead
+    175  0a3f				   .full
+    176  0a3f		       60		      rts
+    177  0a40
+    178  0a40				   NesPut
+    179  0a40					      subroutine
+    180  0a40							; write the slot at head first (always free: one slot stays empty),
+    181  0a40							; then publish head unless the queue is full. Uses only A and X.
+    182  0a40		       a6 1a		      ldx	nesqHead
+    183  0a42		       a5 22		      lda	mS
+    184  0a44		       9d c0 c1 	      sta	nesqS,x
+    185  0a47		       a5 23		      lda	mD1
+    186  0a49		       9d 00 c2 	      sta	nesqD1,x
+    187  0a4c		       a5 24		      lda	mD2
+    188  0a4e		       9d 40 c2 	      sta	nesqD2,x
+    189  0a51		       8a		      txa
+    190  0a52		       18		      clc
+    191  0a53		       69 01		      adc	#1
+    192  0a55		       29 3f		      and	#63
+    193  0a57		       c5 1b		      cmp	nesqTail
+    194  0a59		       f0 02		      beq	.full
+    195  0a5b		       85 1a		      sta	nesqHead
+    196  0a5d				   .full
+    197  0a5d		       60		      rts
+    198  0a5e
+    199  0a5e							; Game Boy global CC: A = CC number, X = value (sent on the pulse 1 channel)
+    200  0a5e				   GbGlobal
+    201  0a5e					      subroutine
+    202  0a5e		       85 23		      sta	mD1
+    203  0a60		       86 24		      stx	mD2
+    204  0a62		       ad ef c2 	      lda	gbBase
+    205  0a65		       09 b0		      ora	#$B0
+    206  0a67		       85 22		      sta	mS
+    207  0a69		       4c 22 0a 	      jmp	GbPut
+    208  0a6c
+    209  0a6c							; ------------------------------------------------------------ device setup
+    210  0a6c							; Fat Chip GB startup / resync (protocol section 2)
+    211  0a6c				   GbStartup
+    212  0a6c					      subroutine
+    213  0a6c		       ad ed c2 	      lda	devOn+DEV_GB
+    214  0a6f		       f0 46		      beq	.done
+    215  0a71		       a9 66		      lda	#GCC_PROFILE
+    216  0a73		       a2 46		      ldx	#PROFILE_F
+    217  0a75		       20 5e 0a 	      jsr	GbGlobal
+    218  0a78		       a9 6f		      lda	#GCC_PANIC
+    219  0a7a		       a2 00		      ldx	#0
+    220  0a7c		       20 5e 0a 	      jsr	GbGlobal
+    221  0a7f		       a9 67		      lda	#GCC_TUNE
+    222  0a81		       a2 40		      ldx	#64
+    223  0a83		       20 5e 0a 	      jsr	GbGlobal
+    224  0a86		       a9 68		      lda	#GCC_WARBLE	; a little drift so stacked voices breathe
+    225  0a88		       a2 18		      ldx	#24
+    226  0a8a		       20 5e 0a 	      jsr	GbGlobal
+    227  0a8d		       a9 69		      lda	#GCC_WSPEED
+    228  0a8f		       a2 28		      ldx	#40
+    229  0a91		       20 5e 0a 	      jsr	GbGlobal
+    230  0a94							; detune the two pulses apart: CC 94 is scaled 0-127 (64 = centre,
+    231  0a94							; +-50 cents), so 58 / 70 = about -5 / +5 cents
+    232  0a94		       ad ef c2 	      lda	gbBase
+    233  0a97		       09 b0		      ora	#$B0
+    234  0a99		       85 22		      sta	mS
+    235  0a9b		       a9 5e		      lda	#94
+    236  0a9d		       85 23		      sta	mD1
+    237  0a9f		       a9 3a		      lda	#58
+    238  0aa1		       85 24		      sta	mD2
+    239  0aa3		       20 22 0a 	      jsr	GbPut
+    240  0aa6		       e6 22		      inc	mS
+    241  0aa8		       a9 46		      lda	#70
+    242  0aaa		       85 24		      sta	mD2
+    243  0aac		       20 22 0a 	      jsr	GbPut
+    244  0aaf		       a9 70		      lda	#GCC_DISPLAY
+    245  0ab1		       ae f4 c2 	      ldx	videoMode
+    246  0ab4		       20 5e 0a 	      jsr	GbGlobal
+    247  0ab7				   .done
+    248  0ab7		       60		      rts
+    249  0ab8
+    250  0ab8							; MidiNES startup: CC7 = 127 on every voice (levels 0-7 are silent and CC7
+    251  0ab8							; scales velocity), sweep shift CC16 = 127 on the pulses (lowest octave).
+    252  0ab8				   NesStartup
+    253  0ab8					      subroutine
+    254  0ab8		       ad ee c2 	      lda	devOn+DEV_NES
+    255  0abb		       f0 3e		      beq	.done
+    256  0abd		       a9 07		      lda	#7
+    257  0abf		       85 23		      sta	mD1
+    258  0ac1		       a9 7f		      lda	#127
+    259  0ac3		       85 24		      sta	mD2
+    260  0ac5		       a0 00		      ldy	#0
+    261  0ac7				   .cc7
+    262  0ac7		       98		      tya
+    263  0ac8		       18		      clc
+    264  0ac9		       6d f0 c2 	      adc	nesBase
+    265  0acc		       29 0f		      and	#15
+    266  0ace		       09 b0		      ora	#$B0
+    267  0ad0		       85 22		      sta	mS
+    268  0ad2		       84 26		      sty	t1
+    269  0ad4		       20 40 0a 	      jsr	NesPut
+    270  0ad7		       a4 26		      ldy	t1
+    271  0ad9		       c8		      iny
+    272  0ada		       c0 05		      cpy	#5
+    273  0adc		       d0 e9		      bne	.cc7
+    274  0ade		       a9 10		      lda	#16
+    275  0ae0		       85 23		      sta	mD1
+    276  0ae2		       a0 00		      ldy	#0
+    277  0ae4				   .cc16
+    278  0ae4		       98		      tya
+    279  0ae5		       18		      clc
+    280  0ae6		       6d f0 c2 	      adc	nesBase
+    281  0ae9		       29 0f		      and	#15
+    282  0aeb		       09 b0		      ora	#$B0
+    283  0aed		       85 22		      sta	mS
+    284  0aef		       84 26		      sty	t1
+    285  0af1		       20 40 0a 	      jsr	NesPut
+    286  0af4		       a4 26		      ldy	t1
+    287  0af6		       c8		      iny
+    288  0af7		       c0 02		      cpy	#2
+    289  0af9		       d0 e9		      bne	.cc16
+    290  0afb				   .done
+    291  0afb		       60		      rts
+------- FILE main.asm
+------- FILE keys.asm LEVEL 2 PASS 2
+      0  0afc					      include	"keys.asm"
+      1  0afc							; Fat Chip 64 - keyboard and RESTORE
+      2  0afc
+      3  0afc							; Scan the whole matrix, turn changes into key events.
+      4  0afc				   KeyScan
+      5  0afc					      subroutine
+      6  0afc		       a2 07		      ldx	#7
+      7  0afe				   .col
+      8  0afe		       bd ce 12 	      lda	colSelect,x
+      9  0b01		       8d 00 dc 	      sta	CIA1_PRA
+     10  0b04		       ad 01 dc 	      lda	CIA1_PRB
+     11  0b07		       49 ff		      eor	#$FF
+     12  0b09		       9d 80 c2 	      sta	keyNow,x
+     13  0b0c		       ca		      dex
+     14  0b0d		       10 ef		      bpl	.col
+     15  0b0f		       a9 ff		      lda	#$FF
+     16  0b11		       8d 00 dc 	      sta	CIA1_PRA
+     17  0b14							; edges
+     18  0b14		       a2 00		      ldx	#0
+     19  0b16				   .edges
+     20  0b16		       8e fe c2 	      stx	ksCol
+     21  0b19		       bd 80 c2 	      lda	keyNow,x
+     22  0b1c		       5d 88 c2 	      eor	keyPrev,x
+     23  0b1f		       f0 3e		      beq	.nextCol
+     24  0b21		       8d fd c2 	      sta	ksBits	; changed bits
+     25  0b24		       a9 00		      lda	#0
+     26  0b26		       8d ff c2 	      sta	ksRow
+     27  0b29				   .bit
+     28  0b29		       4e fd c2 	      lsr	ksBits
+     29  0b2c		       90 27		      bcc	.nextBit
+     30  0b2e							; key at column ksCol, row ksRow changed
+     31  0b2e		       ad fe c2 	      lda	ksCol
+     32  0b31		       0a		      asl
+     33  0b32		       0a		      asl
+     34  0b33		       0a		      asl
+     35  0b34		       0d ff c2 	      ora	ksRow
+     36  0b37		       a8		      tay
+     37  0b38		       b9 de 12 	      lda	keymap,y
+     38  0b3b		       48		      pha		; key code
+     39  0b3c		       ae fe c2 	      ldx	ksCol
+     40  0b3f		       ac ff c2 	      ldy	ksRow
+     41  0b42		       bd 80 c2 	      lda	keyNow,x
+     42  0b45		       39 d6 12 	      and	rowBit,y
+     43  0b48		       f0 07		      beq	.up
+     44  0b4a		       68		      pla
+     45  0b4b		       20 6e 0b 	      jsr	KeyDown
+     46  0b4e		       4c 55 0b 	      jmp	.nextBit
+     47  0b51				   .up
+     48  0b51		       68		      pla
+     49  0b52		       20 be 0b 	      jsr	KeyUp
+     50  0b55				   .nextBit
+     51  0b55		       ee ff c2 	      inc	ksRow
+     52  0b58		       ad ff c2 	      lda	ksRow
+     53  0b5b		       c9 08		      cmp	#8
+     54  0b5d		       d0 ca		      bne	.bit
+     55  0b5f				   .nextCol
+     56  0b5f		       ae fe c2 	      ldx	ksCol
+     57  0b62		       bd 80 c2 	      lda	keyNow,x
+     58  0b65		       9d 88 c2 	      sta	keyPrev,x
+     59  0b68		       e8		      inx
+     60  0b69		       e0 08		      cpx	#8
+     61  0b6b		       d0 a9		      bne	.edges
+     62  0b6d		       60		      rts
+     63  0b6e
+     64  0b6e							; A = key code
+     65  0b6e				   KeyDown
+     66  0b6e					      subroutine
+     67  0b6e		       c9 18		      cmp	#24
+     68  0b70		       b0 0d		      bcs	.cmd
+     69  0b72		       aa		      tax
+     70  0b73		       a9 01		      lda	#1
+     71  0b75		       9d 90 c2 	      sta	noteHeld,x
+     72  0b78		       9d a8 c2 	      sta	notePressed,x
+     73  0b7b		       8d f2 c2 	      sta	reallocFlag
+     74  0b7e		       60		      rts
+     75  0b7f				   .cmd
+     76  0b7f		       c9 88		      cmp	#K_LSHIFT
+     77  0b81		       f0 15		      beq	.shift
+     78  0b83		       c9 89		      cmp	#K_RSHIFT
+     79  0b85		       f0 11		      beq	.shift
+     80  0b87		       c9 81		      cmp	#K_F1
+     81  0b89		       f0 11		      beq	.f1
+     82  0b8b		       c9 82		      cmp	#K_F3
+     83  0b8d		       f0 12		      beq	.f3
+     84  0b8f		       c9 83		      cmp	#K_F5
+     85  0b91		       f0 1b		      beq	.f5
+     86  0b93		       c9 84		      cmp	#K_F7
+     87  0b95		       f0 24		      beq	.f7
+     88  0b97		       60		      rts
+     89  0b98				   .shift
+     90  0b98		       ee f1 c2 	      inc	shiftDown
+     91  0b9b		       60		      rts
+     92  0b9c				   .f1
+     93  0b9c		       a2 00		      ldx	#DEV_SID
+     94  0b9e		       4c bb 0e 	      jmp	ToggleDevice
+     95  0ba1				   .f3
+     96  0ba1		       ad f1 c2 	      lda	shiftDown
+     97  0ba4		       d0 05		      bne	.gbch
+     98  0ba6		       a2 01		      ldx	#DEV_GB
+     99  0ba8		       4c bb 0e 	      jmp	ToggleDevice
+    100  0bab				   .gbch
+    101  0bab		       4c dc 0e 	      jmp	NextGbChannel
+    102  0bae				   .f5
+    103  0bae		       ad f1 c2 	      lda	shiftDown
+    104  0bb1		       d0 05		      bne	.nesch
+    105  0bb3		       a2 02		      ldx	#DEV_NES
+    106  0bb5		       4c bb 0e 	      jmp	ToggleDevice
+    107  0bb8				   .nesch
+    108  0bb8		       4c 08 0f 	      jmp	NextNesChannel
+    109  0bbb				   .f7
+    110  0bbb		       4c 34 0f 	      jmp	Panic
+    111  0bbe
+    112  0bbe				   KeyUp
+    113  0bbe					      subroutine
+    114  0bbe		       c9 18		      cmp	#24
+    115  0bc0		       b0 0c		      bcs	.cmd
+    116  0bc2		       aa		      tax
+    117  0bc3		       a9 00		      lda	#0
+    118  0bc5		       9d 90 c2 	      sta	noteHeld,x
+    119  0bc8		       a9 01		      lda	#1
+    120  0bca		       8d f2 c2 	      sta	reallocFlag
+    121  0bcd		       60		      rts
+    122  0bce				   .cmd
+    123  0bce		       c9 88		      cmp	#K_LSHIFT
+    124  0bd0		       f0 05		      beq	.shift
+    125  0bd2		       c9 89		      cmp	#K_RSHIFT
+    126  0bd4		       f0 01		      beq	.shift
+    127  0bd6		       60		      rts
+    128  0bd7				   .shift
+    129  0bd7		       ad f1 c2 	      lda	shiftDown
+    130  0bda		       f0 03		      beq	.x
+    131  0bdc		       ce f1 c2 	      dec	shiftDown
+    132  0bdf				   .x
+    133  0bdf		       60		      rts
+    134  0be0
+    135  0be0							; RESTORE (top B of the overlay) is a command key.
+    136  0be0							; Every press: downbeat re-sync. A second press within DOUBLE_TAP ms: also
+    137  0be0							; cycle the video mode (the single action stays immediate so re-sync lands
+    138  0be0							; on the beat).
+    139  0be0				   RestoreCheck
+    140  0be0					      subroutine
+    141  0be0		       a5 1e		      lda	nmiCount
+    142  0be2		       c5 21		      cmp	nmiSeen
+    143  0be4		       d0 10		      bne	.new
+    144  0be6		       ad f7 c2 	      lda	restoreFlash
+    145  0be9		       f0 0a		      beq	.x
+    146  0beb		       ce f7 c2 	      dec	restoreFlash
+    147  0bee		       d0 05		      bne	.x
+    148  0bf0		       a9 00		      lda	#0
+    149  0bf2		       8d 20 d0 	      sta	BORDER
+    150  0bf5				   .x
+    151  0bf5		       60		      rts
+    152  0bf6				   .new
+    153  0bf6		       85 21		      sta	nmiSeen
+    154  0bf8							; debounce: ignore presses within RESTORE_DEBOUNCE ms of the last one
+    155  0bf8		       a5 1f		      lda	nmiTick
+    156  0bfa		       38		      sec
+    157  0bfb		       ed f5 c2 	      sbc	lastRestore
+    158  0bfe		       85 25		      sta	t0
+    159  0c00		       a5 20		      lda	nmiTick+1
+    160  0c02		       ed f6 c2 	      sbc	lastRestore+1
+    161  0c05		       85 26		      sta	t1
+    162  0c07		       d0 06		      bne	.notBounce
+    163  0c09		       a5 25		      lda	t0
+    164  0c0b		       c9 28		      cmp	#RESTORE_DEBOUNCE
+    165  0c0d		       90 e6		      bcc	.x
+    166  0c0f				   .notBounce
+    167  0c0f		       a5 1f		      lda	nmiTick
+    168  0c11		       8d f5 c2 	      sta	lastRestore
+    169  0c14		       a5 20		      lda	nmiTick+1
+    170  0c16		       8d f6 c2 	      sta	lastRestore+1
+    171  0c19							; double tap? (t1:t0 = ms since the previous press). Decide before acting:
+    172  0c19							; the actions use t0/t1.
+    173  0c19		       a2 00		      ldx	#0
+    174  0c1b		       a5 26		      lda	t1
+    175  0c1d		       c9 01		      cmp	#>DOUBLE_TAP
+    176  0c1f		       90 08		      bcc	.dbl	; under 256 ms
+    177  0c21		       d0 08		      bne	.single	; 512 ms or more
+    178  0c23		       a5 25		      lda	t0
+    179  0c25		       c9 5e		      cmp	#<DOUBLE_TAP
+    180  0c27		       b0 02		      bcs	.single
+    181  0c29				   .dbl
+    182  0c29		       a2 01		      ldx	#1
+    183  0c2b				   .single
+    184  0c2b		       8a		      txa
+    185  0c2c		       48		      pha
+    186  0c2d		       20 37 0c 	      jsr	Resync	; every press: downbeat re-sync, right away
+    187  0c30		       68		      pla
+    188  0c31		       f0 03		      beq	.x2
+    189  0c33		       4c 50 0c 	      jmp	CycleVideo
+    190  0c36				   .x2
+    191  0c36		       60		      rts
+    192  0c37
+    193  0c37				   Resync
+    194  0c37					      subroutine
+    195  0c37		       a9 6d		      lda	#GCC_DOWNBEAT
+    196  0c39		       a2 00		      ldx	#0
+    197  0c3b		       ad ed c2 	      lda	devOn+DEV_GB
+    198  0c3e		       f0 05		      beq	.flash
+    199  0c40		       a9 6d		      lda	#GCC_DOWNBEAT
+    200  0c42		       20 5e 0a 	      jsr	GbGlobal
+    201  0c45				   .flash
+    202  0c45		       a9 01		      lda	#1	; white border blink
+    203  0c47		       8d 20 d0 	      sta	BORDER
+    204  0c4a		       a9 06		      lda	#6
+    205  0c4c		       8d f7 c2 	      sta	restoreFlash
+    206  0c4f		       60		      rts
+    207  0c50
+    208  0c50				   CycleVideo
+    209  0c50					      subroutine
+    210  0c50		       ad f4 c2 	      lda	videoMode
+    211  0c53		       49 01		      eor	#1
+    212  0c55		       8d f4 c2 	      sta	videoMode
+    213  0c58		       f0 0b		      beq	.on
+    214  0c5a		       ad 11 d0 	      lda	VIC_CTRL1
+    215  0c5d		       29 ef		      and	#$EF	; blank the screen
+    216  0c5f		       8d 11 d0 	      sta	VIC_CTRL1
+    217  0c62		       4c 6d 0c 	      jmp	.gb
+    218  0c65				   .on
+    219  0c65		       ad 11 d0 	      lda	VIC_CTRL1
+    220  0c68		       09 10		      ora	#$10
+    221  0c6a		       8d 11 d0 	      sta	VIC_CTRL1
+    222  0c6d				   .gb
+    223  0c6d		       ad ed c2 	      lda	devOn+DEV_GB
+    224  0c70		       f0 08		      beq	.x
+    225  0c72		       a9 70		      lda	#GCC_DISPLAY
+    226  0c74		       ae f4 c2 	      ldx	videoMode
+    227  0c77		       20 5e 0a 	      jsr	GbGlobal
+    228  0c7a				   .x
+    229  0c7a		       60		      rts
+------- FILE main.asm
+------- FILE voices.asm LEVEL 2 PASS 2
+      0  0c7b					      include	"voices.asm"
+      1  0c7b							; Fat Chip 64 - voice pool and smart stacking (poly synth mode)
+      2  0c7b							;
+      3  0c7b							; Nine voices across three chips, interleaved so a stack mixes chips:
+      4  0c7b							;   v0 SID 1	v1 GB pulse 1	v2 NES pulse 1
+      5  0c7b							;   v3 SID 2	v4 GB pulse 2	v5 NES pulse 2
+      6  0c7b							;   v6 SID 3	v7 GB wave*	v8 NES triangle*      (* bass voices)
+      7  0c7b							; Allocation, whenever the held notes change:
+      8  0c7b							;   1. bass voices play the lowest note, an octave down
+      9  0c7b							;   2. every other note gets one voice, lowest notes first
+     10  0c7b							;   3. leftover voices stack on the lowest two notes, alternating
+     11  0c7b							; So one note = a nine-voice unison across three chips, and in chords the
+     12  0c7b							; bottom of the chord is fattest. Disabled devices get no notes.
+     13  0c7b
+     14  0c7b							; ------------------------------------------------------------ SID
+     15  0c7b				   SidInit
+     16  0c7b					      subroutine
+     17  0c7b		       a2 18		      ldx	#24
+     18  0c7d		       a9 00		      lda	#0
+     19  0c7f				   .clr
+     20  0c7f		       9d 00 d4 	      sta	SID,x
+     21  0c82		       ca		      dex
+     22  0c83		       10 fa		      bpl	.clr
+     23  0c85		       a9 0f		      lda	#$0F	; volume 15, no filter
+     24  0c87		       8d 18 d4 	      sta	SID_VOL
+     25  0c8a		       a2 02		      ldx	#2
+     26  0c8c				   .v
+     27  0c8c		       bc 1e 13 	      ldy	sidOfs,x
+     28  0c8f		       a9 19		      lda	#$19	; attack 1, decay 9
+     29  0c91		       99 05 d4 	      sta	SID+5,y
+     30  0c94		       a9 c9		      lda	#$C9	; sustain 12, release 9
+     31  0c96		       99 06 d4 	      sta	SID+6,y
+     32  0c99		       a9 08		      lda	#$08	; pulse width 50% (for pulse patches later)
+     33  0c9b		       99 03 d4 	      sta	SID+3,y
+     34  0c9e		       a9 20		      lda	#$20	; sawtooth, gate off
+     35  0ca0		       9d f8 c2 	      sta	sidGate,x
+     36  0ca3		       99 04 d4 	      sta	SID+4,y
+     37  0ca6		       ca		      dex
+     38  0ca7		       10 e3		      bpl	.v
+     39  0ca9		       60		      rts
+     40  0caa
+     41  0caa							; Gate SID voices back on one scan after a retrigger.
+     42  0caa				   SidRetrig
+     43  0caa					      subroutine
+     44  0caa		       a2 00		      ldx	#0
+     45  0cac				   .v
+     46  0cac		       bd e3 c2 	      lda	vRetrig,x
+     47  0caf		       f0 1e		      beq	.next
+     48  0cb1		       a9 00		      lda	#0
+     49  0cb3		       9d e3 c2 	      sta	vRetrig,x
+     50  0cb6		       bd 21 13 	      lda	vDev,x
+     51  0cb9		       d0 14		      bne	.next
+     52  0cbb		       bc 2a 13 	      ldy	vIdx,x	; SID voice 0-2
+     53  0cbe		       b9 f8 c2 	      lda	sidGate,y
+     54  0cc1		       09 01		      ora	#1
+     55  0cc3		       99 f8 c2 	      sta	sidGate,y
+     56  0cc6		       48		      pha
+     57  0cc7		       b9 1e 13 	      lda	sidOfs,y
+     58  0cca		       a8		      tay
+     59  0ccb		       68		      pla
+     60  0ccc		       99 04 d4 	      sta	SID+4,y
+     61  0ccf				   .next
+     62  0ccf		       e8		      inx
+     63  0cd0		       e0 09		      cpx	#NUM_VOICES
+     64  0cd2		       d0 d8		      bne	.v
+     65  0cd4		       60		      rts
+     66  0cd5
+     67  0cd5							; ------------------------------------------------------------ allocation
+     68  0cd5				   Allocate
+     69  0cd5					      subroutine
+     70  0cd5							; held notes, ascending, at most 8
+     71  0cd5		       a2 00		      ldx	#0
+     72  0cd7		       a0 00		      ldy	#0
+     73  0cd9				   .h
+     74  0cd9		       bd 90 c2 	      lda	noteHeld,x
+     75  0cdc		       f0 09		      beq	.hn
+     76  0cde		       c0 08		      cpy	#8
+     77  0ce0		       b0 05		      bcs	.hn
+     78  0ce2		       8a		      txa
+     79  0ce3		       99 c0 c2 	      sta	heldList,y
+     80  0ce6		       c8		      iny
+     81  0ce7				   .hn
+     82  0ce7		       e8		      inx
+     83  0ce8		       e0 18		      cpx	#24
+     84  0cea		       d0 ed		      bne	.h
+     85  0cec		       8c c8 c2 	      sty	heldCount
+     86  0cef							; nothing wanted yet
+     87  0cef		       a2 08		      ldx	#NUM_VOICES-1
+     88  0cf1		       a9 ff		      lda	#NO_NOTE
+     89  0cf3				   .w
+     90  0cf3		       9d d1 c2 	      sta	vWant,x
+     91  0cf6		       ca		      dex
+     92  0cf7		       10 fa		      bpl	.w
+     93  0cf9		       ad c8 c2 	      lda	heldCount
+     94  0cfc		       d0 01		      bne	.go
+     95  0cfe		       60		      rts
+     96  0cff				   .go
+     97  0cff		       a2 07		      ldx	#7
+     98  0d01		       a9 00		      lda	#0
+     99  0d03				   .c
+    100  0d03		       9d c9 c2 	      sta	covered,x
+    101  0d06		       ca		      dex
+    102  0d07		       10 fa		      bpl	.c
+    103  0d09							; 1. bass voices -> lowest note
+    104  0d09		       a2 00		      ldx	#0
+    105  0d0b				   .p1
+    106  0d0b		       20 84 0d 	      jsr	VoiceEnabled
+    107  0d0e		       f0 10		      beq	.p1n
+    108  0d10		       bd 33 13 	      lda	vBass,x
+    109  0d13		       f0 0b		      beq	.p1n
+    110  0d15		       ad c0 c2 	      lda	heldList
+    111  0d18		       9d d1 c2 	      sta	vWant,x
+    112  0d1b		       a9 01		      lda	#1
+    113  0d1d		       8d c9 c2 	      sta	covered
+    114  0d20				   .p1n
+    115  0d20		       e8		      inx
+    116  0d21		       e0 09		      cpx	#NUM_VOICES
+    117  0d23		       d0 e6		      bne	.p1
+    118  0d25							; 2. one voice per uncovered note, lowest first
+    119  0d25		       a2 00		      ldx	#0
+    120  0d27				   .p2
+    121  0d27		       20 84 0d 	      jsr	VoiceEnabled
+    122  0d2a		       f0 1f		      beq	.p2n
+    123  0d2c		       bd 33 13 	      lda	vBass,x
+    124  0d2f		       d0 1a		      bne	.p2n
+    125  0d31		       a0 00		      ldy	#0
+    126  0d33				   .find
+    127  0d33		       cc c8 c2 	      cpy	heldCount
+    128  0d36		       f0 13		      beq	.p2n	; all covered
+    129  0d38		       b9 c9 c2 	      lda	covered,y
+    130  0d3b		       f0 03		      beq	.take
+    131  0d3d		       c8		      iny
+    132  0d3e		       d0 f3		      bne	.find
+    133  0d40				   .take
+    134  0d40		       a9 01		      lda	#1
+    135  0d42		       99 c9 c2 	      sta	covered,y
+    136  0d45		       b9 c0 c2 	      lda	heldList,y
+    137  0d48		       9d d1 c2 	      sta	vWant,x
+    138  0d4b				   .p2n
+    139  0d4b		       e8		      inx
+    140  0d4c		       e0 09		      cpx	#NUM_VOICES
+    141  0d4e		       d0 d7		      bne	.p2
+    142  0d50							; 3. leftovers stack on the lowest two notes
+    143  0d50		       ad c8 c2 	      lda	heldCount
+    144  0d53		       c9 02		      cmp	#2
+    145  0d55		       90 02		      bcc	.one
+    146  0d57		       a9 02		      lda	#2
+    147  0d59				   .one
+    148  0d59		       85 26		      sta	t1	; how many notes to stack on (1 or 2)
+    149  0d5b		       a9 00		      lda	#0
+    150  0d5d		       85 27		      sta	t2	; next stack target
+    151  0d5f		       a2 00		      ldx	#0
+    152  0d61				   .p3
+    153  0d61		       20 84 0d 	      jsr	VoiceEnabled
+    154  0d64		       f0 18		      beq	.p3n
+    155  0d66		       bd d1 c2 	      lda	vWant,x
+    156  0d69		       c9 ff		      cmp	#NO_NOTE
+    157  0d6b		       d0 11		      bne	.p3n
+    158  0d6d		       a4 27		      ldy	t2
+    159  0d6f		       b9 c0 c2 	      lda	heldList,y
+    160  0d72		       9d d1 c2 	      sta	vWant,x
+    161  0d75		       c8		      iny
+    162  0d76		       c4 26		      cpy	t1
+    163  0d78		       90 02		      bcc	.keep
+    164  0d7a		       a0 00		      ldy	#0
+    165  0d7c				   .keep
+    166  0d7c		       84 27		      sty	t2
+    167  0d7e				   .p3n
+    168  0d7e		       e8		      inx
+    169  0d7f		       e0 09		      cpx	#NUM_VOICES
+    170  0d81		       d0 de		      bne	.p3
+    171  0d83		       60		      rts
+    172  0d84
+    173  0d84							; Z clear if voice X's device is on. Keeps X.
+    174  0d84				   VoiceEnabled
+    175  0d84					      subroutine
+    176  0d84		       bc 21 13 	      ldy	vDev,x
+    177  0d87		       b9 ec c2 	      lda	devOn,y
+    178  0d8a		       60		      rts
+    179  0d8b
+    180  0d8b							; ------------------------------------------------------------ apply
+    181  0d8b							; Send what changed. A voice whose note was just pressed is re-attacked even
+    182  0d8b							; if it already plays that note.
+    183  0d8b				   ApplyVoices
+    184  0d8b					      subroutine
+    185  0d8b		       a2 00		      ldx	#0
+    186  0d8d				   .v
+    187  0d8d		       86 25		      stx	t0
+    188  0d8f		       a9 00		      lda	#0
+    189  0d91		       85 28		      sta	t3	; retrigger?
+    190  0d93		       bc d1 c2 	      ldy	vWant,x
+    191  0d96		       c0 ff		      cpy	#NO_NOTE
+    192  0d98		       f0 05		      beq	.cmp
+    193  0d9a		       b9 a8 c2 	      lda	notePressed,y
+    194  0d9d		       85 28		      sta	t3
+    195  0d9f				   .cmp
+    196  0d9f		       bd d1 c2 	      lda	vWant,x
+    197  0da2		       dd da c2 	      cmp	vNote,x
+    198  0da5		       d0 04		      bne	.change
+    199  0da7		       a5 28		      lda	t3
+    200  0da9		       f0 0b		      beq	.next
+    201  0dab				   .change
+    202  0dab		       20 c8 0d 	      jsr	VoiceSet
+    203  0dae		       a6 25		      ldx	t0
+    204  0db0		       bd d1 c2 	      lda	vWant,x
+    205  0db3		       9d da c2 	      sta	vNote,x
+    206  0db6				   .next
+    207  0db6		       a6 25		      ldx	t0
+    208  0db8		       e8		      inx
+    209  0db9		       e0 09		      cpx	#NUM_VOICES
+    210  0dbb		       d0 d0		      bne	.v
+    211  0dbd							; presses handled
+    212  0dbd		       a2 17		      ldx	#23
+    213  0dbf		       a9 00		      lda	#0
+    214  0dc1				   .p
+    215  0dc1		       9d a8 c2 	      sta	notePressed,x
+    216  0dc4		       ca		      dex
+    217  0dc5		       10 fa		      bpl	.p
+    218  0dc7		       60		      rts
+    219  0dc8
+    220  0dc8							; Voice X: from vNote,x to vWant,x; t3 = retrigger
+    221  0dc8				   VoiceSet
+    222  0dc8					      subroutine
+    223  0dc8		       bd 21 13 	      lda	vDev,x
+    224  0dcb		       f0 4a		      beq	.sid
+    225  0dcd							; ---- MIDI voice (Game Boy or MidiNES)
+    226  0dcd		       c9 01		      cmp	#DEV_GB
+    227  0dcf		       d0 06		      bne	.nesCh
+    228  0dd1		       ad ef c2 	      lda	gbBase
+    229  0dd4		       4c da 0d 	      jmp	.ch
+    230  0dd7				   .nesCh
+    231  0dd7		       ad f0 c2 	      lda	nesBase
+    232  0dda				   .ch
+    233  0dda		       18		      clc
+    234  0ddb		       7d 2a 13 	      adc	vIdx,x
+    235  0dde		       29 0f		      and	#15
+    236  0de0		       85 26		      sta	t1	; channel
+    237  0de2							; note off for the old note
+    238  0de2		       bd da c2 	      lda	vNote,x
+    239  0de5		       c9 ff		      cmp	#NO_NOTE
+    240  0de7		       f0 12		      beq	.on
+    241  0de9		       20 9e 0e 	      jsr	MidiNoteValue
+    242  0dec		       85 23		      sta	mD1
+    243  0dee		       a5 26		      lda	t1
+    244  0df0		       09 80		      ora	#$80
+    245  0df2		       85 22		      sta	mS
+    246  0df4		       a9 00		      lda	#0
+    247  0df6		       85 24		      sta	mD2
+    248  0df8		       20 ac 0e 	      jsr	DevPut
+    249  0dfb				   .on
+    250  0dfb		       a6 25		      ldx	t0
+    251  0dfd		       bd d1 c2 	      lda	vWant,x
+    252  0e00		       c9 ff		      cmp	#NO_NOTE
+    253  0e02		       f0 12		      beq	.done
+    254  0e04		       20 9e 0e 	      jsr	MidiNoteValue
+    255  0e07		       85 23		      sta	mD1
+    256  0e09		       a5 26		      lda	t1
+    257  0e0b		       09 90		      ora	#$90
+    258  0e0d		       85 22		      sta	mS
+    259  0e0f		       a9 64		      lda	#VELOCITY
+    260  0e11		       85 24		      sta	mD2
+    261  0e13		       20 ac 0e 	      jsr	DevPut
+    262  0e16				   .done
+    263  0e16		       60		      rts
+    264  0e17							; ---- SID voice
+    265  0e17				   .sid
+    266  0e17		       bc 2a 13 	      ldy	vIdx,x
+    267  0e1a		       b9 1e 13 	      lda	sidOfs,y
+    268  0e1d		       85 27		      sta	t2	; register offset
+    269  0e1f		       bd d1 c2 	      lda	vWant,x
+    270  0e22		       c9 ff		      cmp	#NO_NOTE
+    271  0e24		       d0 0e		      bne	.sidOn
+    272  0e26							; gate off
+    273  0e26		       b9 f8 c2 	      lda	sidGate,y
+    274  0e29		       29 fe		      and	#$FE
+    275  0e2b		       99 f8 c2 	      sta	sidGate,y
+    276  0e2e		       a6 27		      ldx	t2
+    277  0e30		       9d 04 d4 	      sta	SID+4,x
+    278  0e33		       60		      rts
+    279  0e34				   .sidOn
+    280  0e34		       18		      clc
+    281  0e35		       69 30		      adc	#BASE_NOTE
+    282  0e37		       aa		      tax
+    283  0e38		       bd 23 15 	      lda	sidFreqLo,x
+    284  0e3b		       85 29		      sta	ptr
+    285  0e3d		       bd a3 15 	      lda	sidFreqHi,x
+    286  0e40		       85 2a		      sta	ptr+1
+    287  0e42							; detune: SID 2 a little sharp, SID 3 a little flat (+-1/256, ~7 cents)
+    288  0e42		       c0 01		      cpy	#1
+    289  0e44		       d0 0d		      bne	.notUp
+    290  0e46		       a5 29		      lda	ptr
+    291  0e48		       18		      clc
+    292  0e49		       65 2a		      adc	ptr+1
+    293  0e4b		       85 29		      sta	ptr
+    294  0e4d		       90 13		      bcc	.freq
+    295  0e4f		       e6 2a		      inc	ptr+1
+    296  0e51		       d0 0f		      bne	.freq
+    297  0e53				   .notUp
+    298  0e53		       c0 02		      cpy	#2
+    299  0e55		       d0 0b		      bne	.freq
+    300  0e57		       a5 29		      lda	ptr
+    301  0e59		       38		      sec
+    302  0e5a		       e5 2a		      sbc	ptr+1
+    303  0e5c		       85 29		      sta	ptr
+    304  0e5e		       b0 02		      bcs	.freq
+    305  0e60		       c6 2a		      dec	ptr+1
+    306  0e62				   .freq
+    307  0e62		       a6 27		      ldx	t2
+    308  0e64		       a5 29		      lda	ptr
+    309  0e66		       9d 00 d4 	      sta	SID+0,x
+    310  0e69		       a5 2a		      lda	ptr+1
+    311  0e6b		       9d 01 d4 	      sta	SID+1,x
+    312  0e6e							; gate
+    313  0e6e		       a6 25		      ldx	t0
+    314  0e70		       bd da c2 	      lda	vNote,x
+    315  0e73		       c9 ff		      cmp	#NO_NOTE
+    316  0e75		       f0 19		      beq	.gateOn	; was silent: attack
+    317  0e77		       a5 28		      lda	t3
+    318  0e79		       f0 22		      beq	.legato	; same voice, new note, not a new press: glide
+    319  0e7b							; re-attack: gate off now, on at the next scan
+    320  0e7b		       b9 f8 c2 	      lda	sidGate,y
+    321  0e7e		       29 fe		      and	#$FE
+    322  0e80		       99 f8 c2 	      sta	sidGate,y
+    323  0e83		       a6 27		      ldx	t2
+    324  0e85		       9d 04 d4 	      sta	SID+4,x
+    325  0e88		       a6 25		      ldx	t0
+    326  0e8a		       a9 01		      lda	#1
+    327  0e8c		       9d e3 c2 	      sta	vRetrig,x
+    328  0e8f		       60		      rts
+    329  0e90				   .gateOn
+    330  0e90		       b9 f8 c2 	      lda	sidGate,y
+    331  0e93		       09 01		      ora	#1
+    332  0e95		       99 f8 c2 	      sta	sidGate,y
+    333  0e98		       a6 27		      ldx	t2
+    334  0e9a		       9d 04 d4 	      sta	SID+4,x
+    335  0e9d				   .legato
+    336  0e9d		       60		      rts
+    337  0e9e
+    338  0e9e							; A = note index for voice t0 -> MIDI note (bass voices an octave down)
+    339  0e9e				   MidiNoteValue
+    340  0e9e					      subroutine
+    341  0e9e		       a6 25		      ldx	t0
+    342  0ea0		       18		      clc
+    343  0ea1		       69 30		      adc	#BASE_NOTE
+    344  0ea3		       bc 33 13 	      ldy	vBass,x
+    345  0ea6		       f0 03		      beq	.x
+    346  0ea8		       38		      sec
+    347  0ea9		       e9 0c		      sbc	#12
+    348  0eab				   .x
+    349  0eab		       60		      rts
+    350  0eac
+    351  0eac							; queue mS/mD1/mD2 for voice t0's device
+    352  0eac				   DevPut
+    353  0eac					      subroutine
+    354  0eac		       a6 25		      ldx	t0
+    355  0eae		       bd 21 13 	      lda	vDev,x
+    356  0eb1		       c9 01		      cmp	#DEV_GB
+    357  0eb3		       d0 03		      bne	.nes
+    358  0eb5		       4c 22 0a 	      jmp	GbPut
+    359  0eb8				   .nes
+    360  0eb8		       4c 40 0a 	      jmp	NesPut
+    361  0ebb
+    362  0ebb							; ------------------------------------------------------------ device control
+    363  0ebb							; X = device
+    364  0ebb				   ToggleDevice
+    365  0ebb					      subroutine
+    366  0ebb		       bd ec c2 	      lda	devOn,x
+    367  0ebe		       49 01		      eor	#1
+    368  0ec0		       9d ec c2 	      sta	devOn,x
+    369  0ec3		       f0 0e		      beq	.off
+    370  0ec5		       e0 01		      cpx	#DEV_GB
+    371  0ec7		       d0 03		      bne	.n1
+    372  0ec9		       20 6c 0a 	      jsr	GbStartup
+    373  0ecc				   .n1
+    374  0ecc		       e0 02		      cpx	#DEV_NES
+    375  0ece		       d0 03		      bne	.off
+    376  0ed0		       20 b8 0a 	      jsr	NesStartup
+    377  0ed3				   .off
+    378  0ed3		       a9 01		      lda	#1
+    379  0ed5		       8d f2 c2 	      sta	reallocFlag	; voices move to or away from it
+    380  0ed8		       8d f3 c2 	      sta	screenDirty
+    381  0edb		       60		      rts
+    382  0edc
+    383  0edc							; Release one device's voices, change its base channel, start it again.
+    384  0edc				   NextGbChannel
+    385  0edc					      subroutine
+    386  0edc		       ad ed c2 	      lda	devOn+DEV_GB
+    387  0edf		       48		      pha
+    388  0ee0		       a9 00		      lda	#0
+    389  0ee2		       8d ed c2 	      sta	devOn+DEV_GB
+    390  0ee5		       20 d5 0c 	      jsr	Allocate
+    391  0ee8		       20 8b 0d 	      jsr	ApplyVoices	; note-offs on the old channels
+    392  0eeb		       ae ef c2 	      ldx	gbBase
+    393  0eee		       e8		      inx
+    394  0eef		       e0 0c		      cpx	#12	; 1-5 ... 12-16
+    395  0ef1		       90 02		      bcc	.ok
+    396  0ef3		       a2 00		      ldx	#0
+    397  0ef5				   .ok
+    398  0ef5		       8e ef c2 	      stx	gbBase
+    399  0ef8		       68		      pla
+    400  0ef9		       8d ed c2 	      sta	devOn+DEV_GB
+    401  0efc		       20 6c 0a 	      jsr	GbStartup
+    402  0eff		       a9 01		      lda	#1
+    403  0f01		       8d f2 c2 	      sta	reallocFlag
+    404  0f04		       8d f3 c2 	      sta	screenDirty
+    405  0f07		       60		      rts
+    406  0f08
+    407  0f08				   NextNesChannel
+    408  0f08					      subroutine
+    409  0f08		       ad ee c2 	      lda	devOn+DEV_NES
+    410  0f0b		       48		      pha
+    411  0f0c		       a9 00		      lda	#0
+    412  0f0e		       8d ee c2 	      sta	devOn+DEV_NES
+    413  0f11		       20 d5 0c 	      jsr	Allocate
+    414  0f14		       20 8b 0d 	      jsr	ApplyVoices
+    415  0f17		       ae f0 c2 	      ldx	nesBase
+    416  0f1a		       e8		      inx
+    417  0f1b		       e0 0c		      cpx	#12
+    418  0f1d		       90 02		      bcc	.ok
+    419  0f1f		       a2 00		      ldx	#0
+    420  0f21				   .ok
+    421  0f21		       8e f0 c2 	      stx	nesBase
+    422  0f24		       68		      pla
+    423  0f25		       8d ee c2 	      sta	devOn+DEV_NES
+    424  0f28		       20 b8 0a 	      jsr	NesStartup
+    425  0f2b		       a9 01		      lda	#1
+    426  0f2d		       8d f2 c2 	      sta	reallocFlag
+    427  0f30		       8d f3 c2 	      sta	screenDirty
+    428  0f33		       60		      rts
+    429  0f34
+    430  0f34							; F7: everything off, held keys forgotten, devices set up again.
+    431  0f34				   Panic
+    432  0f34					      subroutine
+    433  0f34		       a2 17		      ldx	#23
+    434  0f36		       a9 00		      lda	#0
+    435  0f38				   .k
+    436  0f38		       9d 90 c2 	      sta	noteHeld,x
+    437  0f3b		       9d a8 c2 	      sta	notePressed,x
+    438  0f3e		       ca		      dex
+    439  0f3f		       10 f7		      bpl	.k
+    440  0f41		       20 d5 0c 	      jsr	Allocate	; nothing held -> every voice off
+    441  0f44		       20 8b 0d 	      jsr	ApplyVoices
+    442  0f47							; SID: all gates off
+    443  0f47		       a2 02		      ldx	#2
+    444  0f49				   .s
+    445  0f49		       bc 1e 13 	      ldy	sidOfs,x
+    446  0f4c		       bd f8 c2 	      lda	sidGate,x
+    447  0f4f		       29 fe		      and	#$FE
+    448  0f51		       9d f8 c2 	      sta	sidGate,x
+    449  0f54		       99 04 d4 	      sta	SID+4,y
+    450  0f57		       ca		      dex
+    451  0f58		       10 ef		      bpl	.s
+    452  0f5a							; MidiNES: all notes off (CC 123) on its five channels
+    453  0f5a		       ad ee c2 	      lda	devOn+DEV_NES
+    454  0f5d		       f0 21		      beq	.gb
+    455  0f5f		       a9 7b		      lda	#123
+    456  0f61		       85 23		      sta	mD1
+    457  0f63		       a9 00		      lda	#0
+    458  0f65		       85 24		      sta	mD2
+    459  0f67		       a0 00		      ldy	#0
+    460  0f69				   .n
+    461  0f69		       98		      tya
+    462  0f6a		       18		      clc
+    463  0f6b		       6d f0 c2 	      adc	nesBase
+    464  0f6e		       29 0f		      and	#15
+    465  0f70		       09 b0		      ora	#$B0
+    466  0f72		       85 22		      sta	mS
+    467  0f74		       84 26		      sty	t1
+    468  0f76		       20 40 0a 	      jsr	NesPut
+    469  0f79		       a4 26		      ldy	t1
+    470  0f7b		       c8		      iny
+    471  0f7c		       c0 05		      cpy	#5
+    472  0f7e		       d0 e9		      bne	.n
+    473  0f80				   .gb
+    474  0f80		       20 6c 0a 	      jsr	GbStartup	; includes the Game Boy's panic CC
+    475  0f83		       20 b8 0a 	      jsr	NesStartup
+    476  0f86		       a9 01		      lda	#1
+    477  0f88		       8d f3 c2 	      sta	screenDirty
+    478  0f8b		       60		      rts
+------- FILE main.asm
+------- FILE screen.asm LEVEL 2 PASS 2
+      0  0f8c					      include	"screen.asm"
+      1  0f8c							; Fat Chip 64 - screen
+      2  0f8c							;
+      3  0f8c							;  row 0   FAT CHIP 64 header
+      4  0f8c							;  rows 2-7  devices (F1/F3/F5), channels, panic, overlap warning
+      5  0f8c							;  rows 9-18 voice table: which chip voice plays which note
+      6  0f8c							;  row 20  held notes, row 22 RESTORE help, row 23 messages sent, row 24 mode
+      7  0f8c
+      8  0f8c							; Print the 0-terminated ASCII string at (ptr) to screen row Y, column X.
+      9  0f8c							; Letters become screen codes; bit 7 of t2 reverses.
+     10  0f8c				   PrintAt
+     11  0f8c					      subroutine
+     12  0f8c		       20 a4 0f 	      jsr	ScreenAddr
+     13  0f8f		       a0 00		      ldy	#0
+     14  0f91				   .c
+     15  0f91		       b1 29		      lda	(ptr),y
+     16  0f93		       f0 0e		      beq	.done
+     17  0f95		       c9 40		      cmp	#64
+     18  0f97		       90 03		      bcc	.noLetter
+     19  0f99		       38		      sec
+     20  0f9a		       e9 40		      sbc	#64
+     21  0f9c				   .noLetter
+     22  0f9c		       05 27		      ora	t2
+     23  0f9e		       91 2b		      sta	(ptr2),y
+     24  0fa0		       c8		      iny
+     25  0fa1		       d0 ee		      bne	.c
+     26  0fa3				   .done
+     27  0fa3		       60		      rts
+     28  0fa4
+     29  0fa4							; ptr2 = SCREEN + 40*Y + X
+     30  0fa4				   ScreenAddr
+     31  0fa4					      subroutine
+     32  0fa4		       a9 00		      lda	#<SCREEN
+     33  0fa6		       85 2b		      sta	ptr2
+     34  0fa8		       a9 04		      lda	#>SCREEN
+     35  0faa		       85 2c		      sta	ptr2+1
+     36  0fac		       c0 00		      cpy	#0
+     37  0fae		       f0 0e		      beq	.col
+     38  0fb0				   .row
+     39  0fb0		       a5 2b		      lda	ptr2
+     40  0fb2		       18		      clc
+     41  0fb3		       69 28		      adc	#40
+     42  0fb5		       85 2b		      sta	ptr2
+     43  0fb7		       90 02		      bcc	.nc
+     44  0fb9		       e6 2c		      inc	ptr2+1
+     45  0fbb				   .nc
+     46  0fbb		       88		      dey
+     47  0fbc		       d0 f2		      bne	.row
+     48  0fbe				   .col
+     49  0fbe		       8a		      txa
+     50  0fbf		       18		      clc
+     51  0fc0		       65 2b		      adc	ptr2
+     52  0fc2		       85 2b		      sta	ptr2
+     53  0fc4		       90 02		      bcc	.x
+     54  0fc6		       e6 2c		      inc	ptr2+1
+     55  0fc8				   .x
+     56  0fc8		       60		      rts
+     57  0fc9
+     58  0fc9							; macro-ish helper: PRINT row, col, label
+     59  0fc9					      mac	print
+     60  0fc9					      ldx	#{2}
+     61  0fc9					      ldy	#{1}
+     62  0fc9					      lda	#<{3}
+     63  0fc9					      sta	ptr
+     64  0fc9					      lda	#>{3}
+     65  0fc9					      sta	ptr+1
+     66  0fc9					      jsr	PrintAt
+     67  0fc9					      endm
+     68  0fc9
+     69  0fc9							; Put the character in A at column X of the row in ptr2 (ScreenAddr first).
+     70  0fc9							; Keeps X; uses Y.
+     71  0fc9				   PutChar
+     72  0fc9					      subroutine
+     73  0fc9		       48		      pha
+     74  0fca		       8a		      txa
+     75  0fcb		       a8		      tay
+     76  0fcc		       68		      pla
+     77  0fcd		       c9 40		      cmp	#64
+     78  0fcf		       90 03		      bcc	.nl
+     79  0fd1		       38		      sec
+     80  0fd2		       e9 40		      sbc	#64
+     81  0fd4				   .nl
+     82  0fd4		       91 2b		      sta	(ptr2),y
+     83  0fd6		       60		      rts
+     84  0fd7
+     85  0fd7							; Decimal 0-99 in A at column X of row ptr2 (one or two digits). Returns X past it.
+     86  0fd7				   PutNum
+     87  0fd7					      subroutine
+     88  0fd7		       a0 00		      ldy	#0
+     89  0fd9				   .tens
+     90  0fd9		       c9 0a		      cmp	#10
+     91  0fdb		       90 05		      bcc	.ones
+     92  0fdd		       e9 0a		      sbc	#10
+     93  0fdf		       c8		      iny
+     94  0fe0		       d0 f7		      bne	.tens
+     95  0fe2				   .ones
+     96  0fe2		       48		      pha
+     97  0fe3		       98		      tya
+     98  0fe4		       f0 07		      beq	.skip
+     99  0fe6		       18		      clc
+    100  0fe7		       69 30		      adc	#'0
+    101  0fe9		       20 c9 0f 	      jsr	PutChar
+    102  0fec		       e8		      inx
+    103  0fed				   .skip
+    104  0fed		       68		      pla
+    105  0fee		       18		      clc
+    106  0fef		       69 30		      adc	#'0
+    107  0ff1		       20 c9 0f 	      jsr	PutChar
+    108  0ff4		       e8		      inx
+    109  0ff5		       60		      rts
+    110  0ff6
+    111  0ff6				   ScreenInit
+    112  0ff6					      subroutine
+    113  0ff6		       a9 00		      lda	#0
+    114  0ff8		       8d 20 d0 	      sta	BORDER
+    115  0ffb		       8d 21 d0 	      sta	BGCOL
+    116  0ffe		       a2 00		      ldx	#0
+    117  1000				   .c
+    118  1000		       a9 20		      lda	#32
+    119  1002		       9d 00 04 	      sta	SCREEN,x
+    120  1005		       9d 00 05 	      sta	SCREEN+$100,x
+    121  1008		       9d 00 06 	      sta	SCREEN+$200,x
+    122  100b		       9d e8 06 	      sta	SCREEN+$2E8,x
+    123  100e		       a9 0d		      lda	#13	; light green, a nod to the Game Boy
+    124  1010		       9d 00 d8 	      sta	COLRAM,x
+    125  1013		       9d 00 d9 	      sta	COLRAM+$100,x
+    126  1016		       9d 00 da 	      sta	COLRAM+$200,x
+    127  1019		       9d e8 da 	      sta	COLRAM+$2E8,x
+    128  101c		       e8		      inx
+    129  101d		       d0 e1		      bne	.c
+    130  101f		       ad 11 d0 	      lda	VIC_CTRL1
+    131  1022		       09 10		      ora	#$10
+    132  1024		       8d 11 d0 	      sta	VIC_CTRL1
+    133  1027		       a9 15		      lda	#$15	; uppercase character set
+    134  1029		       8d 18 d0 	      sta	$D018
+    135  102c		       60		      rts
+    136  102d
+    137  102d				   ScreenDrawAll
+    138  102d					      subroutine
+    139  102d		       a9 80		      lda	#$80
+    140  102f		       85 27		      sta	t2
+      0  1031					      PRINT	0, 0, txtHeader
+      1  1031		       a2 00		      ldx	#0
+      2  1033		       a0 00		      ldy	#0
+      3  1035		       a9 c4		      lda	#<txtHeader
+      4  1037		       85 29		      sta	ptr
+      5  1039		       a9 13		      lda	#>txtHeader
+      6  103b		       85 2a		      sta	ptr+1
+      7  103d		       20 8c 0f 	      jsr	PrintAt
+    142  1040		       a9 00		      lda	#0
+    143  1042		       85 27		      sta	t2
+      0  1044					      PRINT	2, 0, txtDevices
+      1  1044		       a2 00		      ldx	#0
+      2  1046		       a0 02		      ldy	#2
+      3  1048		       a9 ed		      lda	#<txtDevices
+      4  104a		       85 29		      sta	ptr
+      5  104c		       a9 13		      lda	#>txtDevices
+      6  104e		       85 2a		      sta	ptr+1
+      7  1050		       20 8c 0f 	      jsr	PrintAt
+      0  1053					      PRINT	6, 0, txtPanic
+      1  1053		       a2 00		      ldx	#0
+      2  1055		       a0 06		      ldy	#6
+      3  1057		       a9 1b		      lda	#<txtPanic
+      4  1059		       85 29		      sta	ptr
+      5  105b		       a9 14		      lda	#>txtPanic
+      6  105d		       85 2a		      sta	ptr+1
+      7  105f		       20 8c 0f 	      jsr	PrintAt
+      0  1062					      PRINT	9, 0, txtVoices
+      1  1062		       a2 00		      ldx	#0
+      2  1064		       a0 09		      ldy	#9
+      3  1066		       a9 91		      lda	#<txtVoices
+      4  1068		       85 29		      sta	ptr
+      5  106a		       a9 14		      lda	#>txtVoices
+      6  106c		       85 2a		      sta	ptr+1
+      7  106e		       20 8c 0f 	      jsr	PrintAt
+      0  1071					      PRINT	22, 0, txtRestore
+      1  1071		       a2 00		      ldx	#0
+      2  1073		       a0 16		      ldy	#22
+      3  1075		       a9 c0		      lda	#<txtRestore
+      4  1077		       85 29		      sta	ptr
+      5  1079		       a9 14		      lda	#>txtRestore
+      6  107b		       85 2a		      sta	ptr+1
+      7  107d		       20 8c 0f 	      jsr	PrintAt
+      0  1080					      PRINT	24, 0, txtMode
+      1  1080		       a2 00		      ldx	#0
+      2  1082		       a0 18		      ldy	#24
+      3  1084		       a9 01		      lda	#<txtMode
+      4  1086		       85 29		      sta	ptr
+      5  1088		       a9 15		      lda	#>txtMode
+      6  108a		       85 2a		      sta	ptr+1
+      7  108c		       20 8c 0f 	      jsr	PrintAt
+    149  108f		       a9 01		      lda	#1
+    150  1091		       8d f3 c2 	      sta	screenDirty
+    151  1094		       20 98 10 	      jsr	ScreenUpdate
+    152  1097		       60		      rts
+    153  1098
+    154  1098				   ScreenUpdate
+    155  1098					      subroutine
+    156  1098		       a9 00		      lda	#0
+    157  109a		       85 27		      sta	t2
+    158  109c							; ---- device lines
+      0  109c					      PRINT	3, 0, txtSid
+      1  109c		       a2 00		      ldx	#0
+      2  109e		       a0 03		      ldy	#3
+      3  10a0		       a9 f5		      lda	#<txtSid
+      4  10a2		       85 29		      sta	ptr
+      5  10a4		       a9 13		      lda	#>txtSid
+      6  10a6		       85 2a		      sta	ptr+1
+      7  10a8		       20 8c 0f 	      jsr	PrintAt
+    160  10ab		       a2 00		      ldx	#DEV_SID
+    161  10ad		       a0 03		      ldy	#3
+    162  10af		       20 1e 12 	      jsr	OnOff
+      0  10b2					      PRINT	4, 0, txtGb
+      1  10b2		       a2 00		      ldx	#0
+      2  10b4		       a0 04		      ldy	#4
+      3  10b6		       a9 fc		      lda	#<txtGb
+      4  10b8		       85 29		      sta	ptr
+      5  10ba		       a9 13		      lda	#>txtGb
+      6  10bc		       85 2a		      sta	ptr+1
+      7  10be		       20 8c 0f 	      jsr	PrintAt
+    164  10c1		       a2 01		      ldx	#DEV_GB
+    165  10c3		       a0 04		      ldy	#4
+    166  10c5		       20 1e 12 	      jsr	OnOff
+    167  10c8		       a0 04		      ldy	#4
+    168  10ca		       ad ef c2 	      lda	gbBase
+    169  10cd		       20 3b 12 	      jsr	Channels
+      0  10d0					      PRINT	5, 0, txtNes
+      1  10d0		       a2 00		      ldx	#0
+      2  10d2		       a0 05		      ldy	#5
+      3  10d4		       a9 08		      lda	#<txtNes
+      4  10d6		       85 29		      sta	ptr
+      5  10d8		       a9 14		      lda	#>txtNes
+      6  10da		       85 2a		      sta	ptr+1
+      7  10dc		       20 8c 0f 	      jsr	PrintAt
+    171  10df		       a2 02		      ldx	#DEV_NES
+    172  10e1		       a0 05		      ldy	#5
+    173  10e3		       20 1e 12 	      jsr	OnOff
+    174  10e6		       a0 05		      ldy	#5
+    175  10e8		       ad f0 c2 	      lda	nesBase
+    176  10eb		       20 3b 12 	      jsr	Channels
+    177  10ee							; overlap warning: both on and |gbBase - nesBase| < 5
+      0  10ee					      PRINT	7, 0, txtBlank
+      1  10ee		       a2 00		      ldx	#0
+      2  10f0		       a0 07		      ldy	#7
+      3  10f2		       a9 69		      lda	#<txtBlank
+      4  10f4		       85 29		      sta	ptr
+      5  10f6		       a9 14		      lda	#>txtBlank
+      6  10f8		       85 2a		      sta	ptr+1
+      7  10fa		       20 8c 0f 	      jsr	PrintAt
+    179  10fd		       ad ed c2 	      lda	devOn+DEV_GB
+    180  1100		       2d ee c2 	      and	devOn+DEV_NES
+    181  1103		       f0 20		      beq	.vt
+    182  1105		       ad ef c2 	      lda	gbBase
+    183  1108		       38		      sec
+    184  1109		       ed f0 c2 	      sbc	nesBase
+    185  110c		       b0 04		      bcs	.pos
+    186  110e		       49 ff		      eor	#$FF
+    187  1110		       69 01		      adc	#1
+    188  1112				   .pos
+    189  1112		       c9 05		      cmp	#5
+    190  1114		       b0 0f		      bcs	.vt
+      0  1116					      PRINT	7, 0, txtOverlap
+      1  1116		       a2 00		      ldx	#0
+      2  1118		       a0 07		      ldy	#7
+      3  111a		       a9 41		      lda	#<txtOverlap
+      4  111c		       85 29		      sta	ptr
+      5  111e		       a9 14		      lda	#>txtOverlap
+      6  1120		       85 2a		      sta	ptr+1
+      7  1122		       20 8c 0f 	      jsr	PrintAt
+    192  1125				   .vt
+    193  1125							; ---- voice table
+    194  1125		       a2 00		      ldx	#0
+    195  1127				   .v
+    196  1127		       86 28		      stx	t3
+    197  1129		       8a		      txa
+    198  112a		       18		      clc
+    199  112b		       69 0a		      adc	#10
+    200  112d		       a8		      tay
+    201  112e		       a2 00		      ldx	#0
+    202  1130		       a9 00		      lda	#0
+    203  1132		       85 27		      sta	t2
+    204  1134		       20 a4 0f 	      jsr	ScreenAddr
+    205  1137		       a6 28		      ldx	t3
+    206  1139		       bd 3c 13 	      lda	vNameLo,x
+    207  113c		       85 29		      sta	ptr
+    208  113e		       bd 45 13 	      lda	vNameHi,x
+    209  1141		       85 2a		      sta	ptr+1
+    210  1143		       a0 00		      ldy	#0
+    211  1145				   .n
+    212  1145		       b1 29		      lda	(ptr),y
+    213  1147		       f0 0b		      beq	.note
+    214  1149		       c9 40		      cmp	#64
+    215  114b		       90 02		      bcc	.nl
+    216  114d		       e9 40		      sbc	#64
+    217  114f				   .nl
+    218  114f		       91 2b		      sta	(ptr2),y
+    219  1151		       c8		      iny
+    220  1152		       d0 f1		      bne	.n
+    221  1154				   .note
+    222  1154		       a6 28		      ldx	t3
+    223  1156		       bd da c2 	      lda	vNote,x
+    224  1159		       a2 10		      ldx	#16
+    225  115b		       20 70 12 	      jsr	PutNote
+    226  115e							; off-device voices are drawn dark
+    227  115e		       a6 28		      ldx	t3
+    228  1160		       bc 21 13 	      ldy	vDev,x
+    229  1163		       b9 ec c2 	      lda	devOn,y
+    230  1166		       f0 04		      beq	.dark
+    231  1168		       a9 0d		      lda	#13
+    232  116a		       d0 02		      bne	.col
+    233  116c				   .dark
+    234  116c		       a9 0b		      lda	#11
+    235  116e				   .col
+    236  116e		       85 26		      sta	t1
+    237  1170							; colour RAM row = screen row + $D400
+    238  1170		       a5 2b		      lda	ptr2
+    239  1172		       85 29		      sta	ptr
+    240  1174		       a5 2c		      lda	ptr2+1
+    241  1176		       18		      clc
+    242  1177		       69 d4		      adc	#>(COLRAM-SCREEN)
+    243  1179		       85 2a		      sta	ptr+1
+    244  117b		       a0 13		      ldy	#19
+    245  117d		       a5 26		      lda	t1
+    246  117f				   .cc
+    247  117f		       91 29		      sta	(ptr),y
+    248  1181		       88		      dey
+    249  1182		       10 fb		      bpl	.cc
+    250  1184		       a6 28		      ldx	t3
+    251  1186		       e8		      inx
+    252  1187		       e0 09		      cpx	#NUM_VOICES
+    253  1189		       d0 9c		      bne	.v
+    254  118b							; ---- held notes
+      0  118b					      PRINT	20, 0, txtHeld
+      1  118b		       a2 00		      ldx	#0
+      2  118d		       a0 14		      ldy	#20
+      3  118f		       a9 98		      lda	#<txtHeld
+      4  1191		       85 29		      sta	ptr
+      5  1193		       a9 14		      lda	#>txtHeld
+      6  1195		       85 2a		      sta	ptr+1
+      7  1197		       20 8c 0f 	      jsr	PrintAt
+    256  119a		       a0 14		      ldy	#20
+    257  119c		       a2 00		      ldx	#0
+    258  119e		       20 a4 0f 	      jsr	ScreenAddr
+    259  11a1		       a2 06		      ldx	#6
+    260  11a3		       a0 00		      ldy	#0
+    261  11a5				   .h
+    262  11a5		       cc c8 c2 	      cpy	heldCount
+    263  11a8		       f0 11		      beq	.hd
+    264  11aa		       84 28		      sty	t3
+    265  11ac		       b9 c0 c2 	      lda	heldList,y
+    266  11af		       18		      clc
+    267  11b0		       69 30		      adc	#BASE_NOTE
+    268  11b2		       20 9d 12 	      jsr	PutMidiNote
+    269  11b5		       e8		      inx
+    270  11b6		       a4 28		      ldy	t3
+    271  11b8		       c8		      iny
+    272  11b9		       d0 ea		      bne	.h
+    273  11bb				   .hd
+    274  11bb							; ---- messages sent
+      0  11bb					      PRINT	23, 0, txtSent
+      1  11bb		       a2 00		      ldx	#0
+      2  11bd		       a0 17		      ldy	#23
+      3  11bf		       a9 e8		      lda	#<txtSent
+      4  11c1		       85 29		      sta	ptr
+      5  11c3		       a9 14		      lda	#>txtSent
+      6  11c5		       85 2a		      sta	ptr+1
+      7  11c7		       20 8c 0f 	      jsr	PrintAt
+    276  11ca		       a0 17		      ldy	#23
+    277  11cc		       a2 00		      ldx	#0
+    278  11ce		       20 a4 0f 	      jsr	ScreenAddr
+    279  11d1		       78		      sei
+    280  11d2		       ad fb c2 	      lda	statSent
+    281  11d5		       85 25		      sta	t0
+    282  11d7		       ad fc c2 	      lda	statSent+1
+    283  11da		       85 26		      sta	t1
+    284  11dc		       58		      cli
+    285  11dd		       a2 0a		      ldx	#10
+    286  11df		       20 e3 11 	      jsr	PutDec16
+    287  11e2		       60		      rts
+    288  11e3
+    289  11e3							; 16-bit number in t1:t0 at column X of row ptr2, five digits
+    290  11e3				   PutDec16
+    291  11e3					      subroutine
+    292  11e3		       a0 00		      ldy	#0
+    293  11e5				   .digit
+    294  11e5		       a9 00		      lda	#0
+    295  11e7		       85 27		      sta	t2
+    296  11e9				   .sub
+    297  11e9		       a5 25		      lda	t0
+    298  11eb		       38		      sec
+    299  11ec		       f9 14 12 	      sbc	decLo,y
+    300  11ef		       48		      pha
+    301  11f0		       a5 26		      lda	t1
+    302  11f2		       f9 19 12 	      sbc	decHi,y
+    303  11f5		       90 09		      bcc	.done
+    304  11f7		       85 26		      sta	t1
+    305  11f9		       68		      pla
+    306  11fa		       85 25		      sta	t0
+    307  11fc		       e6 27		      inc	t2
+    308  11fe		       d0 e9		      bne	.sub
+    309  1200				   .done
+    310  1200		       68		      pla
+    311  1201		       a5 27		      lda	t2
+    312  1203		       18		      clc
+    313  1204		       69 30		      adc	#'0
+    314  1206		       84 28		      sty	t3
+    315  1208		       20 c9 0f 	      jsr	PutChar
+    316  120b		       a4 28		      ldy	t3
+    317  120d		       e8		      inx
+    318  120e		       c8		      iny
+    319  120f		       c0 05		      cpy	#5
+    320  1211		       d0 d2		      bne	.digit
+    321  1213		       60		      rts
+    322  1214
+    323  1214		       10 e8 64 0a*decLo      .byte.b	<10000,<1000,<100,<10,<1
+    324  1219		       27 03 00 00*decHi      .byte.b	>10000,>1000,>100,>10,>1
+    325  121e
+    326  121e							; "ON " / "OFF" for device X at row Y, column 12
+    327  121e				   OnOff
+    328  121e					      subroutine
+    329  121e		       bd ec c2 	      lda	devOn,x
+    330  1221		       f0 0b		      beq	.off
+    331  1223		       a9 13		      lda	#<txtOn
+    332  1225		       85 29		      sta	ptr
+    333  1227		       a9 14		      lda	#>txtOn
+    334  1229		       85 2a		      sta	ptr+1
+    335  122b		       4c 36 12 	      jmp	.p
+    336  122e				   .off
+    337  122e		       a9 17		      lda	#<txtOff
+    338  1230		       85 29		      sta	ptr
+    339  1232		       a9 14		      lda	#>txtOff
+    340  1234		       85 2a		      sta	ptr+1
+    341  1236				   .p
+    342  1236		       a2 0c		      ldx	#12
+    343  1238		       4c 8c 0f 	      jmp	PrintAt
+    344  123b
+    345  123b							; "CH a-b" for base channel A (0-15) at row Y, column 17
+    346  123b				   Channels
+    347  123b					      subroutine
+    348  123b		       48		      pha
+    349  123c		       a2 00		      ldx	#0
+    350  123e		       20 a4 0f 	      jsr	ScreenAddr
+    351  1241		       a2 11		      ldx	#17
+    352  1243		       a9 43		      lda	#'C
+    353  1245		       20 c9 0f 	      jsr	PutChar
+    354  1248		       e8		      inx
+    355  1249		       a9 48		      lda	#'H
+    356  124b		       20 c9 0f 	      jsr	PutChar
+    357  124e		       e8		      inx
+    358  124f		       a9 20		      lda	#32
+    359  1251		       20 c9 0f 	      jsr	PutChar
+    360  1254		       e8		      inx
+    361  1255		       68		      pla
+    362  1256		       48		      pha
+    363  1257		       18		      clc
+    364  1258		       69 01		      adc	#1
+    365  125a		       20 d7 0f 	      jsr	PutNum
+    366  125d		       a9 2d		      lda	#'-
+    367  125f		       20 c9 0f 	      jsr	PutChar
+    368  1262		       e8		      inx
+    369  1263		       68		      pla
+    370  1264		       18		      clc
+    371  1265		       69 05		      adc	#5
+    372  1267		       20 d7 0f 	      jsr	PutNum
+    373  126a		       a9 20		      lda	#32
+    374  126c		       20 c9 0f 	      jsr	PutChar
+    375  126f		       60		      rts
+    376  1270
+    377  1270							; Note index A (or NO_NOTE) at column X of row ptr2: "C#3", "--"
+    378  1270				   PutNote
+    379  1270					      subroutine
+    380  1270		       c9 ff		      cmp	#NO_NOTE
+    381  1272		       d0 13		      bne	.n
+    382  1274		       a9 2d		      lda	#'-
+    383  1276		       20 c9 0f 	      jsr	PutChar
+    384  1279		       e8		      inx
+    385  127a		       20 c9 0f 	      jsr	PutChar
+    386  127d		       e8		      inx
+    387  127e		       a9 20		      lda	#32
+    388  1280		       20 c9 0f 	      jsr	PutChar
+    389  1283		       e8		      inx
+    390  1284		       4c c9 0f 	      jmp	PutChar
+    391  1287				   .n
+    392  1287		       18		      clc
+    393  1288		       69 30		      adc	#BASE_NOTE
+    394  128a							; bass voices sound an octave down
+    395  128a		       a4 28		      ldy	t3
+    396  128c		       c0 09		      cpy	#NUM_VOICES
+    397  128e		       b0 0d		      bcs	PutMidiNote
+    398  1290		       48		      pha
+    399  1291		       b9 33 13 	      lda	vBass,y
+    400  1294		       a8		      tay
+    401  1295		       68		      pla
+    402  1296		       c0 00		      cpy	#0
+    403  1298		       f0 03		      beq	PutMidiNote
+    404  129a		       38		      sec
+    405  129b		       e9 0c		      sbc	#12
+    406  129d							; MIDI note A at column X: name + octave (C4 = 60)
+    407  129d				   PutMidiNote
+    408  129d		       a0 00		      ldy	#0
+    409  129f				   .o
+    410  129f		       c9 0c		      cmp	#12
+    411  12a1		       90 05		      bcc	.name
+    412  12a3		       e9 0c		      sbc	#12
+    413  12a5		       c8		      iny
+    414  12a6		       d0 f7		      bne	.o
+    415  12a8				   .name
+    416  12a8		       84 26		      sty	t1	; octave + 1
+    417  12aa		       0a		      asl
+    418  12ab		       48		      pha
+    419  12ac		       a8		      tay
+    420  12ad		       b9 ac 13 	      lda	noteNames,y
+    421  12b0		       20 c9 0f 	      jsr	PutChar	; (uses Y)
+    422  12b3		       e8		      inx
+    423  12b4		       68		      pla
+    424  12b5		       a8		      tay
+    425  12b6		       b9 ad 13 	      lda	noteNames+1,y
+    426  12b9		       20 c9 0f 	      jsr	PutChar
+    427  12bc		       e8		      inx
+    428  12bd		       a5 26		      lda	t1
+    429  12bf		       38		      sec
+    430  12c0		       e9 01		      sbc	#1
+    431  12c2		       18		      clc
+    432  12c3		       69 30		      adc	#'0
+    433  12c5		       20 c9 0f 	      jsr	PutChar
+    434  12c8		       e8		      inx
+    435  12c9		       a9 20		      lda	#32
+    436  12cb		       4c c9 0f 	      jmp	PutChar
+------- FILE main.asm
+------- FILE data.asm LEVEL 2 PASS 2
+      0  12ce					      include	"data.asm"
+      1  12ce							; Fat Chip 64 - tables and text
+      2  12ce
+      3  12ce							; keyboard: column select values (CIA1 port A, one bit low)
+      4  12ce		       fe fd fb f7*colSelect  .byte.b	$FE,$FD,$FB,$F7,$EF,$DF,$BF,$7F
+      5  12d6		       01 02 04 08*rowBit     .byte.b	$01,$02,$04,$08,$10,$20,$40,$80
+      6  12de
+      7  12de							; key code for each matrix position, index = column*8 + row.
+      8  12de							; 0-22 = Incredible Musical Keyboard overlay notes (C..A# two octaves; the
+      9  12de							; top B is RESTORE, which isn't in the matrix: see notes/keyboard-overlay.md)
+     10  12de		       00 ff	   N_	      equ	K_NONE
+     11  12de				   keymap
+     12  12de							; col 0: INST/DEL RETURN CRSR-R F7 F1 F3 F5 CRSR-D
+     13  12de		       87 8b 86 84*	      .byte.b	K_INSTDEL,K_RETURN,K_CRSR_RIGHT,K_F7,K_F1,K_F3,K_F5,K_CRSR_DOWN
+     14  12e6							; col 1: 3 W A 4 Z S E LSHIFT
+     15  12e6		       03 02 ff ff*	      .byte.b	3,2,N_,N_,N_,N_,4,K_LSHIFT
+     16  12ee							; col 2: 5 R D 6 C F T X
+     17  12ee		       06 05 ff 08*	      .byte.b	6,5,N_,8,N_,N_,7,N_
+     18  12f6							; col 3: 7 Y G 8 B H U V
+     19  12f6		       0a 09 ff ff*	      .byte.b	10,9,N_,N_,N_,N_,11,N_
+     20  12fe							; col 4: 9 I J 0 M K O N
+     21  12fe		       0d 0c ff 0f*	      .byte.b	13,12,N_,15,N_,N_,14,N_
+     22  1306							; col 5: + P L - . : @ ,
+     23  1306		       ff 10 ff 12*	      .byte.b	N_,16,N_,18,N_,N_,17,N_
+     24  130e							; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
+     25  130e		       14 13 ff 16*	      .byte.b	20,19,N_,22,K_RSHIFT,N_,21,N_
+     26  1316							; col 7: 1 <- CTRL 2 SPACE C= Q RUN/STOP
+     27  1316		       ff ff 8c 01*	      .byte.b	N_,N_,K_CTRL,1,K_SPACE,N_,0,N_
+     28  131e
+     29  131e							; SID voice register offsets
+     30  131e		       00 07 0e    sidOfs     .byte.b	0,7,14
+     31  1321
+     32  1321							; voice pool (see voices.asm)
+     33  1321		       00 01 02 00*vDev       .byte.b	DEV_SID,DEV_GB,DEV_NES, DEV_SID,DEV_GB,DEV_NES, DEV_SID,DEV_GB,DEV_NES
+     34  132a		       00 00 00 01*vIdx       .byte.b	0,0,0, 1,1,1, 2,2,2	; SID voice / channel offset from the base
+     35  1333		       00 00 00 00*vBass      .byte.b	0,0,0, 0,0,0, 0,1,1	; GB wave and NES triangle: bass, octave down
+     36  133c		       4e 54 5f 6b*vNameLo    .byte.b	<vn0,<vn1,<vn2,<vn3,<vn4,<vn5,<vn6,<vn7,<vn8
+     37  1345		       13 13 13 13*vNameHi    .byte.b	>vn0,>vn1,>vn2,>vn3,>vn4,>vn5,>vn6,>vn7,>vn8
+     38  134e		       53 49 44 20*vn0	      .byte.b	"SID 1",0
+     39  1354		       47 42 20 50*vn1	      .byte.b	"GB PULSE 1",0
+     40  135f		       4e 45 53 20*vn2	      .byte.b	"NES PULSE 1",0
+     41  136b		       53 49 44 20*vn3	      .byte.b	"SID 2",0
+     42  1371		       47 42 20 50*vn4	      .byte.b	"GB PULSE 2",0
+     43  137c		       4e 45 53 20*vn5	      .byte.b	"NES PULSE 2",0
+     44  1388		       53 49 44 20*vn6	      .byte.b	"SID 3",0
+     45  138e		       47 42 20 57*vn7	      .byte.b	"GB WAVE (BASS)",0
+     46  139d		       4e 45 53 20*vn8	      .byte.b	"NES TRI (BASS)",0
+     47  13ac
+     48  13ac		       43 20 43 23*noteNames  .byte.b	"C C#D D#E F F#G G#A A#B "
+     49  13c4
+     50  13c4		       20 46 41 54*txtHeader  .byte.b	" FAT CHIP 64			     V0.1 ",0
+     51  13ed		       44 45 56 49*txtDevices .byte.b	"DEVICES",0
+     52  13f5		       46 31 20 53*txtSid     .byte.b	"F1 SID",0
+     53  13fc		       46 33 20 47*txtGb      .byte.b	"F3 GAME BOY",0
+     54  1408		       46 35 20 4d*txtNes     .byte.b	"F5 MIDINES",0
+     55  1413		       4f 4e 20 00 txtOn      .byte.b	"ON ",0
+     56  1417		       4f 46 46 00 txtOff     .byte.b	"OFF",0
+     57  141b		       46 37 20 50*txtPanic   .byte.b	"F7 PANIC   SHIFT+F3/F5: NEXT CHANNELS",0
+     58  1441		       21 21 20 47*txtOverlap .byte.b	"!! GAME BOY AND NES CHANNELS OVERLAP !!",0
+     59  1469		       20 20 20 20*txtBlank   .byte.b	"					 ",0
+     60  1491		       56 4f 49 43*txtVoices  .byte.b	"VOICES",0
+     61  1498		       48 45 4c 44*txtHeld    .byte.b	"HELD					 ",0
+     62  14c0		       52 45 53 54*txtRestore .byte.b	"RESTORE: RE-SYNC   TWICE: SCREEN OFF/ON",0
+     63  14e8		       4d 49 44 49*txtSent    .byte.b	"MIDI OUT:	  MESSAGES",0
+     64  1501		       4d 4f 44 45*txtMode    .byte.b	"MODE: POLY SYNTH (SMART STACKING)",0
+------- FILE main.asm
+------- FILE tables.asm LEVEL 2 PASS 2
+      0  1523					      include	"tables.asm"
+      1  1523							; generated by tools/gen_tables.py - do not edit
+      2  1523							; SID frequency registers for MIDI notes 0-127 (NTSC clock)
+      3  1523				   sidFreqLo
+      4  1523		       86 8e 97 9f*	      .byte.b	$86,$8E,$97,$9F,$A9,$B3,$BE,$C9,$D5,$E2,$EF,$FD,$0C,$1C,$2D,$3F
+      5  1533		       52 66 7b 92*	      .byte.b	$52,$66,$7B,$92,$AA,$C3,$DE,$FA,$18,$38,$5A,$7E,$A4,$CC,$F7,$24
+      6  1543		       54 86 bc f5*	      .byte.b	$54,$86,$BC,$F5,$31,$71,$B4,$FC,$48,$98,$ED,$48,$A7,$0C,$78,$E9
+      7  1553		       62 e2 69 f8*	      .byte.b	$62,$E2,$69,$F8,$90,$30,$DB,$8F,$4E,$19,$F0,$D3,$C4,$C3,$D1,$F0
+      8  1563		       1f 61 b6 1e*	      .byte.b	$1F,$61,$B6,$1E,$9D,$32,$DF,$A6,$88,$86,$A3,$E0,$3F,$C2,$6B,$3D
+      9  1573		       3a 64 be 4c*	      .byte.b	$3A,$64,$BE,$4C,$0F,$0C,$46,$BF,$7D,$84,$D6,$7A,$73,$C8,$7D,$97
+     10  1583		       1e 18 8b 7f*	      .byte.b	$1E,$18,$8B,$7F,$FB,$07,$AC,$F4,$E7,$8F,$F9,$2F,$FF,$FF,$FF,$FF
+     11  1593		       ff ff ff ff*	      .byte.b	$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+     12  15a3				   sidFreqHi
+     13  15a3		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$01,$01,$01,$01
+     14  15b3		       01 01 01 01*	      .byte.b	$01,$01,$01,$01,$01,$01,$01,$01,$02,$02,$02,$02,$02,$02,$02,$03
+     15  15c3		       03 03 03 03*	      .byte.b	$03,$03,$03,$03,$04,$04,$04,$04,$05,$05,$05,$06,$06,$07,$07,$07
+     16  15d3		       08 08 09 09*	      .byte.b	$08,$08,$09,$09,$0A,$0B,$0B,$0C,$0D,$0E,$0E,$0F,$10,$11,$12,$13
+     17  15e3		       15 16 17 19*	      .byte.b	$15,$16,$17,$19,$1A,$1C,$1D,$1F,$21,$23,$25,$27,$2A,$2C,$2F,$32
+     18  15f3		       35 38 3b 3f*	      .byte.b	$35,$38,$3B,$3F,$43,$47,$4B,$4F,$54,$59,$5E,$64,$6A,$70,$77,$7E
+     19  1603		       86 8e 96 9f*	      .byte.b	$86,$8E,$96,$9F,$A8,$B3,$BD,$C8,$D4,$E1,$EE,$FD,$FF,$FF,$FF,$FF
+     20  1613		       ff ff ff ff*	      .byte.b	$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+------- FILE main.asm
