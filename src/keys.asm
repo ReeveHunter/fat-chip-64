@@ -71,8 +71,11 @@ KeyScan:
 	beq .pcn
 	lsr ksBits
 	bcc .pbn
+	lda ghostFilter
+	beq .accept             ; filter off (default): phantoms play
 	jsr Suspect
 	bcs .pbn                ; maybe a phantom: wait
+.accept:
 	ldx ksCol
 	ldy ksRow
 	lda rowBit,y
@@ -137,6 +140,7 @@ Suspect:
 ;   overlay        notes
 ;   =              latch: OFF -> HOLD -> BUILD -> OFF
 ;   N              new chord: latched notes go (keys still down stay)
+;   G              phantom-key filter on / off (off at start; for testing)
 ;   F1/F3/F5/F7    octave: C4 / C3 / C2 / C1 on the lowest key
 ;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
 ;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
@@ -186,6 +190,8 @@ KeyDown:
 	beq .latch
 	cmp #K_N
 	beq .newChord
+	cmp #K_G
+	beq .ghost
 	cmp #K_F1
 	bcc .x
 	cmp #K_F7+1
@@ -257,6 +263,14 @@ KeyDown:
 	lda #1
 	sta reallocFlag
 .x2:
+	rts
+
+.ghost:
+	lda ghostFilter
+	eor #1
+	sta ghostFilter
+	lda #1
+	sta screenDirty
 	rts
 
 ; lowest overlay key for F1 F3 F5 F7

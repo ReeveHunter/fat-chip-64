@@ -146,6 +146,7 @@ ScreenDrawAll:
 	PRINT 6, 0, txtPanic
 	PRINT 9, 0, txtVoices
 	PRINT 21, 0, txtOctave
+	PRINT 8, 0, txtGhost
 	PRINT 22, 0, txtRestore
 	PRINT 24, 0, txtMode
 	jsr ScrDevices
@@ -336,6 +337,13 @@ ScrBottom:
 	ldy #21
 	jsr PrintAt
 .rs:
+	lda ghostFilter
+	beq .ga
+	PRINT 8, 15, txtGFilter
+	jmp .gd
+.ga:
+	PRINT 8, 15, txtGAllow
+.gd:
 	; ---- RESTORE counters
 	ldy #22
 	ldx #0

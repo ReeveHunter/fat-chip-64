@@ -80,6 +80,7 @@ K_CTRL      equ $8C
 K_M         equ $8D
 K_EQUALS    equ $8E
 K_N         equ $8F
+K_G         equ $90
 LATCH_HOLD  equ 1
 LATCH_BUILD equ 2
 K_NONE      equ $FF
@@ -152,6 +153,7 @@ ksBits      ds 1               ; key scan state (KeyDown/KeyUp may call
 ksCol       ds 1               ;  routines that use t0-t3)
 ksRow       ds 1
 ksMask      ds 1
+ghostFilter ds 1               ; 1 = phantom keys filtered
 ctrlDown    ds 1
 octBase     ds 1               ; MIDI note of the lowest overlay key
 latch       ds 1               ; 0 off, 1 hold, 2 build

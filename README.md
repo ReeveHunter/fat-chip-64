@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.04:** phantom-key filter is optional (G), off at start.
+
 **v0.03:** Build latch, N new chord, phantom-key filter.
 
 **v0.02:** poly synth mode with smart stacking across all three chips, octaves,
@@ -40,6 +42,7 @@ lowest key (Q) starts at C3.
 | F1 / F3 / F5 / F7 | Octave: Q = C4 / C3 / C2 / C1 (held notes move with it) |
 | = | Latch: OFF → HOLD → BUILD → OFF. HOLD: notes keep sounding after you let go; a fresh press after letting go of everything starts a new chord. BUILD: every press adds a note, pressing a latched note takes it out |
 | N | New chord: latched notes go (keys still held stay) |
+| G | *Test for now:* phantom-key filter on / off (off at start, so phantoms play) |
 | M | Mute the SID (volume 0: kills the C64's hum; its voices keep their notes) |
 | SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent: SID volume 0, Game Boy panic, NES all notes off |
 | SHIFT + F7 | Panic: every voice off, latch off, devices set up again |
@@ -71,7 +74,7 @@ voices ±7 cents.
   slow to one message per 2 ms.
 - **Screen:** redrawn in 11 small steps, one per keyboard scan, so a redraw
   never holds up the keys (the longest step is about 8 ms).
-- **Phantom keys:** the C64 matrix has no diodes, so three held keys on the
+- **Phantom keys** (filter on with G): the C64 matrix has no diodes, so three held keys on the
   corners of a rectangle make the fourth read as held. A new key that is the
   corner of such a rectangle waits until it breaks (a real fourth key and a
   ghost look the same). Unused keys are ignored, so a ghost on one costs
