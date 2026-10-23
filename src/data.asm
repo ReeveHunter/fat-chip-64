@@ -16,7 +16,7 @@ keymap:
 	; col 2: 5 R D 6 C F T X
 	.byte 6,5,N_,8,N_,N_,7,N_
 	; col 3: 7 Y G 8 B H U V
-	.byte 10,9,N_,N_,N_,N_,11,N_
+	.byte 10,9,K_G,N_,N_,N_,11,N_
 	; col 4: 9 I J 0 M K O N
 	.byte 13,12,N_,15,K_M,N_,14,K_N
 	; col 5: + P L - . : @ ,
@@ -47,7 +47,7 @@ vn8:        .byte "NES TRI (BASS)",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.03 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.04 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -64,6 +64,9 @@ txtHeld:    .byte "HELD                                   ",0
 txtOctave:  .byte "F1-F7 OCTAVE       = LATCH       N NEW",0
 txtLatchLo: .byte <txtLOff,<txtLHold,<txtLBuild
 txtLatchHi: .byte >txtLOff,>txtLHold,>txtLBuild
+txtGhost:   .byte "G PHANTOM KEYS",0
+txtGAllow:  .byte "PLAY    ",0
+txtGFilter: .byte "FILTERED",0
 txtLOff:    .byte "OFF  ",0
 txtLHold:   .byte "HOLD ",0
 txtLBuild:  .byte "BUILD",0
