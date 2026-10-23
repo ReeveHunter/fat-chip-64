@@ -18,11 +18,11 @@ keymap:
 	; col 3: 7 Y G 8 B H U V
 	.byte 10,9,N_,N_,N_,N_,11,N_
 	; col 4: 9 I J 0 M K O N
-	.byte 13,12,N_,15,N_,N_,14,N_
+	.byte 13,12,N_,15,K_M,N_,14,N_
 	; col 5: + P L - . : @ ,
 	.byte N_,16,N_,18,N_,N_,17,N_
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
-	.byte 20,19,N_,22,K_RSHIFT,N_,21,N_
+	.byte 20,19,N_,22,K_RSHIFT,K_EQUALS,21,N_
 	; col 7: 1 <- CTRL 2 SPACE C= Q RUN/STOP
 	.byte N_,N_,K_CTRL,1,K_SPACE,N_,0,N_
 
@@ -47,18 +47,21 @@ vn8:        .byte "NES TRI (BASS)",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                       V0.1 ",0
-txtDevices: .byte "DEVICES",0
-txtSid:     .byte "F1 SID",0
-txtGb:      .byte "F3 GAME BOY",0
-txtNes:     .byte "F5 MIDINES",0
+txtHeader:  .byte " FAT CHIP 64                      V0.02 ",0
+txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
+txtSid:     .byte "SID",0
+txtGb:      .byte "GAME BOY",0
+txtNes:     .byte "MIDINES",0
 txtOn:      .byte "ON ",0
 txtOff:     .byte "OFF",0
-txtPanic:   .byte "F7 PANIC   SHIFT+F3/F5: NEXT CHANNELS",0
+txtMuted:   .byte "MUTED (M)",0
+txtBlank9:  .byte "         ",0
+txtPanic:   .byte "SHIFT+F7 PANIC   CTRL+F3/F5 CHANNELS",0
 txtOverlap: .byte "!! GAME BOY AND NES CHANNELS OVERLAP !!",0
 txtBlank:   .byte "                                       ",0
 txtVoices:  .byte "VOICES",0
 txtHeld:    .byte "HELD                                   ",0
-txtRestore: .byte "RESTORE: RE-SYNC   TWICE: SCREEN OFF/ON",0
+txtOctave:  .byte "F1-F7 OCTAVE        = LATCH",0
+txtRestore: .byte "RESTORE  1 TAP        2 TAPS",0
 txtSent:    .byte "MIDI OUT:       MESSAGES",0
 txtMode:    .byte "MODE: POLY SYNTH (SMART STACKING)",0

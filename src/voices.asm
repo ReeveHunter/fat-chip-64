@@ -20,8 +20,7 @@ SidInit:
 	sta SID,x
 	dex
 	bpl .clr
-	lda #$0F                ; volume 15, no filter
-	sta SID_VOL
+	jsr SidVolume
 	ldx #2
 .v:
 	ldy sidOfs,x
@@ -36,6 +35,21 @@ SidInit:
 	sta SID+4,y
 	dex
 	bpl .v
+	rts
+
+; Volume 15, or 0 (silent, no hum) when the SID is off or muted (M).
+SidVolume:
+	subroutine
+	lda devOn+DEV_SID
+	beq .z
+	lda sidMute
+	bne .off
+	lda #$0F
+	.byte $2C               ; skip the next instruction (bit abs)
+.off:
+	lda #0
+.z:
+	sta SID_VOL
 	rts
 
 ; Gate SID voices back on one scan after a retrigger.
@@ -76,6 +90,8 @@ Allocate:
 	cpy #8
 	bcs .hn
 	txa
+	clc
+	adc octBase
 	sta heldList,y
 	iny
 .hn:
@@ -187,9 +203,14 @@ ApplyVoices:
 	stx t0
 	lda #0
 	sta t3                  ; retrigger?
-	ldy vWant,x
-	cpy #NO_NOTE
+	lda vWant,x
+	cmp #NO_NOTE
 	beq .cmp
+	sec                     ; pressed just now? (key index = note - octave)
+	sbc octBase
+	cmp #24
+	bcs .cmp
+	tay
 	lda notePressed,y
 	sta t3
 .cmp:
@@ -277,8 +298,6 @@ VoiceSet:
 	sta SID+4,x
 	rts
 .sidOn:
-	clc
-	adc #BASE_NOTE
 	tax
 	lda sidFreqLo,x
 	sta ptr
@@ -335,12 +354,10 @@ VoiceSet:
 .legato:
 	rts
 
-; A = note index for voice t0 -> MIDI note (bass voices an octave down)
+; A = MIDI note for voice t0 -> note to send (bass voices an octave down)
 MidiNoteValue:
 	subroutine
 	ldx t0
-	clc
-	adc #BASE_NOTE
 	ldy vBass,x
 	beq .x
 	sec
@@ -366,15 +383,32 @@ ToggleDevice:
 	lda devOn,x
 	eor #1
 	sta devOn,x
-	beq .off
+	bne .on
+	; switched off: its voices get note-offs when the voices move; also
+	; silence it outright
+	cpx #DEV_GB
+	bne .o1
+	lda #GCC_PANIC
+	ldx #0
+	jsr GbGlobal
+	jsr GbAllOff
+	jmp .off
+.o1:
+	cpx #DEV_NES
+	bne .off
+	jsr NesAllOff
+	jmp .off
+.on:
 	cpx #DEV_GB
 	bne .n1
 	jsr GbStartup
+	jmp .off                ; (GbStartup doesn't keep X)
 .n1:
 	cpx #DEV_NES
 	bne .off
 	jsr NesStartup
 .off:
+	jsr SidVolume
 	lda #1
 	sta reallocFlag         ; voices move to or away from it
 	sta screenDirty
@@ -427,11 +461,13 @@ NextNesChannel:
 	sta screenDirty
 	rts
 
-; F7: everything off, held keys forgotten, devices set up again.
+; SHIFT+F7: everything off, held and latched notes forgotten, latch off,
+; devices set up again.
 Panic:
 	subroutine
 	ldx #23
 	lda #0
+	sta latch
 .k:
 	sta noteHeld,x
 	sta notePressed,x
@@ -449,29 +485,15 @@ Panic:
 	sta SID+4,y
 	dex
 	bpl .s
-	; MidiNES: all notes off (CC 123) on its five channels
 	lda devOn+DEV_NES
 	beq .gb
-	lda #123
-	sta mD1
-	lda #0
-	sta mD2
-	ldy #0
-.n:
-	tya
-	clc
-	adc nesBase
-	and #15
-	ora #$B0
-	sta mS
-	sty t1
-	jsr NesPut
-	ldy t1
-	iny
-	cpy #5
-	bne .n
+	jsr NesAllOff
 .gb:
+	lda devOn+DEV_GB
+	beq .nes
+	jsr GbAllOff            ; per channel, in case a global CC goes astray
 	jsr GbStartup           ; includes the Game Boy's panic CC
+.nes:
 	jsr NesStartup
 	lda #1
 	sta screenDirty

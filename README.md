@@ -6,8 +6,13 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
-**v0.1 (first playable skeleton):** poly synth mode with smart stacking across
-all three chips, device on/off and channels, panic, RESTORE as a command key.
+**v0.02:** poly synth mode with smart stacking across all three chips, octaves,
+latch, SID mute, device on/off and channels, panic, RESTORE test functions.
+Versions count in hundredths (v0.01 was the first skeleton, called v0.1 then).
+
+v0.02 fixes the hung Game Boy notes: after about 33 s without MIDI, v0.1's
+message queues froze for another 33 s, filled up and dropped messages
+(note-offs and panic included).
 
 ## Setup
 
@@ -15,25 +20,29 @@ all three chips, device on/off and channels, panic, RESTORE as a command key.
    **MIDI emulation = DATEL / Siel / JMS** (same as Cynthcart).
 2. **Wire** Kerberos MIDI OUT → a MIDI thru/splitter → the Game Boy's MIDI
    adapter and the MidiNES.
-3. **Game Boy:** Fat Chip GB v0.6 or newer, voices on channels **1–5** (its
+3. **Game Boy:** Fat Chip GB v0.07 or newer, voices on channels **1–5** (its
    default). Fat Chip 64 switches it to the FAT CHIP profile (header shows FC).
 4. **NES:** MidiNES on channels **6–10** (D-pad on the NES to shift its block).
    Mode 1 (graphics off) sounds best.
-   Different channels? SHIFT+F3 / SHIFT+F5 on the C64 move the Game Boy / NES
+   Different channels? CTRL+F3 / CTRL+F5 on the C64 move the Game Boy / NES
    block to match. Fat Chip 64 warns if the two blocks overlap.
 
 ## Playing
 
-The Incredible Musical Keyboard overlay plays two octaves from C3 (Q) up.
+The Incredible Musical Keyboard overlay plays two octaves (C to A#); the
+lowest key (Q) starts at C3.
 
 | Key | Does |
 |---|---|
 | Overlay keys | Play notes (poly synth, smart stacking) |
-| F1 / F3 / F5 | SID / Game Boy / NES on or off |
-| SHIFT + F3 / F5 | Game Boy / NES to the next block of channels (1–5, 2–6 … 12–16) |
-| F7 | Panic: every voice off, devices set up again |
-| RESTORE (the overlay's top B) | Downbeat re-sync (border blinks; Game Boy CC 109) |
-| RESTORE twice quickly | Screen off / on (the Game Boy follows: CC 112) |
+| F1 / F3 / F5 / F7 | Octave: Q = C4 / C3 / C2 / C1 (held notes move with it) |
+| = | Latch on / off. On: notes keep sounding after you let go; a fresh press after letting go of everything starts a new chord |
+| M | Mute the SID (volume 0: kills the C64's hum; its voices keep their notes) |
+| SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent: SID volume 0, Game Boy panic, NES all notes off |
+| SHIFT + F7 | Panic: every voice off, latch off, devices set up again |
+| CTRL + F3 / F5 | Game Boy / NES to the next block of channels (1–5, 2–6 … 12–16) |
+| RESTORE (the overlay's top B) | *Test for now:* white border blink, "1 TAP" count, downbeat re-sync (the Game Boy's header blinks the beat) |
+| RESTORE twice quickly | *Test for now:* red border blink, "2 TAPS" count, Game Boy screen off / on (CC 112) |
 
 **Smart stacking:** nine voices (3 SID, Game Boy pulse 1, pulse 2, wave, NES
 pulse 1, pulse 2, triangle). The Game Boy wave and NES triangle play the
@@ -51,10 +60,18 @@ voices ±7 cents.
   one per 3 ms (Reeve's Teensyboy Pro drops messages faster than one per 2 ms)
   and only onto an empty wire, so the gap holds on the cable (≥ 2.5 ms worst
   case). MidiNES messages: one per ms. Running status.
+- **The Teensyboy:** in mGB mode it forwards channels 1–15 to the Game Boy, the
+  NES's too, at about 0.5 ms per byte with a 64-byte buffer (from its
+  Arduinoboy firmware; `test/teensy.py` models it and matches the link test).
+  While the Game Boy is on, Fat Chip 64 estimates the bytes waiting in it and
+  holds messages back past 45, so bursts go straight out and long streams
+  slow to one message per 2 ms.
+- **Screen:** redrawn in 11 small steps, one per keyboard scan, so a redraw
+  never holds up the keys (the longest step is about 8 ms).
 - **Keyboard:** full matrix scan every 4 ms; RESTORE is the NMI (presses only;
   40 ms debounce; the single action is immediate so re-sync lands on the beat).
 - **Memory:** program at $0801 (BASIC and KERNAL banked out, own IRQ/NMI
-  vectors), buffers and state at $C000–$C2FF, zero page $10–$2F.
+  vectors), buffers and state at $C000–$C3FF, zero page $10–$2F.
 
 | File | What |
 |---|---|
@@ -65,8 +82,9 @@ voices ±7 cents.
 | `src/screen.asm`, `src/data.asm` | screen, key map, voice table, text |
 | `tools/gen_tables.py` | SID frequency table (NTSC) |
 | `test/sim.py` | py65 C64 model: 1/3 ms timer IRQ, keyboard matrix, RESTORE NMI, MC6850 with real byte timing |
-| `test/test_main.py` | startup, pacing, stacking, devices, panic, RESTORE |
-| `test/test_with_gb.py` | end to end: Fat Chip 64's bytes replayed into the Fat Chip GB ROM (PyBoy) |
+| `test/teensy.py` | Teensyboy model (mGB mode): channel filter, 64-byte buffer, ~0.5 ms per byte |
+| `test/test_main.py` | startup, pacing, stacking, devices, octaves, latch, mute, panic, RESTORE, long silence, link budget |
+| `test/test_with_gb.py` | end to end: Fat Chip 64 → Teensyboy model → the Fat Chip GB ROM (PyBoy) |
 
 ## Building and testing
 

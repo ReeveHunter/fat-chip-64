@@ -3,7 +3,8 @@
 ;  row 0   FAT CHIP 64 header
 ;  rows 2-7  devices (F1/F3/F5), channels, panic, overlap warning
 ;  rows 9-18 voice table: which chip voice plays which note
-;  row 20  held notes, row 22 RESTORE help, row 23 messages sent, row 24 mode
+;  row 20  held notes, row 21 octave + latch, row 22 RESTORE test counters,
+;  row 23 messages sent, row 24 mode
 
 ; Print the 0-terminated ASCII string at (ptr) to screen row Y, column X.
 ; Letters become screen codes; bit 7 of t2 reverses.
@@ -144,14 +145,55 @@ ScreenDrawAll:
 	PRINT 2, 0, txtDevices
 	PRINT 6, 0, txtPanic
 	PRINT 9, 0, txtVoices
+	PRINT 21, 0, txtOctave
 	PRINT 22, 0, txtRestore
 	PRINT 24, 0, txtMode
-	lda #1
+	jsr ScrDevices
+	ldx #0
+.v:
+	stx t3
+	jsr ScrVoiceRow
+	ldx t3
+	inx
+	cpx #NUM_VOICES
+	bne .v
+	jmp ScrBottom
+
+; Redraw in small steps, one per main loop pass (every 4 ms), so a redraw
+; never holds up the keyboard: stage 1 devices, 2-10 voice rows, 11 the rest.
+ScreenStep:
+	subroutine
+	lda scrStage
+	bne .run
+	lda screenDirty
+	beq .x
+	lda #0
 	sta screenDirty
-	jsr ScreenUpdate
+	lda #1
+	sta scrStage
+.run:
+	cmp #1
+	bne .rows
+	jsr ScrDevices
+	inc scrStage
+	rts
+.rows:
+	cmp #11
+	bcs .bottom
+	sec
+	sbc #2
+	tax
+	jsr ScrVoiceRow
+	inc scrStage
+	rts
+.bottom:
+	jsr ScrBottom
+	lda #0
+	sta scrStage
+.x:
 	rts
 
-ScreenUpdate:
+ScrDevices:
 	subroutine
 	lda #0
 	sta t2
@@ -160,6 +202,11 @@ ScreenUpdate:
 	ldx #DEV_SID
 	ldy #3
 	jsr OnOff
+	PRINT 3, 17, txtBlank9
+	lda sidMute
+	beq .nm
+	PRINT 3, 17, txtMuted
+.nm:
 	PRINT 4, 0, txtGb
 	ldx #DEV_GB
 	ldy #4
@@ -190,9 +237,11 @@ ScreenUpdate:
 	bcs .vt
 	PRINT 7, 0, txtOverlap
 .vt:
-	; ---- voice table
-	ldx #0
-.v:
+	rts
+
+; voice table row for voice X
+ScrVoiceRow:
+	subroutine
 	stx t3
 	txa
 	clc
@@ -247,10 +296,12 @@ ScreenUpdate:
 	sta (ptr),y
 	dey
 	bpl .cc
-	ldx t3
-	inx
-	cpx #NUM_VOICES
-	bne .v
+	rts
+
+ScrBottom:
+	subroutine
+	lda #0
+	sta t2
 	; ---- held notes
 	PRINT 20, 0, txtHeld
 	ldy #20
@@ -263,14 +314,58 @@ ScreenUpdate:
 	beq .hd
 	sty t3
 	lda heldList,y
-	clc
-	adc #BASE_NOTE
 	jsr PutMidiNote
 	inx
 	ldy t3
 	iny
 	bne .h
 .hd:
+	; ---- octave, latch
+	ldy #21
+	ldx #0
+	jsr ScreenAddr
+	ldx #13
+	lda octBase
+	jsr PutMidiNote
+	ldx #28
+	lda latch
+	beq .lo
+	lda #'O
+	jsr PutChar
+	inx
+	lda #'N
+	jsr PutChar
+	inx
+	lda #32
+	jsr PutChar
+	jmp .rs
+.lo:
+	lda #'O
+	jsr PutChar
+	inx
+	lda #'F
+	jsr PutChar
+	inx
+	jsr PutChar
+.rs:
+	; ---- RESTORE counters
+	ldy #22
+	ldx #0
+	jsr ScreenAddr
+	lda rsSingle
+	sta t0
+	lda #0
+	sta t1
+	ldx #15
+	jsr PutDec16
+	lda rsDouble
+	sta t0
+	lda #0
+	sta t1
+	ldx #29
+	jsr PutDec16
+	lda #0
+	sta t2                  ; (PutDec16 uses t2; PrintAt ORs it in)
 	; ---- messages sent
 	PRINT 23, 0, txtSent
 	ldy #23
@@ -389,8 +484,6 @@ PutNote:
 	inx
 	jmp PutChar
 .n:
-	clc
-	adc #BASE_NOTE
 	; bass voices sound an octave down
 	ldy t3
 	cpy #NUM_VOICES
