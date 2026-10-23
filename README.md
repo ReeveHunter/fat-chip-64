@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.05:** tap tempo and the arpeggiator (UNISON / SPARKLE, five patterns, synced or free speed).
+
 **v0.04:** phantom-key filter is optional (G), off at start.
 
 **v0.03:** Build latch, N new chord, phantom-key filter.
@@ -43,6 +45,11 @@ lowest key (Q) starts at C3.
 | = | Latch: OFF → HOLD → BUILD → OFF. HOLD: notes keep sounding after you let go; a fresh press after letting go of everything starts a new chord. BUILD: every press adds a note, pressing a latched note takes it out |
 | N | New chord: latched notes go (keys still held stay) |
 | G | *Test for now:* phantom-key filter on / off (off at start, so phantoms play) |
+| A | Arp: OFF → UNISON (all nine voices step together) → SPARKLE (two voices arpeggiate over the chord as a pad) |
+| S | Arp pattern: UP, DOWN, UPDOWN, RANDOM, PLAYED (the order you pressed or built the chord) |
+| D | Arp speed: 1/4, 1/8, 1/8T, 1/16, 1/32 of the tempo, or FREE |
+| H / J | FREE speed slower / faster (30–1000 ms per step); either one also picks FREE |
+| B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Shown as BPM; sent to the Game Boy (CC 107/108) |
 | M | Mute the SID (volume 0: kills the C64's hum; its voices keep their notes) |
 | SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent: SID volume 0, Game Boy panic, NES all notes off |
 | SHIFT + F7 | Panic: every voice off, latch off, devices set up again |
@@ -72,8 +79,15 @@ voices ±7 cents.
   While the Game Boy is on, Fat Chip 64 estimates the bytes waiting in it and
   holds messages back past 45, so bursts go straight out and long streams
   slow to one message per 2 ms.
-- **Screen:** redrawn in 11 small steps, one per keyboard scan, so a redraw
-  never holds up the keys (the longest step is about 8 ms).
+- **Arp:** steps are timed from the 1 ms clock and checked on every main-loop
+  pass; each step is exactly one step after the last, so it keeps tempo (a
+  step lands within a few ms). SPARKLE's arp voices: the Game Boy pulses
+  (panned hard left / right with CC 10, so the arp ping-pongs in stereo),
+  else the NES pulses, else SID 1 and 2. Each arp note rings until its
+  voice's next turn; the rest of the chips hold the chord. Fastest step 30 ms
+  (the Game Boy link's budget for a nine-voice unison).
+- **Screen:** redrawn in 15 small steps, one per keyboard scan, so a redraw
+  never holds up the keys or the arp (the longest step is about 5 ms).
 - **Phantom keys** (filter on with G): the C64 matrix has no diodes, so three held keys on the
   corners of a rectangle make the fourth read as held. A new key that is the
   corner of such a rectangle waits until it breaks (a real fourth key and a
@@ -97,6 +111,8 @@ voices ±7 cents.
 | `test/sim.py` | py65 C64 model: 1/3 ms timer IRQ, keyboard matrix, RESTORE NMI, MC6850 with real byte timing |
 | `test/teensy.py` | Teensyboy model (mGB mode): channel filter, 64-byte buffer, ~0.5 ms per byte |
 | `test/test_main.py` | startup, pacing, stacking, devices, octaves, latch, mute, panic, RESTORE, long silence, link budget |
+| `src/arp.asm` | tap tempo, arpeggiator |
+| `test/test_arp.py` | tap tempo, arp modes, patterns, speeds, sparkle panning |
 | `test/test_with_gb.py` | end to end: Fat Chip 64 → Teensyboy model → the Fat Chip GB ROM (PyBoy) |
 
 ## Building and testing

@@ -81,6 +81,20 @@ K_M         equ $8D
 K_EQUALS    equ $8E
 K_N         equ $8F
 K_G         equ $90
+K_A         equ $91
+K_S         equ $92
+K_D         equ $93
+K_H         equ $94
+K_J         equ $95
+K_B         equ $96
+ARP_UNISON  equ 1
+ARP_SPARKLE equ 2
+PAT_PLAYED  equ 4
+ARP_FREE    equ 5              ; arpLen: 0-4 = 1/4 1/8 1/8T 1/16 1/32, 5 = free
+FREE_STEPS  equ 16
+MIN_STEP    equ 30             ; ms: fastest arp step (Game Boy link budget)
+GCC_TEMPO_MSB equ 107
+GCC_TEMPO_LSB equ 108
 LATCH_HOLD  equ 1
 LATCH_BUILD equ 2
 K_NONE      equ $FF
@@ -154,6 +168,47 @@ ksCol       ds 1               ;  routines that use t0-t3)
 ksRow       ds 1
 ksMask      ds 1
 ghostFilter ds 1               ; 1 = phantom keys filtered
+scanned     ds 1
+decStarted  ds 1
+nowL        ds 1
+nowH        ds 1
+; tempo
+bpm         ds 1
+beatMs      ds 2
+tapLast     ds 2
+tapCount    ds 1               ; 1 = there was a previous tap
+tapN        ds 1               ; gaps in the ring (0-4)
+tapPos      ds 1
+tapRingLo   ds 4
+tapRingHi   ds 4
+dvdL        ds 1               ; Div16
+dvdH        ds 1
+dvsL        ds 1
+dvsH        ds 1
+remL        ds 1
+remH        ds 1
+; arp
+arpMode     ds 1               ; 0 off, 1 unison, 2 sparkle
+arpPat      ds 1               ; 0 up, 1 down, 2 up-down, 3 random, 4 as played
+arpLen      ds 1
+freeIdx     ds 1
+stepMs      ds 2
+arpNext     ds 2
+arpRunning  ds 1
+arpIdx      ds 1               ; $FF = start of the pattern
+arpDir      ds 1
+arpNote     ds 1
+arpStep     ds 1
+arpHit      ds 1               ; a step just happened: re-attack its voices
+rnd         ds 1
+playOrder   ds 8               ; key indexes in the order they were pressed
+playCount   ds 1
+pairA       ds 1               ; SPARKLE's two arp voices
+pairB       ds 1
+vSkip       ds NUM_VOICES
+vArpHit     ds NUM_VOICES
+allocList   ds 8
+allocCount  ds 1
 ctrlDown    ds 1
 octBase     ds 1               ; MIDI note of the lowest overlay key
 latch       ds 1               ; 0 off, 1 hold, 2 build

@@ -35,6 +35,8 @@ Loop:
 	subroutine
 	jsr TxService
 	; keyboard scan every SCAN_EVERY ms
+	lda #0
+	sta scanned
 	lda scanAt              ; due unless 1..SCAN_EVERY ms to go
 	sec
 	sbc ticks
@@ -46,9 +48,12 @@ Loop:
 	clc
 	adc #SCAN_EVERY
 	sta scanAt
+	inc scanned
 	jsr SidRetrig
 	jsr KeyScan
 	jsr RestoreCheck
+.noScan:
+	jsr ArpTick             ; every pass, so arp steps land on time
 	lda reallocFlag
 	beq .noAlloc
 	jsr Allocate
@@ -58,8 +63,10 @@ Loop:
 	lda #1
 	sta screenDirty
 .noAlloc:
+	lda scanned
+	beq .x
 	jsr ScreenStep
-.noScan:
+.x:
 	jmp Loop
 
 ;------------------------------------------------------------- init
@@ -134,6 +141,19 @@ InitState:
 	sta nesBase
 	lda #OCT_DEFAULT
 	sta octBase
+	lda #120
+	sta bpm
+	lda #<500
+	sta beatMs
+	lda #>500
+	sta beatMs+1
+	lda #3                  ; 1/16
+	sta arpLen
+	lda #8                  ; 160 ms
+	sta freeIdx
+	lda #$FF
+	sta arpIdx
+	jsr StepCalc
 	; keyUsed: per column, the rows whose keys do something
 	ldy #63
 .ku:
@@ -217,6 +237,7 @@ Nmi:
 	include "midi.asm"
 	include "keys.asm"
 	include "voices.asm"
+	include "arp.asm"
 	include "screen.asm"
 	include "data.asm"
 	include "tables.asm"

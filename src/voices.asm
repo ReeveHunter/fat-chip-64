@@ -79,9 +79,9 @@ SidRetrig:
 	rts
 
 ; ------------------------------------------------------------ allocation
-Allocate:
+; held notes (MIDI notes, ascending, at most 8) -> heldList / heldCount
+BuildHeld:
 	subroutine
-	; held notes, ascending, at most 8
 	ldx #0
 	ldy #0
 .h:
@@ -99,6 +99,32 @@ Allocate:
 	cpx #24
 	bne .h
 	sty heldCount
+	rts
+
+Allocate:
+	subroutine
+	jsr BuildHeld
+	; what the stacker spreads: the chord, or in UNISON arp just the arp note
+	ldy heldCount
+	sty allocCount
+.cp:
+	dey
+	bmi .cpd
+	lda heldList,y
+	sta allocList,y
+	jmp .cp
+.cpd:
+	lda arpMode
+	cmp #ARP_UNISON
+	bne .w0
+	lda heldCount
+	beq .w0
+	lda arpNote
+	sta allocList
+	lda #1
+	sta allocCount
+.w0:
+	jsr ArpPairSet          ; SPARKLE: keep the arp pair out of the pad
 	; nothing wanted yet
 	ldx #NUM_VOICES-1
 	lda #NO_NOTE
@@ -106,9 +132,9 @@ Allocate:
 	sta vWant,x
 	dex
 	bpl .w
-	lda heldCount
+	lda allocCount
 	bne .go
-	rts
+	jmp ArpPairNotes
 .go:
 	ldx #7
 	lda #0
@@ -123,7 +149,7 @@ Allocate:
 	beq .p1n
 	lda vBass,x
 	beq .p1n
-	lda heldList
+	lda allocList
 	sta vWant,x
 	lda #1
 	sta covered
@@ -140,7 +166,7 @@ Allocate:
 	bne .p2n
 	ldy #0
 .find:
-	cpy heldCount
+	cpy allocCount
 	beq .p2n                ; all covered
 	lda covered,y
 	beq .take
@@ -149,14 +175,14 @@ Allocate:
 .take:
 	lda #1
 	sta covered,y
-	lda heldList,y
+	lda allocList,y
 	sta vWant,x
 .p2n:
 	inx
 	cpx #NUM_VOICES
 	bne .p2
 	; 3. leftovers stack on the lowest two notes
-	lda heldCount
+	lda allocCount
 	cmp #2
 	bcc .one
 	lda #2
@@ -172,7 +198,7 @@ Allocate:
 	cmp #NO_NOTE
 	bne .p3n
 	ldy t2
-	lda heldList,y
+	lda allocList,y
 	sta vWant,x
 	iny
 	cpy t1
@@ -184,13 +210,95 @@ Allocate:
 	inx
 	cpx #NUM_VOICES
 	bne .p3
+	jmp ArpPairNotes
+
+; SPARKLE's two arp voices: Game Boy pulses, else NES pulses, else SID 1+2.
+; vSkip keeps them out of the pad.
+ArpPairSet:
+	subroutine
+	ldx #NUM_VOICES-1
+	lda #0
+.c:
+	sta vSkip,x
+	dex
+	bpl .c
+	lda arpMode
+	cmp #ARP_SPARKLE
+	bne .x
+	ldx #1                  ; GB pulse 1 / 2 = v1 / v4
+	lda devOn+DEV_GB
+	bne .set
+	ldx #2                  ; NES pulse 1 / 2 = v2 / v5
+	lda devOn+DEV_NES
+	bne .set
+	ldx #0                  ; SID 1 / 2 = v0 / v3
+.set:
+	stx pairA
+	lda #1
+	sta vSkip,x
+	inx
+	inx
+	inx
+	stx pairB
+	sta vSkip,x
+.x:
+	rts
+
+; SPARKLE: this step's voice plays the arp note, the other keeps ringing.
+; Each arp step re-attacks the voices that play it (arpHit).
+ArpPairNotes:
+	subroutine
+	ldx #NUM_VOICES-1
+	lda #0
+.c:
+	sta vArpHit,x
+	dex
+	bpl .c
+	lda arpMode
+	beq .x
+	lda heldCount
+	beq .x
+	lda arpMode
+	cmp #ARP_UNISON
+	bne .sparkle
+	lda arpHit
+	beq .x
+	ldx #NUM_VOICES-1       ; unison: every voice re-attacks each step
+	lda #1
+.u:
+	sta vArpHit,x
+	dex
+	bpl .u
+	rts
+.sparkle:
+	ldx pairA
+	ldy pairB
+	lda arpStep
+	and #1
+	beq .ab
+	ldx pairB
+	ldy pairA
+.ab:
+	; X = this step's voice, Y = the other
+	lda arpNote
+	sta vWant,x
+	lda arpHit
+	sta vArpHit,x
+	lda vNote,y
+	sta vWant,y             ; keeps ringing
+.x:
 	rts
 
 ; Z clear if voice X's device is on. Keeps X.
 VoiceEnabled:
 	subroutine
+	lda vSkip,x
+	bne .no
 	ldy vDev,x
 	lda devOn,y
+	rts
+.no:
+	lda #0
 	rts
 
 ; ------------------------------------------------------------ apply
@@ -203,6 +311,9 @@ ApplyVoices:
 	stx t0
 	lda #0
 	sta t3                  ; retrigger?
+	lda vArpHit,x           ; an arp step re-attacks its voices
+	sta t3
+	bne .cmp
 	lda vWant,x
 	cmp #NO_NOTE
 	beq .cmp
@@ -229,9 +340,10 @@ ApplyVoices:
 	inx
 	cpx #NUM_VOICES
 	bne .v
-	; presses handled
-	ldx #23
+	; presses and the arp step handled
 	lda #0
+	sta arpHit
+	ldx #23
 .p:
 	sta notePressed,x
 	dex
@@ -468,6 +580,8 @@ Panic:
 	ldx #23
 	lda #0
 	sta latch
+	sta arpRunning
+	sta playCount
 .k:
 	sta noteHeld,x
 	sta notePressed,x

@@ -12,13 +12,13 @@ keymap:
 	; col 0: INST/DEL RETURN CRSR-R F7 F1 F3 F5 CRSR-D
 	.byte K_INSTDEL,K_RETURN,K_CRSR_RIGHT,K_F7,K_F1,K_F3,K_F5,K_CRSR_DOWN
 	; col 1: 3 W A 4 Z S E LSHIFT
-	.byte 3,2,N_,N_,N_,N_,4,K_LSHIFT
+	.byte 3,2,K_A,N_,N_,K_S,4,K_LSHIFT
 	; col 2: 5 R D 6 C F T X
-	.byte 6,5,N_,8,N_,N_,7,N_
+	.byte 6,5,K_D,8,N_,N_,7,N_
 	; col 3: 7 Y G 8 B H U V
-	.byte 10,9,K_G,N_,N_,N_,11,N_
+	.byte 10,9,K_G,N_,K_B,K_H,11,N_
 	; col 4: 9 I J 0 M K O N
-	.byte 13,12,N_,15,K_M,N_,14,K_N
+	.byte 13,12,K_J,15,K_M,N_,14,K_N
 	; col 5: + P L - . : @ ,
 	.byte N_,16,N_,18,N_,N_,17,N_
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
@@ -47,7 +47,7 @@ vn8:        .byte "NES TRI (BASS)",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.04 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.05 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -64,6 +64,33 @@ txtHeld:    .byte "HELD                                   ",0
 txtOctave:  .byte "F1-F7 OCTAVE       = LATCH       N NEW",0
 txtLatchLo: .byte <txtLOff,<txtLHold,<txtLBuild
 txtLatchHi: .byte >txtLOff,>txtLHold,>txtLBuild
+txtArp:     .byte "A ARP         S        D        B    BPM",0
+txtMs:      .byte "MS  ",0
+arpModeLo:  .byte <tAOff,<tAUni,<tASpk
+arpModeHi:  .byte >tAOff,>tAUni,>tASpk
+tAOff:      .byte "OFF    ",0
+tAUni:      .byte "UNISON ",0
+tASpk:      .byte "SPARKLE",0
+patTxtLo:   .byte <tPUp,<tPDn,<tPUd,<tPRn,<tPPl
+patTxtHi:   .byte >tPUp,>tPDn,>tPUd,>tPRn,>tPPl
+tPUp:       .byte "UP    ",0
+tPDn:       .byte "DOWN  ",0
+tPUd:       .byte "UPDOWN",0
+tPRn:       .byte "RANDOM",0
+tPPl:       .byte "PLAYED",0
+lenTxtLo:   .byte <tL4,<tL8,<tL8t,<tL16,<tL32
+lenTxtHi:   .byte >tL4,>tL8,>tL8t,>tL16,>tL32
+tL4:        .byte "1/4   ",0
+tL8:        .byte "1/8   ",0
+tL8t:       .byte "1/8T  ",0
+tL16:       .byte "1/16  ",0
+tL32:       .byte "1/32  ",0
+lenDiv:     .byte 1,2,3,4,8
+patLo:      .byte <PatUp,<PatDown,<PatUpDown,<PatRandom,<PatUp
+patHi:      .byte >PatUp,>PatDown,>PatUpDown,>PatRandom,>PatUp
+; FREE speeds (ms per step), H slower / J faster
+freeLo:     .byte <30,<40,<50,<60,<75,<90,<110,<135,<160,<200,<250,<300,<400,<500,<700,<1000
+freeHi:     .byte >30,>40,>50,>60,>75,>90,>110,>135,>160,>200,>250,>300,>400,>500,>700,>1000
 txtGhost:   .byte "G PHANTOM KEYS",0
 txtGAllow:  .byte "PLAY    ",0
 txtGFilter: .byte "FILTERED",0

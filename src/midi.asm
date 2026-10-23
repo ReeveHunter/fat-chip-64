@@ -329,6 +329,8 @@ GbStartup:
 	lda #GCC_DISPLAY
 	ldx videoMode
 	jsr GbGlobal
+	jsr SendTempo
+	jsr ArpPan
 .done:
 	rts
 
