@@ -134,6 +134,29 @@ InitState:
 	sta nesBase
 	lda #OCT_DEFAULT
 	sta octBase
+	; keyUsed: per column, the rows whose keys do something
+	ldy #63
+.ku:
+	lda keymap,y
+	cmp #K_NONE
+	beq .kn
+	tya
+	lsr
+	lsr
+	lsr
+	tax
+	tya
+	and #7
+	sta t0
+	sty t1
+	ldy t0
+	lda rowBit,y
+	ora keyUsed,x
+	sta keyUsed,x
+	ldy t1
+.kn:
+	dey
+	bpl .ku
 	lda #$FF
 	sta lastStatus
 	lda #$80                ; "long ago": the first RESTORE press is a single tap

@@ -79,6 +79,9 @@ K_RETURN    equ $8B
 K_CTRL      equ $8C
 K_M         equ $8D
 K_EQUALS    equ $8E
+K_N         equ $8F
+LATCH_HOLD  equ 1
+LATCH_BUILD equ 2
 K_NONE      equ $FF
 
 ; ------------------------------------------------------------ zero page
@@ -122,7 +125,8 @@ nesqS       ds 64
 nesqD1      ds 64
 nesqD2      ds 64
 keyNow      ds 8
-keyPrev     ds 8
+keyUsed     ds 8               ; keys with a job (the rest are ignored)
+keyAcc      ds 8               ; keys accepted (phantom filter)
 noteHeld    ds 24              ; 1 = note sounding (key held, or latched)
 physKey     ds 24              ; 1 = overlay key physically down
 physCount   ds 1
@@ -147,9 +151,10 @@ statSent    ds 2               ; messages sent (for the status line)
 ksBits      ds 1               ; key scan state (KeyDown/KeyUp may call
 ksCol       ds 1               ;  routines that use t0-t3)
 ksRow       ds 1
+ksMask      ds 1
 ctrlDown    ds 1
 octBase     ds 1               ; MIDI note of the lowest overlay key
-latch       ds 1
+latch       ds 1               ; 0 off, 1 hold, 2 build
 sidMute     ds 1
 rsSingle    ds 1               ; RESTORE test counters
 rsDouble    ds 1

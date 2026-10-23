@@ -1,6 +1,16 @@
 ; Fat Chip 64 - keyboard and RESTORE
 
 ; Scan the whole matrix, turn changes into key events.
+;
+; Phantom keys: the C64 keyboard has no diodes, so holding three keys on the
+; corners of a rectangle in the matrix makes the fourth corner read as held.
+; keyAcc holds the keys we've accepted. A newly down key is accepted only if
+; it isn't the corner of a rectangle of held keys; if it is, it could be a
+; phantom (the matrix can't tell a real fourth key from a ghost), so it waits
+; until the rectangle breaks. Keys Fat Chip doesn't use (most are under the
+; overlay) are left out: they're never really pressed, so a reading on one is
+; always a ghost. So Q 2 E plays all three (the ghost lands on 4), and only
+; chords whose ghost lands on another used key lose their newest note.
 KeyScan:
 	subroutine
 	ldx #7
@@ -9,25 +19,80 @@ KeyScan:
 	sta CIA1_PRA
 	lda CIA1_PRB
 	eor #$FF
+	and keyUsed,x           ; unused keys only ever read as ghosts
 	sta keyNow,x
 	dex
 	bpl .col
 	lda #$FF
 	sta CIA1_PRA
-	; edges
+	; ---- releases first: accepted keys that are up now
 	ldx #0
-.edges:
+.rc:
 	stx ksCol
 	lda keyNow,x
-	eor keyPrev,x
-	beq .nextCol
-	sta ksBits              ; changed bits
+	eor #$FF
+	and keyAcc,x
+	sta ksBits
 	lda #0
 	sta ksRow
-.bit:
+.rb:
+	lda ksBits
+	beq .rcn
 	lsr ksBits
-	bcc .nextBit
-	; key at column ksCol, row ksRow changed
+	bcc .rbn
+	ldx ksCol
+	ldy ksRow
+	lda rowBit,y
+	eor #$FF
+	and keyAcc,x
+	sta keyAcc,x
+	jsr KeyCode
+	jsr KeyUp
+.rbn:
+	inc ksRow
+	bne .rb
+.rcn:
+	ldx ksCol
+	inx
+	cpx #8
+	bne .rc
+	; ---- presses: down now, not accepted yet
+	ldx #0
+.pc:
+	stx ksCol
+	lda keyAcc,x
+	eor #$FF
+	and keyNow,x
+	sta ksBits
+	lda #0
+	sta ksRow
+.pb:
+	lda ksBits
+	beq .pcn
+	lsr ksBits
+	bcc .pbn
+	jsr Suspect
+	bcs .pbn                ; maybe a phantom: wait
+	ldx ksCol
+	ldy ksRow
+	lda rowBit,y
+	ora keyAcc,x
+	sta keyAcc,x
+	jsr KeyCode
+	jsr KeyDown
+.pbn:
+	inc ksRow
+	bne .pb
+.pcn:
+	ldx ksCol
+	inx
+	cpx #8
+	bne .pc
+	rts
+
+; A = key code at ksCol / ksRow
+KeyCode:
+	subroutine
 	lda ksCol
 	asl
 	asl
@@ -35,34 +100,43 @@ KeyScan:
 	ora ksRow
 	tay
 	lda keymap,y
-	pha                     ; key code
-	ldx ksCol
+	rts
+
+; Carry set if the key at ksCol / ksRow is the corner of a rectangle of held
+; keys: some other column has a key in this row and shares another row with
+; this column.
+Suspect:
+	subroutine
 	ldy ksRow
+	lda rowBit,y
+	eor #$FF
+	ldx ksCol
+	and keyNow,x
+	sta ksMask              ; this column's other held rows
+	beq .no
+	ldx #7
+.c:
+	cpx ksCol
+	beq .n
 	lda keyNow,x
 	and rowBit,y
-	beq .up
-	pla
-	jsr KeyDown
-	jmp .nextBit
-.up:
-	pla
-	jsr KeyUp
-.nextBit:
-	inc ksRow
-	lda ksRow
-	cmp #8
-	bne .bit
-.nextCol:
-	ldx ksCol
+	beq .n
 	lda keyNow,x
-	sta keyPrev,x
-	inx
-	cpx #8
-	bne .edges
+	and ksMask
+	beq .n
+	sec
+	rts
+.n:
+	dex
+	bpl .c
+.no:
+	clc
 	rts
 
 ; A = key code
-;   overlay        notes (latch: = )
+;   overlay        notes
+;   =              latch: OFF -> HOLD -> BUILD -> OFF
+;   N              new chord: latched notes go (keys still down stay)
 ;   F1/F3/F5/F7    octave: C4 / C3 / C2 / C1 on the lowest key
 ;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
 ;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
@@ -72,18 +146,32 @@ KeyDown:
 	cmp #24
 	bcs .cmd
 	tax
-	lda latch               ; latched: a fresh press after letting go of
-	beq .add                ; everything starts a new chord
+	lda #1
+	sta physKey,x
+	inc physCount
+	lda latch
+	cmp #LATCH_BUILD
+	beq .build
+	cmp #LATCH_HOLD         ; hold: a fresh press after letting go of
+	bne .add                ; everything starts a new chord
 	lda physCount
+	cmp #1
 	bne .add
 	jsr ClearNotes
 .add:
 	lda #1
-	sta physKey,x
 	sta noteHeld,x
 	sta notePressed,x
 	sta reallocFlag
-	inc physCount
+	rts
+.build:
+	; build: each press adds a note; pressing a latched note takes it out
+	lda #1
+	sta reallocFlag
+	lda noteHeld,x
+	beq .add
+	lda #0
+	sta noteHeld,x
 	rts
 .cmd:
 	cmp #K_LSHIFT
@@ -96,6 +184,8 @@ KeyDown:
 	beq .mute
 	cmp #K_EQUALS
 	beq .latch
+	cmp #K_N
+	beq .newChord
 	cmp #K_F1
 	bcc .x
 	cmp #K_F7+1
@@ -145,11 +235,19 @@ KeyDown:
 	sta screenDirty
 	rts
 .latch:
-	lda latch
-	eor #1
-	sta latch
-	bne .l1
+	ldx latch
+	inx
+	cpx #3
+	bcc .l1
+	ldx #0
+.l1:
+	stx latch
+	lda #1
+	sta screenDirty
+	txa
+	bne .x2
 	; latch off: only keys still down keep sounding
+.newChord:
 	ldx #23
 .l0:
 	lda physKey,x
@@ -158,9 +256,7 @@ KeyDown:
 	bpl .l0
 	lda #1
 	sta reallocFlag
-.l1:
-	lda #1
-	sta screenDirty
+.x2:
 	rts
 
 ; lowest overlay key for F1 F3 F5 F7
