@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.03:** Build latch, N new chord, phantom-key filter.
+
 **v0.02:** poly synth mode with smart stacking across all three chips, octaves,
 latch, SID mute, device on/off and channels, panic, RESTORE test functions.
 Versions count in hundredths (v0.01 was the first skeleton, called v0.1 then).
@@ -36,7 +38,8 @@ lowest key (Q) starts at C3.
 |---|---|
 | Overlay keys | Play notes (poly synth, smart stacking) |
 | F1 / F3 / F5 / F7 | Octave: Q = C4 / C3 / C2 / C1 (held notes move with it) |
-| = | Latch on / off. On: notes keep sounding after you let go; a fresh press after letting go of everything starts a new chord |
+| = | Latch: OFF → HOLD → BUILD → OFF. HOLD: notes keep sounding after you let go; a fresh press after letting go of everything starts a new chord. BUILD: every press adds a note, pressing a latched note takes it out |
+| N | New chord: latched notes go (keys still held stay) |
 | M | Mute the SID (volume 0: kills the C64's hum; its voices keep their notes) |
 | SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent: SID volume 0, Game Boy panic, NES all notes off |
 | SHIFT + F7 | Panic: every voice off, latch off, devices set up again |
@@ -68,6 +71,13 @@ voices ±7 cents.
   slow to one message per 2 ms.
 - **Screen:** redrawn in 11 small steps, one per keyboard scan, so a redraw
   never holds up the keys (the longest step is about 8 ms).
+- **Phantom keys:** the C64 matrix has no diodes, so three held keys on the
+  corners of a rectangle make the fourth read as held. A new key that is the
+  corner of such a rectangle waits until it breaks (a real fourth key and a
+  ghost look the same). Unused keys are ignored, so a ghost on one costs
+  nothing. On the overlay about 12% of 3-note and 36% of 4-note chords can
+  lose their newest note this way; BUILD latch never does (one key at a time).
+  `test/sim.py` ghosts like the real keyboard.
 - **Keyboard:** full matrix scan every 4 ms; RESTORE is the NMI (presses only;
   40 ms debounce; the single action is immediate so re-sync lands on the beat).
 - **Memory:** program at $0801 (BASIC and KERNAL banked out, own IRQ/NMI

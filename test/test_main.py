@@ -116,12 +116,12 @@ shifted("f1")
 check("SID off: volume 0 (no hum)", c.raw[0xD418] & 15 == 0 and "OFF" in c.screen_row(3))
 shifted("f1")
 check("SID on: volume back", c.raw[0xD418] & 15 == 15)
-c.tap("m", ms=20)
+c.tap("m", ms=30)
 check("M: SID muted", c.raw[0xD418] & 15 == 0 and "MUTED" in c.screen_row(3), c.screen_row(3))
 c.press("q", ms=60)
 check("muted SID still plays its voices (unmute is instant)", c.sid(0)[1] & 1)
 c.release("q", ms=40)
-c.tap("m", ms=20)
+c.tap("m", ms=30)
 check("M again: unmuted", c.raw[0xD418] & 15 == 15 and "MUTED" not in c.screen_row(3))
 
 shifted("f5", "ctrl")
@@ -161,7 +161,7 @@ c.tap("f3", ms=30)
 
 # ---------------------------------------------------------------- latch
 c.tap("=", ms=60)
-check("= : latch on screen", "ON" in c.screen_row(21)[25:], c.screen_row(21))
+check("= : latch HOLD on screen", "HOLD" in c.screen_row(21), c.screen_row(21))
 c.press("q", "t", ms=60)
 c.release("q", "t", ms=60)
 on = notes_on(c.midi())
@@ -174,12 +174,51 @@ c.press("q", ms=40); c.press("t", ms=40)
 c.release("q", "t", ms=40)
 on = notes_on(c.midi())
 check("latch: notes pressed together add up", {48, 55} <= set(on.values()), on)
-c.press("w", ms=60)                         # held while latch goes off
+c.tap("n", ms=40)
+check("N: new chord, latched notes gone", notes_on(c.midi()) == {}, notes_on(c.midi()))
+
 c.tap("=", ms=60)
+check("= again: latch BUILD on screen", "BUILD" in c.screen_row(21), c.screen_row(21))
+for k in ("q", "e", "t"):                   # one key at a time
+    c.tap(k, ms=40)
+on = notes_on(c.midi())
+check("build: chord built one key at a time", {48, 52, 55} <= set(on.values()), on)
+c.tap("e", ms=40)
+on = notes_on(c.midi())
+check("build: pressing a latched note takes it out", 52 not in on.values() and {48, 55} <= set(on.values()), on)
+c.tap("y", ms=40)
+check("build: and adding goes on", 57 in notes_on(c.midi()).values())
+c.tap("n", ms=40)
+check("build: N clears the chord", notes_on(c.midi()) == {})
+c.tap("q", ms=40)
+check("build: after N, the next key starts again", set(notes_on(c.midi()).values()) <= {48, 36})
+c.tap("n", ms=40)
+
+c.press("w", ms=60)                         # held while latch goes off
+c.tap("=", ms=60)                           # BUILD -> OFF
 on = notes_on(c.midi())
 check("latch off: only the key still down sounds", set(on.values()) <= {50, 38} and on, on)
 c.release("w", ms=60)
 check("latch off: release stops it", notes_on(c.midi()) == {})
+check("latch OFF on screen", "OFF" in c.screen_row(21)[25:], c.screen_row(21))
+
+# ---------------------------------------------------------------- phantom keys
+c.press("q", "2", ms=40)
+c.press("e", ms=60)                         # Q 2 E: the matrix also reads 4 as held
+on = notes_on(c.midi())
+check("Q 2 E: all three play (the ghost lands on 4, an unused key)", {48, 49, 52} <= set(on.values()), on)
+c.release("q", "2", "e", ms=60)
+check("no hung notes after a ghosting chord", notes_on(c.midi()) == {})
+c.press("q", "2", ms=40)
+c.press("t", ms=60)                         # ghost on 6, which is a note (F#)
+on = notes_on(c.midi())
+check("Q 2 T: the phantom F# (key 6) doesn't play", 54 not in on.values() and 42 not in on.values(), on)
+check("(T waits too: the matrix can't tell T from 6)", 55 not in on.values(), on)
+c.release("q", ms=60)                       # rectangle broken
+on = notes_on(c.midi())
+check("rectangle broken: T plays, the phantom never did", 55 in on.values() and 54 not in on.values(), on)
+c.release("2", "t", ms=60)
+check("all off", notes_on(c.midi()) == {})
 
 # ---------------------------------------------------------------- panic
 c.press("q", "w", ms=60)

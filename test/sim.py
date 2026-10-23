@@ -70,13 +70,26 @@ class C64:
         m = self.mem
 
         def rd_dc01(_):
-            sel = (~self.dc00) & 0xFF
-            r = 0xFF
-            for k in self.pressed:
-                c, rw = KEYS[k]
-                if sel & c:
-                    r &= ~rw
-            return r
+            # The real matrix has no diodes: current flows from a driven
+            # column through any chain of held keys, so three keys on the
+            # corners of a rectangle make the fourth corner read as held too
+            # (ghosting). Follow the chains.
+            cols = (~self.dc00) & 0xFF
+            rows = 0
+            keys = [KEYS[k] for k in self.pressed]
+            while True:
+                nrows = rows
+                for c, rw in keys:
+                    if cols & c:
+                        nrows |= rw
+                ncols = cols
+                for c, rw in keys:
+                    if nrows & rw:
+                        ncols |= c
+                if (nrows, ncols) == (rows, cols):
+                    break
+                rows, cols = nrows, ncols
+            return (~rows) & 0xFF
 
         def wr_dc00(_, v):
             self.dc00 = v

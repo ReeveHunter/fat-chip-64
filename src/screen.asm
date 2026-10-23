@@ -327,26 +327,14 @@ ScrBottom:
 	ldx #13
 	lda octBase
 	jsr PutMidiNote
-	ldx #28
-	lda latch
-	beq .lo
-	lda #'O
-	jsr PutChar
-	inx
-	lda #'N
-	jsr PutChar
-	inx
-	lda #32
-	jsr PutChar
-	jmp .rs
-.lo:
-	lda #'O
-	jsr PutChar
-	inx
-	lda #'F
-	jsr PutChar
-	inx
-	jsr PutChar
+	ldy latch
+	lda txtLatchLo,y
+	sta ptr
+	lda txtLatchHi,y
+	sta ptr+1
+	ldx #27
+	ldy #21
+	jsr PrintAt
 .rs:
 	; ---- RESTORE counters
 	ldy #22

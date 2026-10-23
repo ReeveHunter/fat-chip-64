@@ -18,7 +18,7 @@ keymap:
 	; col 3: 7 Y G 8 B H U V
 	.byte 10,9,N_,N_,N_,N_,11,N_
 	; col 4: 9 I J 0 M K O N
-	.byte 13,12,N_,15,K_M,N_,14,N_
+	.byte 13,12,N_,15,K_M,N_,14,K_N
 	; col 5: + P L - . : @ ,
 	.byte N_,16,N_,18,N_,N_,17,N_
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
@@ -47,7 +47,7 @@ vn8:        .byte "NES TRI (BASS)",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.02 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.03 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -61,7 +61,12 @@ txtOverlap: .byte "!! GAME BOY AND NES CHANNELS OVERLAP !!",0
 txtBlank:   .byte "                                       ",0
 txtVoices:  .byte "VOICES",0
 txtHeld:    .byte "HELD                                   ",0
-txtOctave:  .byte "F1-F7 OCTAVE        = LATCH",0
+txtOctave:  .byte "F1-F7 OCTAVE       = LATCH       N NEW",0
+txtLatchLo: .byte <txtLOff,<txtLHold,<txtLBuild
+txtLatchHi: .byte >txtLOff,>txtLHold,>txtLBuild
+txtLOff:    .byte "OFF  ",0
+txtLHold:   .byte "HOLD ",0
+txtLBuild:  .byte "BUILD",0
 txtRestore: .byte "RESTORE  1 TAP        2 TAPS",0
 txtSent:    .byte "MIDI OUT:       MESSAGES",0
 txtMode:    .byte "MODE: POLY SYNTH (SMART STACKING)",0
