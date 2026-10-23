@@ -147,9 +147,11 @@ ScreenDrawAll:
 	PRINT 9, 0, txtVoices
 	PRINT 21, 0, txtOctave
 	PRINT 8, 0, txtGhost
+	PRINT 19, 0, txtArp
 	PRINT 22, 0, txtRestore
 	PRINT 24, 0, txtMode
 	jsr ScrDevices
+	jsr ScrDev2
 	ldx #0
 .v:
 	stx t3
@@ -158,10 +160,14 @@ ScreenDrawAll:
 	inx
 	cpx #NUM_VOICES
 	bne .v
-	jmp ScrBottom
+	jsr ScrBottom
+	jsr ScrOct
+	jsr ScrArpLine
+	jmp ScrCounters
 
 ; Redraw in small steps, one per main loop pass (every 4 ms), so a redraw
-; never holds up the keyboard: stage 1 devices, 2-10 voice rows, 11 the rest.
+; never holds up the keyboard or the arp: 15 stages (devices, voice rows,
+; held notes, octave + latch, arp line, counters), each about 4 ms or less.
 ScreenStep:
 	subroutine
 	lda scrStage
@@ -173,26 +179,38 @@ ScreenStep:
 	lda #1
 	sta scrStage
 .run:
-	cmp #1
-	bne .rows
-	jsr ScrDevices
-	inc scrStage
-	rts
-.rows:
-	cmp #11
-	bcs .bottom
-	sec
-	sbc #2
+	cmp #3
+	bcc .table
+	cmp #12
+	bcs .table
+	sec                     ; stages 3-11: voice rows
+	sbc #3
 	tax
 	jsr ScrVoiceRow
+	jmp .next
+.table:
+	tax
+	lda stageLo-1,x
+	sta ptr
+	lda stageHi-1,x
+	sta ptr+1
+	jsr .call
+.next:
 	inc scrStage
-	rts
-.bottom:
-	jsr ScrBottom
+	lda scrStage
+	cmp #SCR_STAGES+1
+	bcc .x
 	lda #0
 	sta scrStage
 .x:
 	rts
+.call:
+	jmp (ptr)
+
+SCR_STAGES equ 15
+; stages 1, 2, (3-11 voice rows), 12-15
+stageLo:	.byte <ScrDevices,<ScrDev2,0,0,0,0,0,0,0,0,0,<ScrBottom,<ScrOct,<ScrArpLine,<ScrCounters
+stageHi:	.byte >ScrDevices,>ScrDev2,0,0,0,0,0,0,0,0,0,>ScrBottom,>ScrOct,>ScrArpLine,>ScrCounters
 
 ScrDevices:
 	subroutine
@@ -215,6 +233,12 @@ ScrDevices:
 	ldy #4
 	lda gbBase
 	jsr Channels
+	rts
+
+ScrDev2:
+	subroutine
+	lda #0
+	sta t2
 	PRINT 5, 0, txtNes
 	ldx #DEV_NES
 	ldy #5
@@ -321,6 +345,12 @@ ScrBottom:
 	iny
 	bne .h
 .hd:
+	rts
+
+ScrOct:
+	subroutine
+	lda #0
+	sta t2
 	; ---- octave, latch
 	ldy #21
 	ldx #0
@@ -344,6 +374,86 @@ ScrBottom:
 .ga:
 	PRINT 8, 15, txtGAllow
 .gd:
+	rts
+
+ScrArpLine:
+	subroutine
+	lda #0
+	sta t2
+	; ---- arp: mode, pattern, speed, tempo
+	ldx arpMode
+	lda arpModeLo,x
+	sta ptr
+	lda arpModeHi,x
+	sta ptr+1
+	ldx #6
+	ldy #19
+	jsr PrintAt
+	ldx arpPat
+	lda patTxtLo,x
+	sta ptr
+	lda patTxtHi,x
+	sta ptr+1
+	ldx #16
+	ldy #19
+	jsr PrintAt
+	ldx arpLen
+	cpx #ARP_FREE
+	beq .free
+	lda lenTxtLo,x
+	sta ptr
+	lda lenTxtHi,x
+	sta ptr+1
+	ldx #25
+	ldy #19
+	jsr PrintAt
+	jmp .bpm
+.free:
+	ldy #19
+	ldx #0
+	jsr ScreenAddr
+	ldy freeIdx
+	lda freeLo,y
+	sta t0
+	lda freeHi,y
+	sta t1
+	ldx #25
+	jsr PutDecZ
+	lda #'M
+	jsr PutChar
+	inx
+	lda #'S
+	jsr PutChar
+	inx
+	lda #32
+	jsr PutChar
+	inx
+	jsr PutChar
+.bpm:
+	ldy #19
+	ldx #0
+	jsr ScreenAddr
+	ldx #34
+	lda #32
+	jsr PutChar
+	inx
+	jsr PutChar
+	inx
+	jsr PutChar
+	lda bpm
+	sta t0
+	lda #0
+	sta t1
+	ldx #34
+	jsr PutDecZ
+	lda #0
+	sta t2
+	rts
+
+ScrCounters:
+	subroutine
+	lda #0
+	sta t2
 	; ---- RESTORE counters
 	ldy #22
 	ldx #0
@@ -409,6 +519,54 @@ PutDec16:
 	iny
 	cpy #5
 	bne .digit
+	rts
+
+; Like PutDec16, without leading zeros. Returns X past the number.
+PutDecZ:
+	subroutine
+	lda #0
+	sta decStarted
+	ldy #0
+.digit:
+	lda #0
+	sta t2
+.sub:
+	lda t0
+	sec
+	sbc decLo,y
+	pha
+	lda t1
+	sbc decHi,y
+	bcc .done
+	sta t1
+	pla
+	sta t0
+	inc t2
+	bne .sub
+.done:
+	pla
+	lda t2
+	bne .put
+	cpy #4
+	beq .put                ; always the last digit
+	lda decStarted
+	beq .skip
+	lda t2
+.put:
+	clc
+	adc #'0
+	sty t3
+	jsr PutChar
+	ldy t3
+	inx
+	lda #1
+	sta decStarted
+.skip:
+	iny
+	cpy #5
+	bne .digit
+	lda #0
+	sta t2
 	rts
 
 decLo:	.byte <10000,<1000,<100,<10,<1

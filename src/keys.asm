@@ -141,6 +141,8 @@ Suspect:
 ;   =              latch: OFF -> HOLD -> BUILD -> OFF
 ;   N              new chord: latched notes go (keys still down stay)
 ;   G              phantom-key filter on / off (off at start; for testing)
+;   A / S / D      arp mode / pattern / speed     H / J  free speed
+;   B              tap tempo
 ;   F1/F3/F5/F7    octave: C4 / C3 / C2 / C1 on the lowest key
 ;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
 ;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
@@ -167,7 +169,7 @@ KeyDown:
 	sta noteHeld,x
 	sta notePressed,x
 	sta reallocFlag
-	rts
+	jmp PlayAdd
 .build:
 	; build: each press adds a note; pressing a latched note takes it out
 	lda #1
@@ -179,19 +181,59 @@ KeyDown:
 	rts
 .cmd:
 	cmp #K_LSHIFT
-	beq .shift
+	beq .sh
 	cmp #K_RSHIFT
-	beq .shift
+	bne .nsh
+.sh:
+	inc shiftDown
+	rts
+.nsh:
 	cmp #K_CTRL
-	beq .ctrl
+	bne .nct
+	lda #1
+	sta ctrlDown
+	rts
+.nct:
 	cmp #K_M
-	beq .mute
+	bne .j0
+	jmp .mute
+.j0:
 	cmp #K_EQUALS
-	beq .latch
+	bne .j1
+	jmp .latch
+.j1:
 	cmp #K_N
-	beq .newChord
+	bne .j2
+	jmp .newChord
+.j2:
 	cmp #K_G
-	beq .ghost
+	bne .k0
+	jmp .ghost
+.k0:
+	cmp #K_A
+	bne .k1
+	jmp ArpModeKey
+.k1:
+	cmp #K_S
+	bne .k2
+	jmp ArpPatKey
+.k2:
+	cmp #K_D
+	bne .k3
+	jmp ArpLenKey
+.k3:
+	cmp #K_H
+	bne .k4
+	jmp ArpSlower
+.k4:
+	cmp #K_J
+	bne .k5
+	jmp ArpFaster
+.k5:
+	cmp #K_B
+	bne .k6
+	jmp TapTempo
+.k6:
 	cmp #K_F1
 	bcc .x
 	cmp #K_F7+1

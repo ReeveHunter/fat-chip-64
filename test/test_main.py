@@ -60,7 +60,7 @@ check("Game Boy messages at least 2.5 ms apart on the wire (target 3, measured s
 
 # ---------------------------------------------------------------- one note: 9-voice unison
 t0 = c.cpu.processorCycles
-c.press("q", ms=60)                         # C3
+c.press("q", ms=90)                         # C3 (the screen catches up within ~60 ms)
 after = c.midi(since=t0)
 on = notes_on(c.midi())
 check("one note: GB pulses play C3", on.get(0) == 48 and on.get(1) == 48, on)
@@ -253,7 +253,7 @@ c.run_ms(20)
 after = c.midi(since=t0)
 check("RESTORE: downbeat CC 109 to the Game Boy", any(s == 0xB0 and a == 109 for _, s, a, _ in after), after)
 check("RESTORE: border blinks white", c.raw[0xD020] == 1)
-c.run_ms(40)                                # the screen redraws in steps
+c.run_ms(60)                                # the screen redraws in steps (~60 ms)
 check("single tap counted", c.v("rsSingle") == 1 and c.v("rsDouble") == 0 and "00001" in c.screen_row(22),
       c.screen_row(22))
 c.run_ms(100)

@@ -43,6 +43,12 @@ for _ in range(40):                     # fast, messy playing
     c.press(*ks, ms=rnd.choice((4, 12, 40)))
     c.release(*ks, ms=rnd.choice((4, 20)))
 c.run_ms(300)
+c.tap("a", ms=40); c.tap("a", ms=40)    # arp: SPARKLE
+t_spark = c.cpu.processorCycles
+c.press("q", "e", "t", ms=900)
+c.release("q", "e", "t", ms=60)
+c.tap("a", ms=40)                       # arp off
+c.run_ms(300)
 t_quiet = c.cpu.processorCycles
 # a minute of silence (v0.1 froze its queues after 33 s): skip the clock ahead
 t = (c.v("ticks") | (c.v("ticks", 2)[1] << 8)) + 60000
@@ -67,8 +73,14 @@ i = 0
 chord_frame = None
 quiet_frame = None
 quiet_sound = None
+spark = None
+spark_notes = set()
 while i < len(wire):
     limit = t0 + (frame + 1) * FRAME
+    if quiet_frame is None and limit >= t_quiet:   # 300 ms after the last key, before the next note
+        quiet_frame = frame
+        vs = gb.sym["_voice"]
+        quiet_sound = [(gb.mem(vs + v * 45 + 2), gb.mem(vs + v * 45 + 30)) for v in range(3)]  # gate, env stage
     chunk = []
     while i < len(wire) and wire[i][0] < limit:
         chunk.append(wire[i][1])
@@ -79,10 +91,11 @@ while i < len(wire):
         gb.midi(*chunk)
     gb.run(1)
     frame += 1
-    if quiet_frame is None and i < len(wire) and wire[i][0] >= t_quiet:
-        quiet_frame = frame
+    if t_spark + 200 * CYCLES_PER_MS <= limit < t_spark + 900 * CYCLES_PER_MS:
         vs = gb.sym["_voice"]
-        quiet_sound = [(gb.mem(vs + v * 45 + 2), gb.mem(vs + v * 45 + 30)) for v in range(3)]  # gate, env stage
+        spark_notes.add((gb.mem(vs), gb.mem(vs + 45)))
+        if spark is None:
+            spark = gb.mem(0xFF25)          # NR51: bits 0-3 right, 4-7 left
     if chord_frame is not None and frame == chord_frame + 2:
         # snapshot while the chord is held, before the screen-off taps
         vs = gb.sym["_voice"]
@@ -103,6 +116,10 @@ check("chord on the Game Boy: pulse 1 G3, pulse 2 C3, wave C2 (bass)", notes == 
 check("all three Game Boy voices sounding", sounding & 0x07 == 0x07, hex(sounding))
 check("double RESTORE turned the Game Boy screen off", not (gb.mem(0xFF40) & 0x80))
 check("no stray bytes on the Game Boy side", gb.var("_lt_stray", 2) == [0, 0])
+check("SPARKLE: Game Boy pulse 1 left only, pulse 2 right only (NR51)",
+      spark is not None and spark & 0x11 == 0x10 and spark & 0x22 == 0x02, hex(spark or 0))
+check("SPARKLE: both pulses take turns on chord notes", len({a for a, _ in spark_notes}) >= 2
+      and len({b for _, b in spark_notes}) >= 2, spark_notes)
 check("after fast playing every Game Boy note was released (gate off, releasing or idle)",
       all(g == 0 and st in (0, 3) for g, st in quiet_sound), quiet_sound)
 check("SHIFT+F7 with keys held: every Game Boy voice silent (idle)", after_panic == [(0, 0)] * 3, after_panic)
