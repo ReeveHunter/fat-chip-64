@@ -39,6 +39,7 @@ TICK_LATCH  equ 340            ; CIA1 timer A: 341 cycles = 1/3 ms (NTSC), about
                                ; the main loop is busy; every third IRQ is a tick
 SCAN_EVERY  equ 4              ; keyboard scan every 4 ms
 GB_GAP      equ 3              ; ms between messages to the Game Boy (measured safe: 2)
+LINK_MAX    equ 45             ; bytes we let pile up in the Teensyboy (its buffer: 64)
 NES_GAP     equ 1              ; ms between messages to the MidiNES (wire-limited)
 DOUBLE_TAP  equ 350            ; ms: second RESTORE press within this = double tap
 RESTORE_DEBOUNCE equ 40        ; ms
@@ -49,7 +50,7 @@ DEV_GB      equ 1
 DEV_NES     equ 2
 NUM_VOICES  equ 9
 NO_NOTE     equ $FF
-BASE_NOTE   equ 48             ; lowest overlay key (Q) = MIDI 48 (C3)
+OCT_DEFAULT equ 48             ; lowest overlay key (Q) = MIDI 48 (C3) at start (F3)
 VELOCITY    equ 100
 
 ; Fat Chip GB global CCs (fat-chip-gb/docs/fatchip-protocol.md)
@@ -76,6 +77,8 @@ K_RSHIFT    equ $89
 K_SPACE     equ $8A
 K_RETURN    equ $8B
 K_CTRL      equ $8C
+K_M         equ $8D
+K_EQUALS    equ $8E
 K_NONE      equ $FF
 
 ; ------------------------------------------------------------ zero page
@@ -88,10 +91,10 @@ wireHead    ds 1               ; wire ring: head = write, tail = read
 wireTail    ds 1
 gbqHead     ds 1               ; Game Boy message queue (64 entries)
 gbqTail     ds 1
-gbNext      ds 2               ; tick when the next GB message may go
+gbNext      ds 1               ; ticks (low byte) when the next GB message may go
 nesqHead    ds 1
 nesqTail    ds 1
-nesNext     ds 2
+nesNext     ds 1
 nmiCount    ds 1               ; RESTORE presses seen by the NMI handler
 nmiTick     ds 2
 nmiSeen     ds 1
@@ -106,6 +109,7 @@ ptr         ds 2
 ptr2        ds 2
 irqT        ds 1               ; IRQ-only temporary
 subTick     ds 1               ; IRQs since the last 1 ms tick (0-2)
+linkLoad    ds 1               ; estimated bytes waiting in the Teensyboy (IRQ only)
 
 ; ------------------------------------------------------------ RAM ($C000-$CFFF)
 	seg.u ram
@@ -119,12 +123,14 @@ nesqD1      ds 64
 nesqD2      ds 64
 keyNow      ds 8
 keyPrev     ds 8
-noteHeld    ds 24              ; 1 = overlay key held
+noteHeld    ds 24              ; 1 = note sounding (key held, or latched)
+physKey     ds 24              ; 1 = overlay key physically down
+physCount   ds 1
 notePressed ds 24              ; 1 = pressed since the last voice update
-heldList    ds 8               ; held notes, ascending (indexes 0-23)
+heldList    ds 8               ; held notes, ascending (MIDI notes)
 heldCount   ds 1
 covered     ds 8
-vWant       ds NUM_VOICES      ; note each voice should play (index) or NO_NOTE
+vWant       ds NUM_VOICES      ; MIDI note each voice should play, or NO_NOTE
 vNote       ds NUM_VOICES      ; note each voice plays now
 vRetrig     ds NUM_VOICES      ; SID: gate back on at the next scan
 devOn       ds 3               ; SID, GB, NES enabled
@@ -133,7 +139,7 @@ nesBase     ds 1               ; MIDI channel 0-15 of the MidiNES pulse 1
 shiftDown   ds 1
 reallocFlag ds 1
 screenDirty ds 1
-videoMode   ds 1               ; 0 normal, 1 screen off
+videoMode   ds 1               ; Game Boy screen: 0 on, 1 off (CC 112)
 lastRestore ds 2
 restoreFlash ds 1
 sidGate     ds 3               ; current control register value per SID voice
@@ -141,3 +147,10 @@ statSent    ds 2               ; messages sent (for the status line)
 ksBits      ds 1               ; key scan state (KeyDown/KeyUp may call
 ksCol       ds 1               ;  routines that use t0-t3)
 ksRow       ds 1
+ctrlDown    ds 1
+octBase     ds 1               ; MIDI note of the lowest overlay key
+latch       ds 1
+sidMute     ds 1
+rsSingle    ds 1               ; RESTORE test counters
+rsDouble    ds 1
+scrStage    ds 1               ; ScreenStep: 0 idle, 1-11 drawing

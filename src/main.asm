@@ -35,10 +35,13 @@ Loop:
 	subroutine
 	jsr TxService
 	; keyboard scan every SCAN_EVERY ms
-	lda ticks
+	lda scanAt              ; due unless 1..SCAN_EVERY ms to go
 	sec
-	sbc scanAt
-	bmi .noScan
+	sbc ticks
+	beq .scan
+	cmp #SCAN_EVERY+1
+	bcc .noScan
+.scan:
 	lda ticks
 	clc
 	adc #SCAN_EVERY
@@ -55,11 +58,7 @@ Loop:
 	lda #1
 	sta screenDirty
 .noAlloc:
-	lda screenDirty
-	beq .noScan
-	jsr ScreenUpdate
-	lda #0
-	sta screenDirty
+	jsr ScreenStep
 .noScan:
 	jmp Loop
 
@@ -133,6 +132,8 @@ InitState:
 	sta gbBase
 	lda #5                  ; MidiNES on channels 6-10 (set with the NES D-pad)
 	sta nesBase
+	lda #OCT_DEFAULT
+	sta octBase
 	lda #$FF
 	sta lastStatus
 	lda #$80                ; "long ago": the first RESTORE press is a single tap

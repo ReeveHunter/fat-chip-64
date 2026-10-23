@@ -5,7 +5,7 @@
 ; device's gap (GB_GAP / NES_GAP) after its previous one. The Game Boy link
 ; drops messages when MIDI arrives at full speed (measured on Reeve's
 ; Teensyboy Pro: 1 per 2 ms is clean, 1 per 1 ms loses), so its queue is
-; paced; the MidiNES only gets the wire's own limit for now.
+; paced, and the shared link budget (linkLoad) covers NES traffic too.
 ; The wire uses running status. The main loop and the IRQ both feed the ACIA.
 
 MidiInit:
@@ -41,24 +41,50 @@ TxService:
 	rts
 
 ; IRQ: pace device queues onto the wire.
+;
+; "Due" uses the low byte only: a queue may send when (next - ticks) is 0 or
+; more than its gap, i.e. next is now or in the past. (v0.1 compared 16-bit
+; times as signed numbers, so after 33 s of silence every queue froze for
+; another 33 s, filled up and dropped messages: the hung Game Boy notes.)
+;
+; When the Game Boy is on, everything on the wire also passes through the
+; Teensyboy (it forwards channels 1-15 to the Game Boy, NES ones too, about
+; 0.5 ms per byte, with a 64-byte buffer). linkLoad estimates how many bytes
+; are waiting in it: +3 per message, -1.5 per ms. Nothing goes out while it
+; is over LINK_MAX, so bursts are fine and long streams slow to 2 ms per
+; message, the rate measured clean.
 Schedule:
 	subroutine
+	lda devOn+DEV_GB
+	beq .gb
+	lda linkLoad            ; drain: 1 then 2 bytes on alternate ms
+	beq .gb
+	dec linkLoad
+	beq .gb
+	lda ticks
+	and #1
+	beq .gb
+	dec linkLoad
+.gb:
 	; ---- Game Boy
 	lda gbqTail
 	cmp gbqHead
 	beq .nes
-	lda ticks               ; due? (ticks - gbNext) >= 0
+	lda gbNext
 	sec
-	sbc gbNext
-	lda ticks+1
-	sbc gbNext+1
-	bmi .nes
+	sbc ticks
+	beq .gbDue
+	cmp #GB_GAP+1
+	bcc .nes                ; 1..GB_GAP ms to go
+.gbDue:
 	; only onto an empty wire, so the gap holds on the cable itself (NES
 	; bytes already waiting would otherwise delay this one and squeeze it
 	; against the next)
 	lda wireHead
 	cmp wireTail
 	bne .nes
+	jsr LinkRoom
+	bcc .nes
 	ldx gbqTail
 	lda gbqS,x
 	ldy gbqD2,x
@@ -74,21 +100,21 @@ Schedule:
 	clc
 	adc #GB_GAP
 	sta gbNext
-	lda ticks+1
-	adc #0
-	sta gbNext+1
 .nes:
 	lda nesqTail
 	cmp nesqHead
 	beq .done
-	lda ticks
+	lda nesNext
 	sec
-	sbc nesNext
-	lda ticks+1
-	sbc nesNext+1
-	bmi .done
+	sbc ticks
+	beq .nesDue
+	cmp #NES_GAP+1
+	bcc .done
+.nesDue:
 	jsr WireFree
 	cmp #3
+	bcc .done
+	jsr LinkRoom
 	bcc .done
 	ldx nesqTail
 	lda nesqS,x
@@ -105,10 +131,25 @@ Schedule:
 	clc
 	adc #NES_GAP
 	sta nesNext
-	lda ticks+1
-	adc #0
-	sta nesNext+1
 .done:
+	rts
+
+; Carry set if the Teensyboy has room for a message (always, with the Game
+; Boy off), and counts it.
+LinkRoom:
+	subroutine
+	lda devOn+DEV_GB
+	beq .yes
+	lda linkLoad
+	cmp #LINK_MAX
+	bcs .no
+	adc #3
+	sta linkLoad
+.yes:
+	sec
+	rts
+.no:
+	clc
 	rts
 
 ; A = free bytes in the wire ring
@@ -205,6 +246,50 @@ GbGlobal:
 	ora #$B0
 	sta mS
 	jmp GbPut
+
+; CC 123 (all notes off) on the Game Boy's three note channels
+GbAllOff:
+	subroutine
+	lda #123
+	sta mD1
+	lda #0
+	sta mD2
+	lda gbBase
+	ora #$B0
+	sta mS
+	ldy #3
+.c:
+	jsr GbPut
+	lda mS                  ; next channel (wraps 16 -> 1)
+	clc
+	adc #1
+	and #$0F
+	ora #$B0
+	sta mS
+	dey
+	bne .c
+	rts
+
+; CC 123 on the MidiNES's five channels
+NesAllOff:
+	subroutine
+	lda #123
+	sta mD1
+	lda #0
+	sta mD2
+	ldy #0
+.n:
+	tya
+	clc
+	adc nesBase
+	and #15
+	ora #$B0
+	sta mS
+	jsr NesPut
+	iny
+	cpy #5
+	bne .n
+	rts
 
 ; ------------------------------------------------------------ device setup
 ; Fat Chip GB startup / resync (protocol section 2)
