@@ -157,10 +157,10 @@ pans = [(s & 15, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0 and
 check("arp off: pulses back to centre", pans == [(0, 64), (1, 64)], pans)
 c.tap("=", ms=40)                           # latch off (ADD -> OFF)
 t0 = c.cpu.processorCycles
-c.press("q", "e", ms=300)
+c.press("q", ms=300)
 on = [x for x in c.midi(since=t0) if (x[1] & 0xF0) == 0x90 and x[3]]
-check("arp off: plain chords again (one note-on per voice)", len(on) == 6, len(on))
-c.release("q", "e", ms=60)
+check("arp off: plain notes again (one note-on per voice, no stepping)", len(on) == 6, len(on))
+c.release("q", ms=60)
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

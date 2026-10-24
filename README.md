@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.07:** a latched chord keeps sounding through a mode, extensions or key change; the next note starts a new chord with the new settings.
+
 **v0.06:** SMART CHORD and EXTENSIONS modes with a key, PADS sound, SMART latch, deferred N, mute everything + SPACE momentary, RESTORE = screens, SPARKLE an octave up.
 
 **v0.05:** tap tempo and the arpeggiator (UNISON / SPARKLE, five patterns, synced or free speed).

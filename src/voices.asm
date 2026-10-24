@@ -136,7 +136,7 @@ BuildHeld:
 	cpx #24
 	bne .h
 	sty heldCount
-	lda playMode
+	lda effMode
 	bne Expand
 	rts
 
@@ -158,10 +158,10 @@ Expand:
 	lda #0
 	sta heldCount
 	ldx #3                  ; tones: triad
-	lda playMode
+	lda effMode
 	cmp #MODE_EXT
 	bne .tn
-	lda spice
+	lda effSpice
 	clc
 	adc #4                  ; 7th = 4 tones ... 13th = 7
 	tax
@@ -178,7 +178,7 @@ Expand:
 	sta exR
 	; degree of the note in the key, or $FF
 	sec
-	sbc keyRoot
+	sbc effRoot
 	clc
 	adc #120                ; keep it positive
 .mod:
@@ -235,7 +235,7 @@ Expand:
 
 ; ptr = the key's scale table (21 steps, three octaves)
 ScalePtr:
-	lda keyMinor
+	lda effMinor
 	beq .maj
 	lda #<scaleMinor
 	sta ptr

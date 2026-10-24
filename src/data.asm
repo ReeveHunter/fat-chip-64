@@ -47,7 +47,7 @@ vn8:        .byte "NES TRI (BASS)",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.06 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.07 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0

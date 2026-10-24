@@ -196,7 +196,8 @@ KeyDown:
 	sta physKey,x
 	inc physCount
 	jsr GetTicks
-	lda newPending          ; N was pressed: this note starts a new chord
+	jsr ApplySettings       ; (changes waiting for this note)
+	lda newPending          ; N or a setting change: this note starts a new chord
 	beq .styles
 	lda #0
 	sta newPending
@@ -357,17 +358,13 @@ SetKeyRoot:
 	bcs .m
 .r:
 	sta keyRoot
-	lda #1
-	sta reallocFlag
-	jmp Dirty
+	jmp SettingChanged
 
 ScaleKey:
 	lda keyMinor
 	eor #1
 	sta keyMinor
-	lda #1
-	sta reallocFlag
-	jmp Dirty
+	jmp SettingChanged
 
 ModeKey:
 	subroutine
@@ -378,9 +375,7 @@ ModeKey:
 	ldx #0
 .s:
 	stx playMode
-	lda #1
-	sta reallocFlag
-	jmp Dirty
+	jmp SettingChanged
 
 SpiceKey:
 	subroutine
@@ -391,9 +386,43 @@ SpiceKey:
 	ldx #0
 .s:
 	stx spice
+	jmp SettingChanged
+
+; Mode, extensions, key or major/minor changed. A latched chord keeps
+; sounding as it is; the next note starts a new chord with the new settings
+; (like N). Otherwise they apply at once.
+SettingChanged:
+	subroutine
+	jsr Dirty
+	lda latch
+	beq .apply
+	ldx #23
+.c:
+	lda noteHeld,x
+	bne .wait
+	dex
+	bpl .c
+.apply:
+	jsr ApplySettings
 	lda #1
 	sta reallocFlag
-	jmp Dirty
+	rts
+.wait:
+	lda #1
+	sta newPending
+	rts
+
+; The settings the chord builder uses (eff*) catch up with the chosen ones.
+ApplySettings:
+	lda playMode
+	sta effMode
+	lda spice
+	sta effSpice
+	lda keyRoot
+	sta effRoot
+	lda keyMinor
+	sta effMinor
+	rts
 
 SoundKey:
 	lda padSound
@@ -433,6 +462,7 @@ NewChordKey:
 	sta newPending
 	jsr Dirty
 KeepPhysical:
+	jsr ApplySettings
 	ldx #23
 .l0:
 	lda physKey,x
