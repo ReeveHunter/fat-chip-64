@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fat Chip 64 v0.02: startup, pacing, smart stacking, devices, octaves,
+"""Fat Chip 64: startup, pacing, smart stacking, devices, octaves,
 latch, mute, panic, RESTORE, long idle, the Teensyboy link."""
 import os
 import sys
@@ -116,13 +116,30 @@ shifted("f1")
 check("SID off: volume 0 (no hum)", c.raw[0xD418] & 15 == 0 and "OFF" in c.screen_row(3))
 shifted("f1")
 check("SID on: volume back", c.raw[0xD418] & 15 == 15)
-c.tap("m", ms=30)
-check("M: SID muted", c.raw[0xD418] & 15 == 0 and "MUTED" in c.screen_row(3), c.screen_row(3))
 c.press("q", ms=60)
-check("muted SID still plays its voices (unmute is instant)", c.sid(0)[1] & 1)
+t0 = c.cpu.processorCycles
+c.tap("m", ms=60)
+check("M: mute: SID volume 0, red border, MUTE ON", c.raw[0xD418] & 15 == 0 and c.raw[0xD020] == 2
+      and "MUTE ON" in c.screen_row(22), c.screen_row(22))
+check("M: the Game Boy and NES get note-offs (nothing sounds)", notes_on(c.midi()) == {}, notes_on(c.midi()))
 c.release("q", ms=40)
-c.tap("m", ms=30)
-check("M again: unmuted", c.raw[0xD418] & 15 == 15 and "MUTED" not in c.screen_row(3))
+c.press("w", ms=60)
+check("muted: new notes aren't sent", notes_on(c.midi()) == {})
+c.press("space", ms=60)
+on = notes_on(c.midi())
+check("muted + SPACE held: the chord plays", on.get(0) == 50 and c.raw[0xD418] & 15 == 15, on)
+c.release("space", ms=60)
+check("SPACE let go: muted again", notes_on(c.midi()) == {} and c.raw[0xD418] & 15 == 0)
+c.tap("m", ms=60)
+on = notes_on(c.midi())
+check("M again: unmuted, the held note comes back", on.get(0) == 50 and c.raw[0xD418] & 15 == 15
+      and c.raw[0xD020] == 0, on)
+c.press("space", ms=60)
+check("unmuted + SPACE held: silent", notes_on(c.midi()) == {} and c.raw[0xD418] & 15 == 0)
+c.release("space", ms=60)
+check("SPACE let go: sounding again", notes_on(c.midi()).get(0) == 50)
+c.release("w", ms=60)
+check("all off", notes_on(c.midi()) == {})
 
 shifted("f5", "ctrl")
 check("CTRL+F5: NES on 7-11", c.v("nesBase") == 6 and "CH 7-11" in c.screen_row(5), c.screen_row(5))
@@ -148,7 +165,7 @@ def tap_note(key, f):
 check("F1: Q plays C4", tap_note("q", "f1").get(0) == 60)
 check("F5: Q plays C2", tap_note("q", "f5").get(0) == 36)
 check("F7: Q plays C1, bass C0", tap_note("q", "f7") == {0: 24, 1: 24, 2: 12, 5: 24, 6: 24, 7: 12})
-c.tap("f3", ms=30)
+c.tap("f3", ms=60)
 check("F3: back to C3, on screen", "C 3" in c.screen_row(21) and c.v("octBase") == 48, c.screen_row(21))
 c.press("q", ms=60)
 c.tap("f1", ms=60)
@@ -160,42 +177,60 @@ check("released after an octave change: all off", notes_on(c.midi()) == {})
 c.tap("f3", ms=30)
 
 # ---------------------------------------------------------------- latch
+def sounding():
+    return set(notes_on(c.midi()).values())
+
+
 c.tap("=", ms=60)
-check("= : latch HOLD on screen", "HOLD" in c.screen_row(21), c.screen_row(21))
+check("= : latch SMART", "SMART" in c.screen_row(21), c.screen_row(21))
+c.press("q", "t", ms=40); c.release("q", "t", ms=40)
+check("smart: chord keeps sounding after release", {48, 55} <= sounding())
+c.run_ms(200)
+c.tap("y", ms=40)                           # soon after: adds
+check("smart: a note soon after adds to the chord", {48, 55, 57} <= sounding(), sounding())
+c.run_ms(700)
+c.tap("e", ms=40)                           # after a pause: new chord
+check("smart: after a pause the next note starts a new chord", sounding() <= {52, 40} and 52 in sounding(), sounding())
+c.tap("w", ms=40)
+check("smart: ...and builds on quickly", {50, 52} <= sounding() and 57 not in sounding(), sounding())
+c.tap("n", ms=60)
+check("N: chord keeps sounding, N NEXT on screen", {50, 52} <= sounding() and "N NEXT" in c.screen_row(21), c.screen_row(21))
+c.tap("u", ms=60)                           # within the window, but N said new
+check("after N the next note starts a new chord", sounding() <= {59, 47} and 59 in sounding(), sounding())
+c.tap("n", ms=20); c.tap("n", ms=60)
+check("N twice: clear now", sounding() == set() and "N NEW" in c.screen_row(21))
+
+c.tap("=", ms=60)
+check("= again: HOLD", "HOLD" in c.screen_row(21), c.screen_row(21))
 c.press("q", "t", ms=60)
 c.release("q", "t", ms=60)
-on = notes_on(c.midi())
-check("latch: chord keeps sounding after release", 48 in on.values() and 55 in on.values(), on)
-c.press("e", ms=60)
-c.release("e", ms=60)
-on = notes_on(c.midi())
-check("latch: a fresh press starts a new chord", set(on.values()) <= {52, 40}, on)
+check("hold: chord keeps sounding after release", {48, 55} <= sounding())
+c.tap("e", ms=60)                           # quick, but a fresh press
+check("hold: a fresh press starts a new chord", sounding() <= {52, 40}, sounding())
 c.press("q", ms=40); c.press("t", ms=40)
 c.release("q", "t", ms=40)
-on = notes_on(c.midi())
-check("latch: notes pressed together add up", {48, 55} <= set(on.values()), on)
-c.tap("n", ms=40)
-check("N: new chord, latched notes gone", notes_on(c.midi()) == {}, notes_on(c.midi()))
+check("hold: notes pressed together add up", {48, 55} <= sounding(), sounding())
+c.tap("n", ms=20); c.tap("n", ms=60)
 
 c.tap("=", ms=60)
-check("= again: latch BUILD on screen", "BUILD" in c.screen_row(21), c.screen_row(21))
-for k in ("q", "e", "t"):                   # one key at a time
+check("= again: ADD", "ADD" in c.screen_row(21), c.screen_row(21))
+for k in ("q", "e", "t"):                   # one at a time, slowly
     c.tap(k, ms=40)
-on = notes_on(c.midi())
-check("build: chord built one key at a time", {48, 52, 55} <= set(on.values()), on)
+    c.run_ms(700)
+check("add: chord built one key at a time, however slowly", {48, 52, 55} <= sounding(), sounding())
 c.tap("e", ms=40)
-on = notes_on(c.midi())
-check("build: pressing a latched note takes it out", 52 not in on.values() and {48, 55} <= set(on.values()), on)
+check("add: pressing a latched note takes it out", 52 not in sounding() and {48, 55} <= sounding(), sounding())
 c.tap("y", ms=40)
-check("build: and adding goes on", 57 in notes_on(c.midi()).values())
+check("add: and adding goes on", 57 in sounding())
 c.tap("n", ms=40)
-check("build: N clears the chord", notes_on(c.midi()) == {})
-c.tap("q", ms=40)
-check("build: after N, the next key starts again", set(notes_on(c.midi()).values()) <= {48, 36})
-c.tap("n", ms=40)
+check("add: N waits for the next note", {48, 55, 57} <= sounding())
+c.tap("q", ms=60)
+check("add: after N, the next key starts again", sounding() <= {48, 36} and 48 in sounding(), sounding())
+c.tap("n", ms=20); c.tap("n", ms=60)
+check("add: N twice clears", sounding() == set())
 
 c.press("w", ms=60)                         # held while latch goes off
-c.tap("=", ms=60)                           # BUILD -> OFF
+c.tap("=", ms=60)                           # ADD -> OFF
 on = notes_on(c.midi())
 check("latch off: only the key still down sounds", set(on.values()) <= {50, 38} and on, on)
 c.release("w", ms=60)
@@ -250,25 +285,19 @@ c.run_ms(500)
 t0 = c.cpu.processorCycles
 c.restore()
 c.run_ms(20)
-after = c.midi(since=t0)
-check("RESTORE: downbeat CC 109 to the Game Boy", any(s == 0xB0 and a == 109 for _, s, a, _ in after), after)
-check("RESTORE: border blinks white", c.raw[0xD020] == 1)
-c.run_ms(60)                                # the screen redraws in steps (~60 ms)
-check("single tap counted", c.v("rsSingle") == 1 and c.v("rsDouble") == 0 and "00001" in c.screen_row(22),
-      c.screen_row(22))
+check("RESTORE: both screens off (C64 blanked, Game Boy CC 112 = 1)", not (c.raw[0xD011] & 0x10)
+      and (0xB0, 112, 1) in [x[1:] for x in c.midi(since=t0)])
 c.run_ms(100)
+t0 = c.cpu.processorCycles
 c.restore()
 c.run_ms(20)
-check("double tap: border blinks red", c.raw[0xD020] == 2)
-check("double tap counted", c.v("rsDouble") == 1 and c.v("rsSingle") == 1, c.screen_row(22))
-check("double tap: Game Boy screen off (CC 112 = 1)", any(s == 0xB0 and a == 112 and b == 1 for _, s, a, b in c.midi(since=t0)))
-check("double tap: C64 screen stays on", c.raw[0xD011] & 0x10)
-c.run_ms(500)
-c.restore(); c.run_ms(100); c.restore(); c.run_ms(20)
-check("double tap again: Game Boy screen on", c.midi()[-1][1:] == (0xB0, 112, 0), c.midi()[-1])
-c.run_ms(500)
+check("RESTORE again: both back on", c.raw[0xD011] & 0x10 and (0xB0, 112, 0) in [x[1:] for x in c.midi(since=t0)])
+c.run_ms(100)
 c.restore(); c.run_ms(10); c.restore(); c.run_ms(20)
-check("a bounce (10 ms) is ignored", c.v("rsDouble") == 2 and c.v("rsSingle") == 3, (c.v("rsSingle"), c.v("rsDouble")))
+check("a bounce (10 ms) is ignored", not (c.raw[0xD011] & 0x10))
+c.run_ms(100)
+c.restore(); c.run_ms(20)
+check("screens on again", c.raw[0xD011] & 0x10)
 
 # ---------------------------------------------------------------- re-attack
 c.press("q", ms=40)

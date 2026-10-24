@@ -87,6 +87,19 @@ K_D         equ $93
 K_H         equ $94
 K_J         equ $95
 K_B         equ $96
+K_F         equ $97
+K_Z         equ $98
+K_X         equ $99
+K_K         equ $9A
+K_L         equ $9B
+K_V         equ $9C
+LATCH_SMART equ 1
+LATCH_HOLD  equ 2
+LATCH_ADD   equ 3
+SMART_WINDOW equ 500           ; ms: SMART latch adds notes pressed within this
+MODE_POLY   equ 0
+MODE_CHORD  equ 1
+MODE_EXT    equ 2
 ARP_UNISON  equ 1
 ARP_SPARKLE equ 2
 PAT_PLAYED  equ 4
@@ -95,8 +108,6 @@ FREE_STEPS  equ 16
 MIN_STEP    equ 30             ; ms: fastest arp step (Game Boy link budget)
 GCC_TEMPO_MSB equ 107
 GCC_TEMPO_LSB equ 108
-LATCH_HOLD  equ 1
-LATCH_BUILD equ 2
 K_NONE      equ $FF
 
 ; ------------------------------------------------------------ zero page
@@ -167,6 +178,7 @@ ksBits      ds 1               ; key scan state (KeyDown/KeyUp may call
 ksCol       ds 1               ;  routines that use t0-t3)
 ksRow       ds 1
 ksMask      ds 1
+ksPass      ds 1
 ghostFilter ds 1               ; 1 = phantom keys filtered
 scanned     ds 1
 decStarted  ds 1
@@ -209,6 +221,32 @@ vSkip       ds NUM_VOICES
 vArpHit     ds NUM_VOICES
 allocList   ds 8
 allocCount  ds 1
+; v0.06
+kDown       ds 1               ; K held: notes set the key
+newPending  ds 1               ; N: the next note starts a new chord
+lastPress   ds 2
+moment      ds 1               ; SPACE held
+muteNow     ds 1               ; mute (M) xor momentary (SPACE)
+keyRoot     ds 1               ; 0-11, C = 0
+keyMinor    ds 1
+playMode    ds 1               ; 0 poly, 1 smart chord, 2 extensions
+spice       ds 1               ; extensions: 0 = 7th, 1 = 9th, 2 = 11th, 3 = 13th
+padSound    ds 1               ; 0 fat, 1 pads
+arpOct      ds 1               ; SPARKLE arp: octaves up (0-2)
+vOut        ds NUM_VOICES      ; MIDI voices: note actually sounding on the device
+sidCtl      ds 1               ; SID waveform bits (saw $20, pulse $40)
+padT        ds 2               ; pad LFO phase
+chordTmp    ds 8
+exCount     ds 1               ; Expand / InsertNote
+exTones     ds 1
+exI         ds 1
+exR         ds 1
+exV         ds 1
+exD         ds 1
+exK         ds 1
+exS         ds 1
+mtTarget    ds 1
+sidFilt     ds 1               ; SID_VOL filter mode bits (pads: low-pass)
 ctrlDown    ds 1
 octBase     ds 1               ; MIDI note of the lowest overlay key
 latch       ds 1               ; 0 off, 1 hold, 2 build

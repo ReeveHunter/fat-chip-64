@@ -52,6 +52,7 @@ Loop:
 	jsr SidRetrig
 	jsr KeyScan
 	jsr RestoreCheck
+	jsr PadTick
 .noScan:
 	jsr ArpTick             ; every pass, so arp steps land on time
 	lda reallocFlag
@@ -129,6 +130,7 @@ InitState:
 .v:
 	sta vNote,x
 	sta vWant,x
+	sta vOut,x
 	dex
 	bpl .v
 	lda #1
@@ -141,6 +143,8 @@ InitState:
 	sta nesBase
 	lda #OCT_DEFAULT
 	sta octBase
+	lda #1
+	sta arpOct              ; SPARKLE arp an octave up
 	lda #120
 	sta bpm
 	lda #<500
@@ -226,6 +230,8 @@ Irq:
 Nmi:
 	subroutine
 	pha
+	lda CIA2_ICR            ; acknowledge anything CIA 2 holds, so the NMI
+	                        ; line is free for the next RESTORE edge
 	inc nmiCount
 	lda ticks
 	sta nmiTick
@@ -238,6 +244,7 @@ Nmi:
 	include "keys.asm"
 	include "voices.asm"
 	include "arp.asm"
+	include "pads.asm"
 	include "screen.asm"
 	include "data.asm"
 	include "tables.asm"

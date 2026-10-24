@@ -148,8 +148,8 @@ ScreenDrawAll:
 	PRINT 21, 0, txtOctave
 	PRINT 8, 0, txtGhost
 	PRINT 19, 0, txtArp
-	PRINT 22, 0, txtRestore
-	PRINT 24, 0, txtMode
+	PRINT 22, 0, txtTempo
+	PRINT 24, 0, txtModeLn
 	jsr ScrDevices
 	jsr ScrDev2
 	ldx #0
@@ -221,11 +221,6 @@ ScrDevices:
 	ldx #DEV_SID
 	ldy #3
 	jsr OnOff
-	PRINT 3, 17, txtBlank9
-	lda sidMute
-	beq .nm
-	PRINT 3, 17, txtMuted
-.nm:
 	PRINT 4, 0, txtGb
 	ldx #DEV_GB
 	ldy #4
@@ -366,6 +361,18 @@ ScrOct:
 	ldx #27
 	ldy #21
 	jsr PrintAt
+	lda #<txtNNew
+	ldy #>txtNNew
+	ldx newPending
+	beq .np
+	lda #<txtNNext
+	ldy #>txtNNext
+.np:
+	sta ptr
+	sty ptr+1
+	ldx #34
+	ldy #21
+	jsr PrintAt
 .rs:
 	lda ghostFilter
 	beq .ga
@@ -430,10 +437,24 @@ ScrArpLine:
 	inx
 	jsr PutChar
 .bpm:
+	ldy arpOct
+	lda octTxtLo,y
+	sta ptr
+	lda octTxtHi,y
+	sta ptr+1
+	ldx #34
 	ldy #19
+	jmp PrintAt
+
+ScrCounters:
+	subroutine
+	lda #0
+	sta t2
+	; ---- tempo, mute
+	ldy #22
 	ldx #0
 	jsr ScreenAddr
-	ldx #34
+	ldx #2
 	lda #32
 	jsr PutChar
 	inx
@@ -444,34 +465,74 @@ ScrArpLine:
 	sta t0
 	lda #0
 	sta t1
-	ldx #34
+	ldx #2
 	jsr PutDecZ
-	lda #0
-	sta t2
-	rts
-
-ScrCounters:
-	subroutine
-	lda #0
-	sta t2
-	; ---- RESTORE counters
+	lda #<txtOff
+	ldy #>txtOff
+	ldx sidMute
+	beq .mo
+	lda #<txtOn
+	ldy #>txtOn
+.mo:
+	sta ptr
+	sty ptr+1
+	ldx #19
 	ldy #22
+	jsr PrintAt
+	; ---- mode line: notes mode, key, sound
+	ldx playMode
+	cpx #MODE_EXT
+	bne .m1
+	lda spice
+	clc
+	adc #2
+	tax
+.m1:
+	lda modeTxtLo,x
+	sta ptr
+	lda modeTxtHi,x
+	sta ptr+1
+	ldx #2
+	ldy #24
+	jsr PrintAt
+	ldy #24
 	ldx #0
 	jsr ScreenAddr
-	lda rsSingle
+	lda keyRoot
+	asl
 	sta t0
-	lda #0
-	sta t1
-	ldx #15
-	jsr PutDec16
-	lda rsDouble
-	sta t0
-	lda #0
-	sta t1
-	ldx #29
-	jsr PutDec16
-	lda #0
-	sta t2                  ; (PutDec16 uses t2; PrintAt ORs it in)
+	tay
+	ldx #19
+	lda noteNames,y
+	jsr PutChar             ; (uses Y)
+	inx
+	ldy t0
+	lda noteNames+1,y
+	jsr PutChar
+	lda #<txtMajor
+	ldy #>txtMajor
+	ldx keyMinor
+	beq .mj
+	lda #<txtMinor
+	ldy #>txtMinor
+.mj:
+	sta ptr
+	sty ptr+1
+	ldx #22
+	ldy #24
+	jsr PrintAt
+	lda #<txtFat
+	ldy #>txtFat
+	ldx padSound
+	beq .sd
+	lda #<txtPads
+	ldy #>txtPads
+.sd:
+	sta ptr
+	sty ptr+1
+	ldx #30
+	ldy #24
+	jsr PrintAt
 	; ---- messages sent
 	PRINT 23, 0, txtSent
 	ldy #23

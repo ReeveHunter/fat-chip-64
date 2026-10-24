@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """End to end: Fat Chip 64 (py65) -> MIDI bytes -> Fat Chip GB (PyBoy).
 
-Runs Fat Chip 64: a chord, a RESTORE double tap, fast messy playing, a
+Runs Fat Chip 64: a chord, RESTORE (screens off), fast messy playing, a
 minute of silence, more notes, then SHIFT+F7 panic with keys held. The exact
 bytes it sent go through a model of the Teensyboy (teensy.py, timing and
 buffer from its firmware) into the Fat Chip GB ROM at their real times.
@@ -35,7 +35,7 @@ c.run_ms(150)
 c.press("q", "e", "t", ms=120)          # C-E-G chord, held
 t_chord = c.cpu.processorCycles
 c.run_ms(200)
-c.restore(); c.run_ms(100); c.restore(); c.run_ms(100)   # double tap: Game Boy screen off
+c.restore(); c.run_ms(100)               # RESTORE: screens off
 c.release("q", "e", "t", ms=200)
 rnd = random.Random(3)
 for _ in range(40):                     # fast, messy playing
@@ -48,6 +48,17 @@ t_spark = c.cpu.processorCycles
 c.press("q", "e", "t", ms=900)
 c.release("q", "e", "t", ms=60)
 c.tap("a", ms=40)                       # arp off
+c.run_ms(300)
+c.press("q", "e", ms=200)               # a chord, then M
+c.tap("m", ms=40)
+t_mute = c.cpu.processorCycles
+c.run_ms(300)
+c.tap("m", ms=40)
+c.release("q", "e", ms=60)
+c.tap("v", ms=60)                       # PADS
+t_pads = c.cpu.processorCycles
+c.run_ms(200)
+c.tap("v", ms=60)                       # FAT
 c.run_ms(300)
 t_quiet = c.cpu.processorCycles
 # a minute of silence (v0.1 froze its queues after 33 s): skip the clock ahead
@@ -75,6 +86,8 @@ quiet_frame = None
 quiet_sound = None
 spark = None
 spark_notes = set()
+muted_gates = None
+pad_patch = None
 while i < len(wire):
     limit = t0 + (frame + 1) * FRAME
     if quiet_frame is None and limit >= t_quiet:   # 300 ms after the last key, before the next note
@@ -91,6 +104,12 @@ while i < len(wire):
         gb.midi(*chunk)
     gb.run(1)
     frame += 1
+    if muted_gates is None and limit >= t_mute + 200 * CYCLES_PER_MS:
+        vs = gb.sym["_voice"]
+        muted_gates = [gb.mem(vs + v * 45 + 2) for v in range(3)]
+    if pad_patch is None and limit >= t_pads + 150 * CYCLES_PER_MS:
+        pp = gb.sym["_patch"]
+        pad_patch = [(gb.mem(pp + v * 32 + 5), gb.mem(pp + v * 32 + 7)) for v in range(3)] + [gb.mem(pp + 32 + 8)]
     if t_spark + 200 * CYCLES_PER_MS <= limit < t_spark + 900 * CYCLES_PER_MS:
         vs = gb.sym["_voice"]
         spark_notes.add((gb.mem(vs), gb.mem(vs + 45)))
@@ -114,12 +133,15 @@ check("pulses detuned about -5 / +5 cents (patch 29 / 35)", (gb.mem(patch + P_DE
       (gb.mem(patch + P_DETUNE), gb.mem(patch + 32 + P_DETUNE)))
 check("chord on the Game Boy: pulse 1 G3, pulse 2 C3, wave C2 (bass)", notes == [55, 48, 36], notes)
 check("all three Game Boy voices sounding", sounding & 0x07 == 0x07, hex(sounding))
-check("double RESTORE turned the Game Boy screen off", not (gb.mem(0xFF40) & 0x80))
+check("RESTORE turned the Game Boy screen off", not (gb.mem(0xFF40) & 0x80))
 check("no stray bytes on the Game Boy side", gb.var("_lt_stray", 2) == [0, 0])
 check("SPARKLE: Game Boy pulse 1 left only, pulse 2 right only (NR51)",
       spark is not None and spark & 0x11 == 0x10 and spark & 0x22 == 0x02, hex(spark or 0))
 check("SPARKLE: both pulses take turns on chord notes", len({a for a, _ in spark_notes}) >= 2
       and len({b for _, b in spark_notes}) >= 2, spark_notes)
+check("M with a chord held: every Game Boy voice let go", muted_gates == [0, 0, 0], muted_gates)
+check("PADS: Game Boy attack 5 / release 6 on pulses + wave, pulse 2 glide 8",
+      pad_patch == [(5, 6), (5, 6), (5, 6), 8], pad_patch)
 check("after fast playing every Game Boy note was released (gate off, releasing or idle)",
       all(g == 0 and st in (0, 3) for g, st in quiet_sound), quiet_sound)
 check("SHIFT+F7 with keys held: every Game Boy voice silent (idle)", after_panic == [(0, 0)] * 3, after_panic)

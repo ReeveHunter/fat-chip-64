@@ -331,6 +331,7 @@ GbStartup:
 	jsr GbGlobal
 	jsr SendTempo
 	jsr ArpPan
+	jsr SoundGb
 .done:
 	rts
 
