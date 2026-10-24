@@ -237,6 +237,10 @@ vOut        ds NUM_VOICES      ; MIDI voices: note actually sounding on the devi
 sidCtl      ds 1               ; SID waveform bits (saw $20, pulse $40)
 padT        ds 2               ; pad LFO phase
 chordTmp    ds 8
+effMode     ds 1               ; settings the chord builder uses (a latched
+effSpice    ds 1               ;  chord keeps the old ones until the next note)
+effRoot     ds 1
+effMinor    ds 1
 exCount     ds 1               ; Expand / InsertNote
 exTones     ds 1
 exI         ds 1

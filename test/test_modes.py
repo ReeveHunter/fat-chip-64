@@ -98,6 +98,32 @@ c.tap("a", ms=20); c.tap("a", ms=40)         # SPARKLE -> OFF
 c.tap("z", ms=20); c.tap("z", ms=60)         # CHORD -> EXT -> POLY
 check("back to POLY", c.v("playMode") == 0)
 
+# ---------------------------------------------------------------- latched chord + a mode change
+c.tap("=", ms=30)                           # latch SMART
+c.press("q", "t", ms=60); c.release("q", "t", ms=60)
+check("latched in POLY: C G", held() == [48, 55], held())
+c.tap("z", ms=80)                           # -> SMART CHORD
+check("mode change while latched: the chord stays as it was", held() == [48, 55] and "N NEXT" in c.screen_row(21),
+      (held(), c.screen_row(21)))
+check("...but the screen shows the new mode", "SMART CHRD" in c.screen_row(24))
+c.tap("w", ms=80)                           # next press: new chord, new mode (even though quick)
+check("next key: a new chord in the new mode (D minor)", held() == [50, 53, 57], held())
+c.press("k", ms=20); c.tap("t", ms=30); c.release("k", ms=80)
+check("key change while latched: D minor keeps sounding", held() == [50, 53, 57], held())
+c.tap("w", ms=80)
+check("next key: D in G major = D major", held() == [50, 54, 57], held())
+c.press("k", ms=20); c.tap("q", ms=30); c.release("k", ms=40)
+c.tap("n", ms=20); c.tap("n", ms=20)
+c.tap("=", ms=20); c.tap("=", ms=20); c.tap("=", ms=40)   # SMART -> HOLD -> ADD -> OFF
+c.press("q", ms=60)
+c.tap("z", ms=80)                           # latch off: applies at once to held keys
+check("latch off: a mode change applies at once", held() == [48, 52, 55, 59], held())
+c.release("q", ms=40)
+c.tap("z", ms=20); c.tap("z", ms=60)         # EXT -> POLY -> CHORD
+c.tap("z", ms=60)
+check("(mode back to EXT for the next part)", c.v("playMode") == 2)
+c.tap("z", ms=60)
+
 # ---------------------------------------------------------------- SPARKLE octave
 c.tap("a", ms=20); c.tap("a", ms=60)         # SPARKLE
 t0 = c.cpu.processorCycles
