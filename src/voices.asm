@@ -38,18 +38,55 @@ SidInit:
 	rts
 
 ; Volume 15, or 0 (silent, no hum) when the SID is off or muted (M).
+; Volume 15, or 0 when the SID is off or muted. Keeps the filter mode bits.
 SidVolume:
 	subroutine
 	lda devOn+DEV_SID
 	beq .z
-	lda sidMute
+	lda muteNow
 	bne .off
 	lda #$0F
-	.byte $2C               ; skip the next instruction (bit abs)
+	bne .z
 .off:
 	lda #0
 .z:
+	ora sidFilt
 	sta SID_VOL
+	rts
+
+; M or SPACE changed: muteNow = mute xor momentary. The SID goes to volume 0;
+; the Game Boy and NES get note-offs (so nothing hangs on, and their tails
+; ring out naturally), and their notes come back when it unmutes.
+MuteChanged:
+	subroutine
+	lda sidMute
+	eor moment
+	sta muteNow
+	beq .b
+	lda #2                  ; red border while muted
+.b:
+	sta BORDER
+	jsr SidVolume
+	ldx #0
+.v:
+	stx t0
+	lda vDev,x
+	beq .n                  ; SID: volume does it
+	lda vNote,x
+	ldy muteNow
+	beq .t
+	lda #NO_NOTE
+.t:
+	cmp vOut,x
+	beq .n
+	jsr MidiTo
+.n:
+	ldx t0
+	inx
+	cpx #NUM_VOICES
+	bne .v
+	lda #1
+	sta screenDirty
 	rts
 
 ; Gate SID voices back on one scan after a retrigger.
@@ -99,6 +136,160 @@ BuildHeld:
 	cpx #24
 	bne .h
 	sty heldCount
+	lda playMode
+	bne Expand
+	rts
+
+; SMART CHORD / EXTENSIONS: each held note becomes a chord built in the key.
+; A note in the scale gets its diatonic chord (stacked scale thirds: triad,
+; or 7 / 9 / 11 / 13 with extensions). A note outside the scale gets a
+; major triad (+ b7, 9, 11, 13). Results merge, ascending, at most 8.
+Expand:
+	subroutine
+	ldx heldCount
+	stx exCount
+.cp:
+	dex
+	bmi .cpd
+	lda heldList,x
+	sta chordTmp,x
+	jmp .cp
+.cpd:
+	lda #0
+	sta heldCount
+	ldx #3                  ; tones: triad
+	lda playMode
+	cmp #MODE_EXT
+	bne .tn
+	lda spice
+	clc
+	adc #4                  ; 7th = 4 tones ... 13th = 7
+	tax
+.tn:
+	stx exTones
+	lda #0
+	sta exI
+.raw:
+	lda exI
+	cmp exCount
+	beq .x
+	tax
+	lda chordTmp,x
+	sta exR
+	; degree of the note in the key, or $FF
+	sec
+	sbc keyRoot
+	clc
+	adc #120                ; keep it positive
+.mod:
+	cmp #12
+	bcc .rel
+	sbc #12
+	bcs .mod
+.rel:
+	sta exV                 ; semitones above the key root
+	jsr ScalePtr
+	ldy #6
+.d:
+	lda (ptr),y
+	cmp exV
+	beq .found
+	dey
+	bpl .d
+	ldy #$FF                ; not in the scale
+.found:
+	sty exD
+	lda #0
+	sta exK
+.tone:
+	lda exK
+	cmp exTones
+	beq .nextRaw
+	ldy exD
+	bmi .chrom
+	; diatonic: scale[d + 2k] - scale[d]
+	lda exK
+	asl
+	clc
+	adc exD
+	tay
+	lda (ptr),y
+	ldy exD
+	sec
+	sbc (ptr),y
+	jmp .add
+.chrom:
+	ldy exK
+	lda chromTones,y
+.add:
+	clc
+	adc exR
+	jsr InsertNote
+	inc exK
+	bne .tone
+.nextRaw:
+	inc exI
+	bne .raw
+.x:
+	rts
+
+; ptr = the key's scale table (21 steps, three octaves)
+ScalePtr:
+	lda keyMinor
+	beq .maj
+	lda #<scaleMinor
+	sta ptr
+	lda #>scaleMinor
+	sta ptr+1
+	rts
+.maj:
+	lda #<scaleMajor
+	sta ptr
+	lda #>scaleMajor
+	sta ptr+1
+	rts
+
+; Insert note A into heldList (ascending, no repeats, at most 8: the
+; highest falls off).
+InsertNote:
+	subroutine
+	cmp #108
+	bcs .x                  ; too high to be useful
+	sta exV
+	ldx #0
+.f:
+	cpx heldCount
+	beq .ins
+	lda heldList,x
+	cmp exV
+	beq .x                  ; already there
+	bcs .ins                ; first one above
+	inx
+	bne .f
+.ins:
+	cpx #8
+	bcs .x                  ; full and this is the highest
+	; shift up from the end (dropping the 8th if full)
+	stx exS
+	ldy heldCount
+	cpy #8
+	bcc .s
+	ldy #7
+.s:
+	cpy exS
+	beq .put
+	lda heldList-1,y
+	sta heldList,y
+	dey
+	jmp .s
+.put:
+	lda exV
+	sta heldList,x
+	lda heldCount
+	cmp #8
+	bcs .x
+	inc heldCount
+.x:
 	rts
 
 Allocate:
@@ -279,8 +470,15 @@ ArpPairNotes:
 	ldx pairB
 	ldy pairA
 .ab:
-	; X = this step's voice, Y = the other
-	lda arpNote
+	; X = this step's voice, Y = the other; arpOct octaves up
+	lda arpOct
+	asl
+	asl
+	sta t1                  ; x4
+	asl
+	adc t1                  ; x12
+	clc
+	adc arpNote
 	sta vWant,x
 	lda arpHit
 	sta vArpHit,x
@@ -355,45 +553,13 @@ VoiceSet:
 	subroutine
 	lda vDev,x
 	beq .sid
-	; ---- MIDI voice (Game Boy or MidiNES)
-	cmp #DEV_GB
-	bne .nesCh
-	lda gbBase
-	jmp .ch
-.nesCh:
-	lda nesBase
-.ch:
-	clc
-	adc vIdx,x
-	and #15
-	sta t1                  ; channel
-	; note off for the old note
-	lda vNote,x
-	cmp #NO_NOTE
-	beq .on
-	jsr MidiNoteValue
-	sta mD1
-	lda t1
-	ora #$80
-	sta mS
-	lda #0
-	sta mD2
-	jsr DevPut
-.on:
-	ldx t0
+	; ---- MIDI voice (Game Boy or MidiNES): nothing sounds while muted
 	lda vWant,x
-	cmp #NO_NOTE
-	beq .done
-	jsr MidiNoteValue
-	sta mD1
-	lda t1
-	ora #$90
-	sta mS
-	lda #VELOCITY
-	sta mD2
-	jsr DevPut
-.done:
-	rts
+	ldy muteNow
+	beq .go
+	lda #NO_NOTE
+.go:
+	jmp MidiTo
 	; ---- SID voice
 .sid:
 	ldy vIdx,x
@@ -464,6 +630,53 @@ VoiceSet:
 	ldx t2
 	sta SID+4,x
 .legato:
+	rts
+
+; MIDI voice t0: from what it sounds now (vOut) to note A (or NO_NOTE):
+; note-off for the old note, note-on for the new. Always sends both, so
+; the same note again is a re-attack.
+MidiTo:
+	subroutine
+	sta mtTarget
+	ldx t0
+	lda vDev,x
+	cmp #DEV_GB
+	bne .nesCh
+	lda gbBase
+	jmp .ch
+.nesCh:
+	lda nesBase
+.ch:
+	clc
+	adc vIdx,x
+	and #15
+	sta t1                  ; channel
+	lda vOut,x
+	cmp #NO_NOTE
+	beq .on
+	jsr MidiNoteValue
+	sta mD1
+	lda t1
+	ora #$80
+	sta mS
+	lda #0
+	sta mD2
+	jsr DevPut
+.on:
+	ldx t0
+	lda mtTarget
+	sta vOut,x
+	cmp #NO_NOTE
+	beq .done
+	jsr MidiNoteValue
+	sta mD1
+	lda t1
+	ora #$90
+	sta mS
+	lda #VELOCITY
+	sta mD2
+	jsr DevPut
+.done:
 	rts
 
 ; A = MIDI note for voice t0 -> note to send (bass voices an octave down)

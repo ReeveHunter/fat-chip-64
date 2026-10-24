@@ -56,7 +56,12 @@ KeyScan:
 	inx
 	cpx #8
 	bne .rc
-	; ---- presses: down now, not accepted yet
+	; ---- presses: down now, not accepted yet. Two passes: modifiers (SHIFT,
+	; CTRL, K) first, so SHIFT+F7 or K + a note pressed in the same scan
+	; still count as a combination.
+	lda #0
+	sta ksPass
+.pass:
 	ldx #0
 .pc:
 	stx ksCol
@@ -76,6 +81,16 @@ KeyScan:
 	jsr Suspect
 	bcs .pbn                ; maybe a phantom: wait
 .accept:
+	jsr KeyCode
+	jsr IsModifier          ; Z set = modifier
+	beq .mod
+	lda ksPass
+	beq .pbn                ; pass 0: modifiers only
+	bne .take
+.mod:
+	lda ksPass
+	bne .pbn                ; (taken in pass 0)
+.take:
 	ldx ksCol
 	ldy ksRow
 	lda rowBit,y
@@ -91,6 +106,23 @@ KeyScan:
 	inx
 	cpx #8
 	bne .pc
+	lda ksPass
+	bne .done
+	inc ksPass
+	jmp .pass
+.done:
+	rts
+
+; Z set if key code A is a modifier. Keeps A.
+IsModifier:
+	cmp #K_LSHIFT
+	beq .y
+	cmp #K_RSHIFT
+	beq .y
+	cmp #K_CTRL
+	beq .y
+	cmp #K_K
+.y:
 	rts
 
 ; A = key code at ksCol / ksRow
@@ -137,41 +169,85 @@ Suspect:
 	rts
 
 ; A = key code
-;   overlay        notes
-;   =              latch: OFF -> HOLD -> BUILD -> OFF
-;   N              new chord: latched notes go (keys still down stay)
-;   G              phantom-key filter on / off (off at start; for testing)
-;   A / S / D      arp mode / pattern / speed     H / J  free speed
-;   B              tap tempo
+;   overlay        notes (K held + a note: set the key)
 ;   F1/F3/F5/F7    octave: C4 / C3 / C2 / C1 on the lowest key
 ;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
 ;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
-;   M              mute the SID (kills the C64's hum)
+;   M              mute everything        SPACE  momentary (flips mute while held)
+;   =              latch: OFF -> SMART -> HOLD -> ADD -> OFF
+;   N              new chord: the next note starts one (twice: clear now)
+;   Z / X          notes mode (POLY, CHORD, EXT) / extensions (7 9 11 13)
+;   K + note / L   key root / major-minor        V  sound: FAT or PADS
+;   A / S / D / F  arp mode / pattern / speed / SPARKLE octave
+;   H / J          free arp speed            B  tap tempo
+;   G              phantom-key filter on / off (off at start; for testing)
 KeyDown:
 	subroutine
 	cmp #24
-	bcs .cmd
+	bcc .isNote
+	jmp .cmd
+.isNote:
 	tax
+	lda kDown
+	beq .note
+	jmp SetKeyRoot
+.note:
 	lda #1
 	sta physKey,x
 	inc physCount
+	jsr GetTicks
+	lda newPending          ; N was pressed: this note starts a new chord
+	beq .styles
+	lda #0
+	sta newPending
+	jsr ClearNotes
+	jmp .add
+.styles:
 	lda latch
-	cmp #LATCH_BUILD
-	beq .build
-	cmp #LATCH_HOLD         ; hold: a fresh press after letting go of
-	bne .add                ; everything starts a new chord
+	cmp #LATCH_ADD
+	beq .addStyle
+	cmp #LATCH_HOLD
+	beq .hold
+	cmp #LATCH_SMART
+	bne .add
+	; smart: a key still down, or a press soon after the last one, adds to
+	; the chord; after a pause the next note starts a new chord
+	lda physCount
+	cmp #1
+	bne .add
+	lda nowL
+	sec
+	sbc lastPress
+	sta t0
+	lda nowH
+	sbc lastPress+1
+	cmp #>SMART_WINDOW
+	bcc .add
+	bne .new
+	lda t0
+	cmp #<SMART_WINDOW
+	bcc .add
+.new:
+	jsr ClearNotes
+	jmp .add
+.hold:
+	; hold: a fresh press after letting go of everything starts a new chord
 	lda physCount
 	cmp #1
 	bne .add
 	jsr ClearNotes
 .add:
+	lda nowL
+	sta lastPress
+	lda nowH
+	sta lastPress+1
 	lda #1
 	sta noteHeld,x
 	sta notePressed,x
 	sta reallocFlag
 	jmp PlayAdd
-.build:
-	; build: each press adds a note; pressing a latched note takes it out
+.addStyle:
+	; add: each press adds a note; pressing a latched note takes it out
 	lda #1
 	sta reallocFlag
 	lda noteHeld,x
@@ -188,56 +264,10 @@ KeyDown:
 	inc shiftDown
 	rts
 .nsh:
-	cmp #K_CTRL
-	bne .nct
-	lda #1
-	sta ctrlDown
-	rts
-.nct:
-	cmp #K_M
-	bne .j0
-	jmp .mute
-.j0:
-	cmp #K_EQUALS
-	bne .j1
-	jmp .latch
-.j1:
-	cmp #K_N
-	bne .j2
-	jmp .newChord
-.j2:
-	cmp #K_G
-	bne .k0
-	jmp .ghost
-.k0:
-	cmp #K_A
-	bne .k1
-	jmp ArpModeKey
-.k1:
-	cmp #K_S
-	bne .k2
-	jmp ArpPatKey
-.k2:
-	cmp #K_D
-	bne .k3
-	jmp ArpLenKey
-.k3:
-	cmp #K_H
-	bne .k4
-	jmp ArpSlower
-.k4:
-	cmp #K_J
-	bne .k5
-	jmp ArpFaster
-.k5:
-	cmp #K_B
-	bne .k6
-	jmp TapTempo
-.k6:
 	cmp #K_F1
-	bcc .x
+	bcc .table
 	cmp #K_F7+1
-	bcs .x
+	bcs .table
 	; F keys
 	sec
 	sbc #K_F1
@@ -251,7 +281,6 @@ KeyDown:
 	lda #1
 	sta reallocFlag
 	sta screenDirty
-.x:
 	rts
 .shiftF:
 	cpx #3
@@ -267,35 +296,143 @@ KeyDown:
 	cpx #2
 	bne .x
 	jmp NextNesChannel
-.shift:
-	inc shiftDown
+.table:
+	ldx #0
+.t:
+	ldy cmdCode,x
+	beq .x                  ; end of the table
+	cmp cmdCode,x
+	beq .go
+	inx
+	bne .t
+.go:
+	lda cmdLo,x
+	sta ptr
+	lda cmdHi,x
+	sta ptr+1
+	jmp (ptr)
+.x:
 	rts
-.ctrl:
+
+; key -> handler (KeyDown)
+cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_G,K_A,K_S,K_D,K_F,K_H,K_J,K_B,K_Z,K_X,K_K,K_L,K_V,0
+cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<GhostKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey
+cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>GhostKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey
+
+CtrlDown:
 	lda #1
 	sta ctrlDown
 	rts
-.mute:
-	lda sidMute
+
+MuteKey:
+	lda sidMute             ; (now mutes everything)
 	eor #1
 	sta sidMute
-	jsr SidVolume
+	jmp MuteChanged
+
+MomentDown:
 	lda #1
-	sta screenDirty
+	sta moment
+	jmp MuteChanged
+
+GhostKey:
+	lda ghostFilter
+	eor #1
+	sta ghostFilter
+	jmp Dirty
+
+KeyKeyDown:
+	lda #1
+	sta kDown
 	rts
-.latch:
-	ldx latch
+
+; K held + note X: that note is the key's root
+SetKeyRoot:
+	subroutine
+	txa
+.m:
+	cmp #12
+	bcc .r
+	sbc #12
+	bcs .m
+.r:
+	sta keyRoot
+	lda #1
+	sta reallocFlag
+	jmp Dirty
+
+ScaleKey:
+	lda keyMinor
+	eor #1
+	sta keyMinor
+	lda #1
+	sta reallocFlag
+	jmp Dirty
+
+ModeKey:
+	subroutine
+	ldx playMode
 	inx
 	cpx #3
+	bcc .s
+	ldx #0
+.s:
+	stx playMode
+	lda #1
+	sta reallocFlag
+	jmp Dirty
+
+SpiceKey:
+	subroutine
+	ldx spice
+	inx
+	cpx #4
+	bcc .s
+	ldx #0
+.s:
+	stx spice
+	lda #1
+	sta reallocFlag
+	jmp Dirty
+
+SoundKey:
+	lda padSound
+	eor #1
+	sta padSound
+	jsr SoundApply
+	jmp Dirty
+
+LatchKey:
+	subroutine
+	ldx latch
+	inx
+	cpx #4
 	bcc .l1
 	ldx #0
 .l1:
 	stx latch
-	lda #1
-	sta screenDirty
+	lda #0
+	sta newPending
+	jsr Dirty
 	txa
-	bne .x2
-	; latch off: only keys still down keep sounding
-.newChord:
+	bne .x
+	jmp KeepPhysical        ; latch off: only keys still down keep sounding
+.x:
+	rts
+
+; N: the next note starts a new chord. Pressed again before that: clear now.
+NewChordKey:
+	subroutine
+	lda newPending
+	bne .now
+	lda #1
+	sta newPending
+	jmp Dirty
+.now:
+	lda #0
+	sta newPending
+	jsr Dirty
+KeepPhysical:
 	ldx #23
 .l0:
 	lda physKey,x
@@ -304,13 +441,9 @@ KeyDown:
 	bpl .l0
 	lda #1
 	sta reallocFlag
-.x2:
 	rts
 
-.ghost:
-	lda ghostFilter
-	eor #1
-	sta ghostFilter
+Dirty:
 	lda #1
 	sta screenDirty
 	rts
@@ -354,6 +487,18 @@ KeyUp:
 	sta ctrlDown
 	rts
 .s:
+	cmp #K_SPACE
+	bne .k
+	lda #0
+	sta moment
+	jmp MuteChanged
+.k:
+	cmp #K_K
+	bne .sh
+	lda #0
+	sta kDown
+	rts
+.sh:
 	cmp #K_LSHIFT
 	beq .shift
 	cmp #K_RSHIFT
@@ -366,24 +511,13 @@ KeyUp:
 .x2:
 	rts
 
-; RESTORE (top B of the overlay) is a command key. For testing, for now:
-;   single tap: white border blink, count it, downbeat re-sync to the Game
-;               Boy (its header blinks the beat)
-;   double tap (second press within DOUBLE_TAP ms): red border blink, count
-;               it, switch the Game Boy's screen off / on (CC 112)
-; A double tap's first press is a single tap.
+; RESTORE (top B of the overlay): each press switches both screens off / on
+; (the C64's, and the Game Boy's with CC 112). No double tap.
 RestoreCheck:
 	subroutine
 	lda nmiCount
 	cmp nmiSeen
 	bne .new
-	lda restoreFlash
-	beq .x
-	dec restoreFlash
-	bne .x
-	lda #0
-	sta BORDER
-.x:
 	rts
 .new:
 	sta nmiSeen
@@ -394,68 +528,33 @@ RestoreCheck:
 	sta t0
 	lda nmiTick+1
 	sbc lastRestore+1
-	sta t1
-	bne .notBounce
+	bne .ok
 	lda t0
 	cmp #RESTORE_DEBOUNCE
-	bcc .x
-.notBounce:
+	bcs .ok
+	rts
+.ok:
 	lda nmiTick
 	sta lastRestore
 	lda nmiTick+1
 	sta lastRestore+1
-	; double tap? (t1:t0 = ms since the previous press). Decide before acting:
-	; the actions use t0/t1.
-	ldx #0
-	lda t1
-	cmp #>DOUBLE_TAP
-	bcc .dbl                ; under 256 ms
-	bne .single             ; 512 ms or more
-	lda t0
-	cmp #<DOUBLE_TAP
-	bcs .single
-.dbl:
-	ldx #1
-.single:
-	txa
-	bne .double
-	jmp Resync
-.double:
-	jmp GbScreenToggle
-
-Resync:
-	subroutine
-	inc rsSingle
-	lda devOn+DEV_GB
-	beq .flash
-	lda #GCC_DOWNBEAT
-	ldx #0
-	jsr GbGlobal
-.flash:
-	lda #1                  ; white
-	sta BORDER
-	lda #6
-	sta restoreFlash
-	lda #1
-	sta screenDirty
-	rts
-
-GbScreenToggle:
-	subroutine
-	inc rsDouble
-	lda #2                  ; red
-	sta BORDER
-	lda #6
-	sta restoreFlash
-	lda #1
-	sta screenDirty
 	lda videoMode
 	eor #1
 	sta videoMode
+	beq .on
+	lda VIC_CTRL1
+	and #$EF                ; blank the C64 screen
+	sta VIC_CTRL1
+	jmp .gb
+.on:
+	lda VIC_CTRL1
+	ora #$10
+	sta VIC_CTRL1
+.gb:
 	lda devOn+DEV_GB
 	beq .x
 	lda #GCC_DISPLAY
 	ldx videoMode
-	jsr GbGlobal
+	jmp GbGlobal
 .x:
 	rts

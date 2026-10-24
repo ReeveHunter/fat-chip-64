@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.06:** SMART CHORD and EXTENSIONS modes with a key, PADS sound, SMART latch, deferred N, mute everything + SPACE momentary, RESTORE = screens, SPARKLE an octave up.
+
 **v0.05:** tap tempo and the arpeggiator (UNISON / SPARKLE, five patterns, synced or free speed).
 
 **v0.04:** phantom-key filter is optional (G), off at start.
@@ -40,22 +42,34 @@ lowest key (Q) starts at C3.
 
 | Key | Does |
 |---|---|
-| Overlay keys | Play notes (poly synth, smart stacking) |
+| Overlay keys | Play notes (through the notes mode) |
 | F1 / F3 / F5 / F7 | Octave: Q = C4 / C3 / C2 / C1 (held notes move with it) |
-| = | Latch: OFF → HOLD → BUILD → OFF. HOLD: notes keep sounding after you let go; a fresh press after letting go of everything starts a new chord. BUILD: every press adds a note, pressing a latched note takes it out |
-| N | New chord: latched notes go (keys still held stay) |
-| G | *Test for now:* phantom-key filter on / off (off at start, so phantoms play) |
-| A | Arp: OFF → UNISON (all nine voices step together) → SPARKLE (two voices arpeggiate over the chord as a pad) |
-| S | Arp pattern: UP, DOWN, UPDOWN, RANDOM, PLAYED (the order you pressed or built the chord) |
-| D | Arp speed: 1/4, 1/8, 1/8T, 1/16, 1/32 of the tempo, or FREE |
+| **Notes mode** | |
+| Z | POLY (smart stacking) → SMART CHORD (each key plays its chord in the key) → EXT (the chord plus 7th, 9th, 11th or 13th) |
+| X | Extensions: 7TH → 9TH → 11TH → 13TH |
+| K + a note | Set the key (hold K, press the key's root; the note doesn't play) |
+| L | Major / minor (natural minor) |
+| **Sound** | |
+| V | FAT (default) / PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES keeps its sharp attacks |
+| **Latch** | |
+| = | OFF → SMART → HOLD → ADD → OFF. SMART: notes pressed within half a second of the last (or while another key is down) build the chord; after a pause the next note starts a new one. HOLD: a fresh press after letting go of everything starts a new chord. ADD: every press adds a note, pressing a latched note takes it out |
+| N | New chord: the current one keeps sounding and the next note starts a new one (screen: N NEXT). Press N twice to clear now |
+| **Arp** | |
+| A | OFF → UNISON (all nine voices step together) → SPARKLE (two voices arpeggiate over the chord as a pad) |
+| S | Pattern: UP, DOWN, UPDOWN, RANDOM, PLAYED (the order you pressed or built the chord) |
+| D | Speed: 1/4, 1/8, 1/8T, 1/16, 1/32 of the tempo, or FREE |
 | H / J | FREE speed slower / faster (30–1000 ms per step); either one also picks FREE |
-| B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Shown as BPM; sent to the Game Boy (CC 107/108) |
-| M | Mute the SID (volume 0: kills the C64's hum; its voices keep their notes) |
-| SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent: SID volume 0, Game Boy panic, NES all notes off |
+| F | SPARKLE arp octave: +0, +1 (default), +2 |
+| B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Sent to the Game Boy (CC 107/108) |
+| **Sound control** | |
+| M | Mute everything: SID volume 0, Game Boy and NES note-offs (their release tails ring out). Border goes red. Notes come back on unmute |
+| SPACE | Momentary: while held, flips the mute (cut the sound, or hear it while muted) |
+| RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
+| **Setup-ish (for now)** | |
+| SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent |
 | SHIFT + F7 | Panic: every voice off, latch off, devices set up again |
 | CTRL + F3 / F5 | Game Boy / NES to the next block of channels (1–5, 2–6 … 12–16) |
-| RESTORE (the overlay's top B) | *Test for now:* white border blink, "1 TAP" count, downbeat re-sync (the Game Boy's header blinks the beat) |
-| RESTORE twice quickly | *Test for now:* red border blink, "2 TAPS" count, Game Boy screen off / on (CC 112) |
+| G | *Test for now:* phantom-key filter on / off (off at start, so phantoms play) |
 
 **Smart stacking:** nine voices (3 SID, Game Boy pulse 1, pulse 2, wave, NES
 pulse 1, pulse 2, triangle). The Game Boy wave and NES triangle play the
@@ -95,8 +109,8 @@ voices ±7 cents.
   nothing. On the overlay about 12% of 3-note and 36% of 4-note chords can
   lose their newest note this way; BUILD latch never does (one key at a time).
   `test/sim.py` ghosts like the real keyboard.
-- **Keyboard:** full matrix scan every 4 ms; RESTORE is the NMI (presses only;
-  40 ms debounce; the single action is immediate so re-sync lands on the beat).
+- **Keyboard:** full matrix scan every 4 ms; modifiers (SHIFT, CTRL, K) are handled first in each scan, so a combination pressed at once still counts; RESTORE is the NMI (presses only;
+  40 ms debounce).
 - **Memory:** program at $0801 (BASIC and KERNAL banked out, own IRQ/NMI
   vectors), buffers and state at $C000–$C3FF, zero page $10–$2F.
 
@@ -112,6 +126,8 @@ voices ±7 cents.
 | `test/teensy.py` | Teensyboy model (mGB mode): channel filter, 64-byte buffer, ~0.5 ms per byte |
 | `test/test_main.py` | startup, pacing, stacking, devices, octaves, latch, mute, panic, RESTORE, long silence, link budget |
 | `src/arp.asm` | tap tempo, arpeggiator |
+| `src/pads.asm` | FAT / PADS sound, SPARKLE octave |
+| `test/test_modes.py` | smart chord, extensions, key, pads, sparkle octave |
 | `test/test_arp.py` | tap tempo, arp modes, patterns, speeds, sparkle panning |
 | `test/test_with_gb.py` | end to end: Fat Chip 64 → Teensyboy model → the Fat Chip GB ROM (PyBoy) |
 

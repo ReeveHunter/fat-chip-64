@@ -27,7 +27,7 @@ def gaps(ev):
 c = C64()
 c.run_ms(150)
 check("arp line on screen", c.screen_row(19).startswith("A ARP OFF") and "1/16" in c.screen_row(19)
-      and "120BPM" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+      and "+1 OCT" in c.screen_row(19) and "120BPM" in c.screen_row(22).replace(" ", ""), c.screen_row(22))
 check("Game Boy gets the tempo at startup (120 BPM = CC107 30, CC108 0)",
       [(a, b) for _, s, a, b in c.midi() if s == 0xB0 and a in (107, 108)] == [(107, 30), (108, 0)])
 
@@ -41,8 +41,8 @@ for _ in range(5):
     c.press("b", ms=300)
     c.release("b", ms=300)                  # 600 ms apart = 100 BPM
 c.run_ms(60)
-check("tap tempo: 100 BPM", c.v("bpm") == 100 and "100BPM" in c.screen_row(19).replace(" ", ""),
-      (c.v("bpm"), c.screen_row(19)))
+check("tap tempo: 100 BPM", c.v("bpm") == 100 and "100BPM" in c.screen_row(22).replace(" ", ""),
+      (c.v("bpm"), c.screen_row(22)))
 tm = [(a, b) for _, s, a, b in c.midi(since=t0) if s == 0xB0 and a in (107, 108)]
 check("tap tempo goes to the Game Boy (100 x 32 = 3200: CC107 25, CC108 0)", tm[-2:] == [(107, 25), (108, 0)], tm[-2:])
 c.run_ms(2500)
@@ -93,30 +93,33 @@ check("release: arp stops, nothing left on", all(v == 255 for v in c.v("vNote", 
 
 c.tap("s", ms=40)                           # AS PLAYED
 check("S: PLAYED", "PLAYED" in c.screen_row(19), c.screen_row(19))
-c.tap("=", ms=30)                           # latch HOLD
-c.tap("=", ms=30)                           # BUILD
+c.tap("=", ms=30)                           # latch SMART
+c.tap("=", ms=30)                           # HOLD
+c.tap("=", ms=30)                           # ADD
 t0 = c.cpu.processorCycles
 for k in ("t", "q", "y", "e"):              # G C A E, one at a time
     c.tap(k, ms=40)
 c.run_ms(2600)
 notes = [n for _, n in ons(c, 0, t0)][-8:]
-check("PLAYED + BUILD latch: the order you built it (G C A E)", notes[:4] in ([55, 48, 57, 52], [48, 57, 52, 55], [57, 52, 55, 48], [52, 55, 48, 57]), notes)
-c.tap("n", ms=60)
+check("PLAYED + ADD latch: the order you built it (G C A E)", notes[:4] in ([55, 48, 57, 52], [48, 57, 52, 55], [57, 52, 55, 48], [52, 55, 48, 57]), notes)
+c.tap("n", ms=20); c.tap("n", ms=60)
 check("N: chord gone, arp stopped", all(v == 255 for v in c.v("vNote", 9)))
 
 # ---------------------------------------------------------------- free speed
 c.tap("s", ms=10)                           # UP again
 c.tap("h", ms=30)                           # picks FREE (160 ms)
+c.run_ms(40)
 check("H picks FREE", "160MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
 c.tap("j", ms=30)
 c.tap("j", ms=30)                           # 110 ms
+c.run_ms(60)
 check("J faster: 110 MS", "110MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
 t0 = c.cpu.processorCycles
 c.tap("q", ms=30); c.tap("w", ms=30)
 c.run_ms(1200)
 g = gaps(ons(c, 0, t0))
 check("FREE 110 ms steps", g and all(abs(x - 110) <= 5 for x in g[2:]), g)
-c.tap("n", ms=40)
+c.tap("n", ms=20); c.tap("n", ms=40)
 
 # ---------------------------------------------------------------- sparkle
 t0 = c.cpu.processorCycles
@@ -134,7 +137,7 @@ chans = []
 for ms, n in allp:
     chans.append(0 if (ms, n) in ons(c, 0, t0) else 1)
 check("sparkle: the arp ping-pongs between pulse 1 and pulse 2", chans[2:8] in ([0, 1, 0, 1, 0, 1], [1, 0, 1, 0, 1, 0]), chans)
-check("sparkle: the arp walks the chord", [n for _, n in allp][2:8] in
+check("sparkle: the arp walks the chord an octave up", [n - 12 for _, n in allp][2:8] in
       ([55, 48, 52, 55, 48, 52], [52, 55, 48, 52, 55, 48], [48, 52, 55, 48, 52, 55]), [n for _, n in allp])
 on_pad = {}
 for _, s, a, b in c.midi():
@@ -147,12 +150,12 @@ check("sparkle: the NES and GB wave hold the pad", on_pad.get(5) in (48, 52, 55)
       and on_pad.get(2) == 36, on_pad)
 nes_ons = len(ons(c, 5, c.cpu.processorCycles - 800 * CYCLES_PER_MS))
 check("sparkle: the pad doesn't re-attack every step", nes_ons == 0, nes_ons)
-c.tap("n", ms=60)
+c.tap("n", ms=20); c.tap("n", ms=60)
 t0 = c.cpu.processorCycles
 c.tap("a", ms=60)                           # OFF
 pans = [(s & 15, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0 and a == 10]
 check("arp off: pulses back to centre", pans == [(0, 64), (1, 64)], pans)
-c.tap("=", ms=40)                           # latch off
+c.tap("=", ms=40)                           # latch off (ADD -> OFF)
 t0 = c.cpu.processorCycles
 c.press("q", "e", ms=300)
 on = [x for x in c.midi(since=t0) if (x[1] & 0xF0) == 0x90 and x[3]]

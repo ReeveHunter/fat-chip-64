@@ -12,15 +12,15 @@ keymap:
 	; col 0: INST/DEL RETURN CRSR-R F7 F1 F3 F5 CRSR-D
 	.byte K_INSTDEL,K_RETURN,K_CRSR_RIGHT,K_F7,K_F1,K_F3,K_F5,K_CRSR_DOWN
 	; col 1: 3 W A 4 Z S E LSHIFT
-	.byte 3,2,K_A,N_,N_,K_S,4,K_LSHIFT
+	.byte 3,2,K_A,N_,K_Z,K_S,4,K_LSHIFT
 	; col 2: 5 R D 6 C F T X
-	.byte 6,5,K_D,8,N_,N_,7,N_
+	.byte 6,5,K_D,8,N_,K_F,7,K_X
 	; col 3: 7 Y G 8 B H U V
-	.byte 10,9,K_G,N_,K_B,K_H,11,N_
+	.byte 10,9,K_G,N_,K_B,K_H,11,K_V
 	; col 4: 9 I J 0 M K O N
-	.byte 13,12,K_J,15,K_M,N_,14,K_N
+	.byte 13,12,K_J,15,K_M,K_K,14,K_N
 	; col 5: + P L - . : @ ,
-	.byte N_,16,N_,18,N_,N_,17,N_
+	.byte N_,16,K_L,18,N_,N_,17,N_
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
 	.byte 20,19,N_,22,K_RSHIFT,K_EQUALS,21,N_
 	; col 7: 1 <- CTRL 2 SPACE C= Q RUN/STOP
@@ -47,7 +47,7 @@ vn8:        .byte "NES TRI (BASS)",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.05 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.06 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -61,10 +61,14 @@ txtOverlap: .byte "!! GAME BOY AND NES CHANNELS OVERLAP !!",0
 txtBlank:   .byte "                                       ",0
 txtVoices:  .byte "VOICES",0
 txtHeld:    .byte "HELD                                   ",0
-txtOctave:  .byte "F1-F7 OCTAVE       = LATCH       N NEW",0
-txtLatchLo: .byte <txtLOff,<txtLHold,<txtLBuild
-txtLatchHi: .byte >txtLOff,>txtLHold,>txtLBuild
-txtArp:     .byte "A ARP         S        D        B    BPM",0
+txtOctave:  .byte "F1-F7 OCTAVE       = LATCH",0
+txtNNew:    .byte "N NEW ",0
+txtNNext:   .byte "N NEXT",0
+txtLatchLo: .byte <txtLOff,<txtLSmart,<txtLHold,<txtLAdd
+txtLatchHi: .byte >txtLOff,>txtLSmart,>txtLHold,>txtLAdd
+txtLSmart:  .byte "SMART",0
+txtLAdd:    .byte "ADD  ",0
+txtArp:     .byte "A ARP         S        D        F",0
 txtMs:      .byte "MS  ",0
 arpModeLo:  .byte <tAOff,<tAUni,<tASpk
 arpModeHi:  .byte >tAOff,>tAUni,>tASpk
@@ -96,7 +100,29 @@ txtGAllow:  .byte "PLAY    ",0
 txtGFilter: .byte "FILTERED",0
 txtLOff:    .byte "OFF  ",0
 txtLHold:   .byte "HOLD ",0
-txtLBuild:  .byte "BUILD",0
-txtRestore: .byte "RESTORE  1 TAP        2 TAPS",0
+txtTempo:   .byte "B     BPM   M MUTE       SPACE FLIPS IT",0
+txtModeLn:  .byte "Z            K KEY          V",0
+modeTxtLo:  .byte <tMPoly,<tMChord,<tMEx7,<tMEx9,<tMEx11,<tMEx13
+modeTxtHi:  .byte >tMPoly,>tMChord,>tMEx7,>tMEx9,>tMEx11,>tMEx13
+tMPoly:     .byte "POLY      ",0
+tMChord:    .byte "SMART CHRD",0
+tMEx7:      .byte "EXT 7TH   ",0
+tMEx9:      .byte "EXT 9TH   ",0
+tMEx11:     .byte "EXT 11TH  ",0
+tMEx13:     .byte "EXT 13TH  ",0
+txtMajor:   .byte "MAJOR",0
+txtMinor:   .byte "MINOR",0
+txtFat:     .byte "FAT ",0
+txtPads:    .byte "PADS",0
+octTxtLo:   .byte <tO0,<tO1,<tO2
+octTxtHi:   .byte >tO0,>tO1,>tO2
+tO0:        .byte "+0 OCT",0
+tO1:        .byte "+1 OCT",0
+tO2:        .byte "+2 OCT",0
 txtSent:    .byte "MIDI OUT:       MESSAGES",0
-txtMode:    .byte "MODE: POLY SYNTH (SMART STACKING)",0
+
+; scale steps, three octaves (Expand)
+scaleMajor: .byte 0,2,4,5,7,9,11,12,14,16,17,19,21,23,24,26,28,29,31,33,35
+scaleMinor: .byte 0,2,3,5,7,8,10,12,14,15,17,19,20,22,24,26,27,29,31,32,34
+; a note outside the key: major triad, b7, 9, 11, 13
+chromTones: .byte 0,4,7,10,14,17,21
