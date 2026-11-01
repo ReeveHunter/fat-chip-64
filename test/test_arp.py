@@ -26,7 +26,7 @@ def gaps(ev):
 
 c = C64()
 c.run_ms(150)
-check("arp line on screen", c.screen_row(19).startswith("A ARP OFF") and "1/16" in c.screen_row(19)
+check("arp line on screen, FREE 30 MS by default", c.screen_row(19).startswith("A ARP OFF") and "30MS" in c.screen_row(19).replace(" ", "")
       and "+1 OCT" in c.screen_row(19) and "120BPM" in c.screen_row(22).replace(" ", ""), c.screen_row(22))
 check("Game Boy gets the tempo at startup (120 BPM = CC107 30, CC108 0)",
       [(a, b) for _, s, a, b in c.midi() if s == 0xB0 and a in (107, 108)] == [(107, 30), (108, 0)])
@@ -52,8 +52,6 @@ check("one tap after a long gap doesn't change the tempo", c.v("bpm") == 100)
 # ---------------------------------------------------------------- unison arp
 c.tap("a", ms=60)
 check("A: UNISON", c.v("arpMode") == 1 and "UNISON" in c.screen_row(19), c.screen_row(19))
-c.tap("d", ms=30)                           # 1/16 -> 1/32
-c.tap("d", ms=30)                           # 1/32 -> FREE
 c.tap("d", ms=30)                           # FREE -> 1/4
 c.tap("d", ms=30)                           # 1/8
 check("D steps the speed: 1/8", c.v("arpLen") == 1 and "1/8 " in c.screen_row(19), c.screen_row(19))
@@ -97,9 +95,7 @@ check("release: arp stops, nothing left on", all(v == 255 for v in c.v("vNote", 
 
 c.tap("s", ms=40)                           # AS PLAYED
 check("S: PLAYED", "PLAYED" in c.screen_row(19), c.screen_row(19))
-c.tap("=", ms=30)                           # latch SMART
-c.tap("=", ms=30)                           # HOLD
-c.tap("=", ms=30)                           # ADD
+c.set("latch", 3)                           # ADD (menu-only for now)
 t0 = c.cpu.processorCycles
 for k in ("t", "q", "y", "e"):              # G C A E, one at a time
     c.tap(k, ms=40)
@@ -111,13 +107,14 @@ check("N: chord gone, arp stopped", all(v == 255 for v in c.v("vNote", 9)))
 
 # ---------------------------------------------------------------- free speed
 c.tap("s", ms=10)                           # UP again
-c.tap("h", ms=30)                           # picks FREE (160 ms)
-c.run_ms(40)
-check("H picks FREE", "160MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
-c.tap("j", ms=30)
-c.tap("j", ms=30)                           # 110 ms
+c.tap(";", ms=30)                           # picks FREE (30 ms)
 c.run_ms(60)
-check("J faster: 110 MS", "110MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+check("; picks FREE", "30MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+for _ in range(6):
+    c.tap(";", ms=30)                       # 40 50 60 75 90 110
+c.tap(":", ms=30); c.tap(";", ms=30)        # : faster, ; slower: 110 ms
+c.run_ms(80)
+check(": faster / ; slower: 110 MS", "110MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
 t0 = c.cpu.processorCycles
 c.tap("q", ms=30); c.tap("w", ms=30)
 c.run_ms(1200)
@@ -161,6 +158,7 @@ c.tap("a", ms=60)                           # OFF
 pans = [(s & 15, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0 and a == 10]
 check("arp off: pulses back to centre", pans == [(0, 64), (1, 64)], pans)
 c.tap("=", ms=40)                           # latch off (ADD -> OFF)
+check("latch off", c.v("latch") == 0)
 t0 = c.cpu.processorCycles
 c.press("q", ms=300)
 on = [x for x in c.midi(since=t0) if (x[1] & 0xF0) == 0x90 and x[3]]

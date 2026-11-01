@@ -529,6 +529,17 @@ ApplyVoices:
 	lda t3
 	beq .next
 .change:
+	lda vDev,x
+	beq .set                ; SID: always
+	lda hardCut
+	bne .set                ; panic: always
+	jsr QBacklog
+	cmp #Q_BACKLOG
+	bcc .set
+	lda #1                  ; that device's queue is backed up (a fast arp):
+	sta applyRetry          ;  this voice catches up on a later pass
+	bne .next
+.set:
 	jsr VoiceSet
 	ldx t0
 	lda vWant,x
@@ -546,6 +557,24 @@ ApplyVoices:
 	sta notePressed,x
 	dex
 	bpl .p
+	rts
+
+; A = messages waiting in voice X's device queue (keeps X)
+QBacklog:
+	subroutine
+	lda vDev,x
+	cmp #DEV_GB
+	bne .nes
+	lda gbqHead
+	sec
+	sbc gbqTail
+	and #63
+	rts
+.nes:
+	lda nesqHead
+	sec
+	sbc nesqTail
+	and #63
 	rts
 
 ; Voice X: from vNote,x to vWant,x; t3 = retrigger
@@ -609,11 +638,11 @@ VoiceSet:
 	bcs .freq
 	dec ptr+1
 .freq:
-	ldx t2
 	lda ptr
-	sta SID+0,x
+	sta sidBaseLo,y
 	lda ptr+1
-	sta SID+1,x
+	sta sidBaseHi,y
+	jsr SidFreqOut          ; (with the SPACE bend)
 	; gate
 	ldx t0
 	lda vNote,x
@@ -678,6 +707,15 @@ MidiTo:
 	cmp #NO_NOTE
 	beq .done
 	jsr NesBeforeOn         ; PADS: NES pulse starts at volume 0 and attacks
+	ldx t0
+	lda vDev,x
+	cmp #DEV_NES
+	bne .noBend
+	lda bendLvl
+	beq .noBend
+	lda mtTarget            ; SPACE bend: this note's bend first
+	jsr NesBendVoice
+.noBend:
 	ldx t0
 	lda mtTarget
 	jsr MidiNoteValue
@@ -839,6 +877,11 @@ Panic:
 	jsr GbStartup           ; includes the Game Boy's panic CC
 .nes:
 	jsr NesStartup
+	lda #0
+	sta bendLvl             ; the bend ends: SID now, MIDI centred next pass
+	jsr SidBendAll
+	lda #$FF
+	sta bendSent
 	lda #1
 	sta screenDirty
 	rts

@@ -142,6 +142,7 @@ c.release("w", ms=60)
 check("all off", notes_on(c.midi()) == {})
 
 shifted("f5", "ctrl")
+c.run_ms(60)                                # (a redraw may be mid-way)
 check("CTRL+F5: NES on 7-11", c.v("nesBase") == 6 and "CH 7-11" in c.screen_row(5), c.screen_row(5))
 for _ in range(6):                          # 8-12, 9-13, 10-14, 11-15, 12-16, wrap to 1-5
     shifted("f5", "ctrl")
@@ -202,7 +203,10 @@ c.tap("n", ms=20); c.tap("n", ms=60)
 check("N twice: clear now", sounding() == set() and "N NEW" in c.screen_row(21))
 
 c.tap("=", ms=60)
-check("= again: HOLD", "HOLD" in c.screen_row(21), c.screen_row(21))
+check("= again: back to OFF (= is OFF / SMART for now)", c.v("latch") == 0 and "OFF" in c.screen_row(21)[25:], c.screen_row(21))
+# HOLD and ADD stay in the code for a menu later: set them directly
+c.set("latch", 2); c.set("screenDirty", 1); c.run_ms(80)
+check("HOLD (set directly)", "HOLD" in c.screen_row(21), c.screen_row(21))
 c.press("q", "t", ms=60)
 c.release("q", "t", ms=60)
 check("hold: chord keeps sounding after release", {48, 55} <= sounding())
@@ -213,8 +217,8 @@ c.release("q", "t", ms=40)
 check("hold: notes pressed together add up", {48, 55} <= sounding(), sounding())
 c.tap("n", ms=20); c.tap("n", ms=60)
 
-c.tap("=", ms=60)
-check("= again: ADD", "ADD" in c.screen_row(21), c.screen_row(21))
+c.set("latch", 3); c.set("screenDirty", 1); c.run_ms(80)
+check("ADD (set directly)", "ADD" in c.screen_row(21), c.screen_row(21))
 for k in ("q", "e", "t"):                   # one at a time, slowly
     c.tap(k, ms=40)
     c.run_ms(700)
@@ -231,7 +235,7 @@ c.tap("n", ms=20); c.tap("n", ms=60)
 check("add: N twice clears", sounding() == set())
 
 c.press("w", ms=60)                         # held while latch goes off
-c.tap("=", ms=60)                           # ADD -> OFF
+c.tap("=", ms=60)                           # ADD -> OFF (past the end of OFF / SMART)
 on = notes_on(c.midi())
 check("latch off: only the key still down sounds", set(on.values()) <= {50, 38} and on, on)
 c.release("w", ms=60)

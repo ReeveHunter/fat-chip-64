@@ -56,15 +56,24 @@ Loop:
 .noScan:
 	jsr ArpTick             ; every pass, so arp steps land on time
 	jsr NesEnvTick          ; MidiNES envelopes (PADS)
+	jsr BendTick            ; SPACE bend
 	lda reallocFlag
 	beq .noAlloc
-	jsr Allocate
-	jsr ApplyVoices
 	lda #0
 	sta reallocFlag
+	sta applyRetry
+	jsr Allocate
+	jsr ApplyVoices
 	lda #1
 	sta screenDirty
+	bne .alloced
 .noAlloc:
+	lda applyRetry          ; a voice change was waiting for a device queue
+	beq .alloced
+	lda #0
+	sta applyRetry
+	jsr ApplyVoices
+.alloced:
 	lda scanned
 	beq .x
 	jsr ScreenStep
@@ -152,9 +161,9 @@ InitState:
 	sta beatMs
 	lda #>500
 	sta beatMs+1
-	lda #3                  ; 1/16
+	lda #ARP_FREE           ; FREE, 30 ms
 	sta arpLen
-	lda #8                  ; 160 ms
+	lda #FREE_DEFAULT
 	sta freeIdx
 	lda #$FF
 	sta arpIdx
@@ -247,6 +256,7 @@ Nmi:
 	include "arp.asm"
 	include "pads.asm"
 	include "nesenv.asm"
+	include "bend.asm"
 	include "screen.asm"
 	include "data.asm"
 	include "tables.asm"

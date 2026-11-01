@@ -194,7 +194,7 @@ StepCalc:
 	lda dvdL
 	cmp #MIN_STEP
 	bcs .ok
-	lda #MIN_STEP           ; too fast for the Game Boy link
+	lda #MIN_STEP           ; fastest step
 	sta dvdL
 .ok:
 	lda dvdL
@@ -274,7 +274,7 @@ ArpLenKey:
 	stx arpLen
 	jmp ArpRateChanged
 
-; H: free rate slower
+; ; : free rate slower
 ArpSlower:
 	subroutine
 	lda arpLen
@@ -290,7 +290,7 @@ ArpSlower:
 	sta arpLen
 	jmp ArpRateChanged
 
-; J: free rate faster
+; : : free rate faster
 ArpFaster:
 	subroutine
 	lda arpLen

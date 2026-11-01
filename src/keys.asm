@@ -316,9 +316,9 @@ KeyDown:
 	rts
 
 ; key -> handler (KeyDown)
-cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_G,K_A,K_S,K_D,K_F,K_H,K_J,K_B,K_Z,K_X,K_K,K_L,K_V,0
-cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<GhostKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey
-cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>GhostKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey
+cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_G,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,0
+cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<GhostKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext
+cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>GhostKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext
 
 CtrlDown:
 	lda #1
@@ -332,9 +332,17 @@ MuteKey:
 	jmp MuteChanged
 
 MomentDown:
+	subroutine
+	lda #1
+	sta spaceDown
+	lda spaceMode
+	cmp #SPC_MUTE
+	bne .x                  ; BENDS: BendTick does it
 	lda #1
 	sta moment
 	jmp MuteChanged
+.x:
+	rts
 
 GhostKey:
 	lda ghostFilter
@@ -447,7 +455,7 @@ LatchKey:
 	subroutine
 	ldx latch
 	inx
-	cpx #4
+	cpx #2                  ; OFF / SMART for now (HOLD, ADD: a menu later)
 	bcc .l1
 	ldx #0
 .l1:
@@ -532,6 +540,7 @@ KeyUp:
 	cmp #K_SPACE
 	bne .k
 	lda #0
+	sta spaceDown
 	sta moment
 	jmp MuteChanged
 .k:

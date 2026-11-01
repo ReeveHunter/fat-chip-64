@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.10:** = is just OFF / SMART for now (HOLD and ADD wait for the setup menu). The arp starts in FREE at 30 ms and goes down to 10 ms; ; and : are slower / faster (H and J are free again). When a fast arp gets ahead of the Game Boy or NES, that device skips steps instead of overflowing its queue. , and . (the < > keys) pick what SPACE does: MUTES (the momentary mute, default) or BENDS (hold: everything bends down 2 semitones over about 1 s; let go: back up over about 0.5 s).
+
 **v0.09:** a third sound, RAW (classic raw chip: everything square, instant attack and release). In PADS the NES triangle (bass) now just stops on release; the pitch-drop release is kept for a future mono bass sound.
 
 **v0.08:** MidiNES envelopes in PADS: the NES pulses swell and fade with CC7 (A 0.6 s, D 0.4 s, S 11, R 2 s, from the NES Lab), the triangle's release is a quick pitch drop (−24 over 250 ms, slow at first, stopping at its lowest note). At startup the MidiNES gets its hardware envelope off and sweep period 0.
@@ -58,18 +60,19 @@ lowest key (Q) starts at C3.
 | **Sound** | |
 | V | Sound: FAT (default) → PADS → RAW. PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES pulses swell and fade (software envelope via CC7), NES triangle just stops. RAW: the classic raw chip sound, FAT's stacking with everything square and instant: SID pulses at 50 / 25 / 12.5%, Game Boy pulses 50 / 25% and the wave channel as a third pulse, NES pulses 50 / 25%, no warble, no filter |
 | **Latch** | |
-| = | OFF → SMART → HOLD → ADD → OFF. SMART: notes pressed within half a second of the last (or while another key is down) build the chord; after a pause the next note starts a new one. HOLD: a fresh press after letting go of everything starts a new chord. ADD: every press adds a note, pressing a latched note takes it out |
+| = | OFF ↔ SMART. SMART: notes pressed within half a second of the last (or while another key is down) build the chord; after a pause the next note starts a new one. (HOLD and ADD are in the code for the setup menu later: HOLD, a fresh press after letting go of everything starts a new chord; ADD, every press adds a note, pressing a latched note takes it out) |
 | N | New chord: the current one keeps sounding and the next note starts a new one (screen: N NEXT). Press N twice to clear now |
 | **Arp** | |
 | A | OFF → UNISON (all nine voices step together) → SPARKLE (two voices arpeggiate over the chord as a pad) |
 | S | Pattern: UP, DOWN, UPDOWN, RANDOM, PLAYED (the order you pressed or built the chord) |
-| D | Speed: 1/4, 1/8, 1/8T, 1/16, 1/32 of the tempo, or FREE |
-| H / J | FREE speed slower / faster (30–1000 ms per step); either one also picks FREE |
+| D | Speed: FREE (default, 30 ms), 1/4, 1/8, 1/8T, 1/16, 1/32 of the tempo |
+| ; / : | FREE speed slower / faster (10–1000 ms per step); either one also picks FREE |
 | F | SPARKLE arp octave: +0, +1 (default), +2 |
 | B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Sent to the Game Boy (CC 107/108) |
 | **Sound control** | |
 | M | Mute everything: SID volume 0, Game Boy and NES note-offs (their release tails ring out). Border goes red. Notes come back on unmute |
-| SPACE | Momentary: while held, flips the mute (cut the sound, or hear it while muted) |
+| , / . (< >) | What SPACE does: MUTES (default) ↔ BENDS. Shown on the tempo line |
+| SPACE | MUTES: while held, flips the mute (cut the sound, or hear it while muted). BENDS: while held, everything bends down 2 semitones over about 1 s; let go and it comes back over about 0.5 s |
 | RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
 | **Setup-ish (for now)** | |
 | SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent |
@@ -104,8 +107,18 @@ voices ±7 cents.
   step lands within a few ms). SPARKLE's arp voices: the Game Boy pulses
   (panned hard left / right with CC 10, so the arp ping-pongs in stereo),
   else the NES pulses, else SID 1 and 2. Each arp note rings until its
-  voice's next turn; the rest of the chips hold the chord. Fastest step 30 ms
-  (the Game Boy link's budget for a nine-voice unison).
+  voice's next turn; the rest of the chips hold the chord. Fastest step 10 ms.
+  The Game Boy link can't carry a nine-voice unison that fast, so when a
+  device's queue has 8 messages waiting, its voices skip the change and catch
+  up on a later pass (a note-off is never lost, only steps in between).
+- **SPACE bend:** depth 0-255 (+1 per 4 ms down, -2 per 4 ms back up). SID:
+  each voice's frequency × (1 − k/256), k = depth/8 − depth/64 (2 semitones at
+  the bottom), on every change. Game Boy: pitch bend (Fat Chip GB's range is 2
+  semitones) every 20 ms. MidiNES: its bend moves the timer, so the amount
+  depends on the note (`p(n) × depth / 1024` for the triangle, twice that for
+  the pulses, `p` from the triangle-drop tables), every 20 ms and before each
+  new NES note while bent; notes too near the bottom of the NES range don't
+  bend. Panic centres everything.
 - **MidiNES envelopes (PADS):** the NES Lab showed CC7 changes a sounding note's volume, so the pulses get a software envelope: CC7 0, note-on, then the 16 levels on a 10 ms clock; the note-off waits until the release reaches 0. The triangle has no volume, so its release is a pitch drop (Reeve's Logic plugin trick) made from precomputed tables (`p(n) × h(step)`), a bend every 4 ms (8 ms while the Game Boy is on: the Teensyboy forwards the NES channels too and can't take more), stopping at MIDI 21 where the triangle's 11-bit timer would wrap. Mute, panic, turning the NES off and switching back to FAT cut at once.
 - **Screen:** redrawn in 15 small steps, one per keyboard scan, so a redraw
   never holds up the keys or the arp (the longest step is about 5 ms).
@@ -134,10 +147,13 @@ voices ±7 cents.
 | `test/test_main.py` | startup, pacing, stacking, devices, octaves, latch, mute, panic, RESTORE, long silence, link budget |
 | `src/arp.asm` | tap tempo, arpeggiator |
 | `src/pads.asm` | FAT / PADS sound, SPARKLE octave |
+| `src/bend.asm` | SPACE modes, SPACE bend |
 | `src/nesenv.asm`, `src/nestables.asm` | MidiNES envelopes (PADS): CC7 envelope on the pulses, triangle release drop |
 | `test/test_nesenv.py` | MidiNES startup settings, envelopes, drop, hard cuts |
 | `test/test_modes.py` | smart chord, extensions, key, pads, sparkle octave |
 | `test/test_arp.py` | tap tempo, arp modes, patterns, speeds, sparkle panning |
+| `test/test_v010.py` | = OFF / SMART, the 10 ms arp (no hung notes), : ;, SPACE modes and bend |
+| `test/test_fast_link.py` | 10 ms arp + bend through the Teensyboy model: nothing lost |
 | `test/test_with_gb.py` | end to end: Fat Chip 64 → Teensyboy model → the Fat Chip GB ROM (PyBoy) |
 
 ## Building and testing

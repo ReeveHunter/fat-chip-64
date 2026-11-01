@@ -172,6 +172,9 @@ class C64:
         a = self.sym[name]
         return list(self.raw[a:a + n]) if n > 1 else self.raw[a]
 
+    def set(self, name, val):
+        self.raw[self.sym[name]] = val
+
     def midi(self, since=0):
         """Decoded MIDI messages sent after cycle `since`: (cycle, status, d1, d2)."""
         out, status, need, data, t0 = [], None, 0, [], 0

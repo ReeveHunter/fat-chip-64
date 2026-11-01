@@ -84,8 +84,6 @@ K_G         equ $90
 K_A         equ $91
 K_S         equ $92
 K_D         equ $93
-K_H         equ $94
-K_J         equ $95
 K_B         equ $96
 K_F         equ $97
 K_Z         equ $98
@@ -93,6 +91,16 @@ K_X         equ $99
 K_K         equ $9A
 K_L         equ $9B
 K_V         equ $9C
+K_COLON     equ $9D           ; : arp faster
+K_SEMI      equ $9E           ; ; arp slower
+K_COMMA     equ $9F           ; , (<) SPACE mode back
+K_PERIOD    equ $A0           ; . (>) SPACE mode on
+SPC_MUTE    equ 0             ; SPACE modes: held = mute flips
+SPC_BEND    equ 1             ;  held = everything bends down
+SPC_MODES   equ 2
+BEND_DOWN_MS equ 4            ; bendLvl 0-255: +1 per 4 ms down (about 1 s)
+BEND_TICK   equ 20            ; ms between bend updates to the Game Boy / NES
+Q_BACKLOG   equ 8             ; messages waiting: a device skips voice changes
 LATCH_SMART equ 1
 LATCH_HOLD  equ 2
 LATCH_ADD   equ 3
@@ -112,8 +120,10 @@ ARP_UNISON  equ 1
 ARP_SPARKLE equ 2
 PAT_PLAYED  equ 4
 ARP_FREE    equ 5              ; arpLen: 0-4 = 1/4 1/8 1/8T 1/16 1/32, 5 = free
-FREE_STEPS  equ 16
-MIN_STEP    equ 30             ; ms: fastest arp step (Game Boy link budget)
+FREE_STEPS  equ 20
+FREE_DEFAULT equ 4             ; 30 ms
+MIN_STEP    equ 10             ; ms: fastest arp step (the Game Boy / NES skip
+                               ;  steps their queues can't keep up with)
 GCC_TEMPO_MSB equ 107
 GCC_TEMPO_LSB equ 108
 K_NONE      equ $FF
@@ -276,7 +286,21 @@ triStart    ds 2
 hardCut     ds 1               ; 1 = no soft releases (panic)
 mulA        ds 2
 mulB        ds 2
-mulR        ds 4               ; SID_VOL filter mode bits (pads: low-pass)
+mulR        ds 4
+; v0.10
+spaceMode   ds 1               ; SPC_MUTE / SPC_BEND (, and .)
+bendLvl     ds 1               ; 0 = none, 255 = 2 semitones down
+bendLast    ds 1               ; ticks (low byte) of the last bend step
+bendSentAt  ds 1               ; ticks (low byte) of the last MIDI bend
+bendSent    ds 1               ; bendLvl last sent to the Game Boy / NES
+spaceDown   ds 1               ; SPACE held
+bT0         ds 1               ; bend.asm temps
+bT1         ds 1
+bT2         ds 1
+bT3         ds 1
+sidBaseLo   ds 3               ; SID frequency before the bend
+sidBaseHi   ds 3
+applyRetry  ds 1               ; a voice change waits for a device queue
 ctrlDown    ds 1
 octBase     ds 1               ; MIDI note of the lowest overlay key
 latch       ds 1               ; 0 off, 1 hold, 2 build

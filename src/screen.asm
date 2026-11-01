@@ -424,17 +424,19 @@ ScrArpLine:
 	sta t0
 	lda freeHi,y
 	sta t1
+	ldx #30                 ; clear the field first (1000MS .. 10MS)
+	lda #32
+.clr:
+	jsr PutChar
+	dex
+	cpx #25
+	bcs .clr
 	ldx #25
 	jsr PutDecZ
 	lda #'M
 	jsr PutChar
 	inx
 	lda #'S
-	jsr PutChar
-	inx
-	lda #32
-	jsr PutChar
-	inx
 	jsr PutChar
 .bpm:
 	ldy arpOct
@@ -477,6 +479,14 @@ ScrCounters:
 	sta ptr
 	sty ptr+1
 	ldx #19
+	ldy #22
+	jsr PrintAt
+	ldx spaceMode           ; what SPACE does
+	lda spcTxtLo,x
+	sta ptr
+	lda spcTxtHi,x
+	sta ptr+1
+	ldx #33
 	ldy #22
 	jsr PrintAt
 	; ---- mode line: notes mode, key, sound
