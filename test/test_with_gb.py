@@ -58,6 +58,9 @@ c.release("q", "e", ms=60)
 c.tap("v", ms=60)                       # PADS
 t_pads = c.cpu.processorCycles
 c.run_ms(200)
+c.tap("v", ms=60)                       # RAW
+t_raw = c.cpu.processorCycles
+c.run_ms(200)
 c.tap("v", ms=60)                       # FAT
 c.run_ms(300)
 t_quiet = c.cpu.processorCycles
@@ -88,6 +91,7 @@ spark = None
 spark_notes = set()
 muted_gates = None
 pad_patch = None
+raw_patch = None
 while i < len(wire):
     limit = t0 + (frame + 1) * FRAME
     if quiet_frame is None and limit >= t_quiet:   # 300 ms after the last key, before the next note
@@ -107,6 +111,10 @@ while i < len(wire):
     if muted_gates is None and limit >= t_mute + 200 * CYCLES_PER_MS:
         vs = gb.sym["_voice"]
         muted_gates = [gb.mem(vs + v * 45 + 2) for v in range(3)]
+    if raw_patch is None and limit >= t_raw + 180 * CYCLES_PER_MS:
+        pp = gb.sym["_patch"]
+        # (attack, release, shape) for pulse 1, pulse 2, wave, + wave mode
+        raw_patch = [(gb.mem(pp + v * 32 + 5), gb.mem(pp + v * 32 + 7), gb.mem(pp + v * 32 + 2)) for v in range(3)] + [gb.mem(pp + 64 + 4)]
     if pad_patch is None and limit >= t_pads + 150 * CYCLES_PER_MS:
         pp = gb.sym["_patch"]
         pad_patch = [(gb.mem(pp + v * 32 + 5), gb.mem(pp + v * 32 + 7)) for v in range(3)] + [gb.mem(pp + 32 + 8)]
@@ -142,6 +150,8 @@ check("SPARKLE: both pulses take turns on chord notes", len({a for a, _ in spark
 check("M with a chord held: every Game Boy voice let go", muted_gates == [0, 0, 0], muted_gates)
 check("PADS: Game Boy attack 5 / release 6 on pulses + wave, pulse 2 glide 8",
       pad_patch == [(5, 6), (5, 6), (5, 6), 8], pad_patch)
+check("RAW on the Game Boy: instant envelopes, pulse 1 50%, pulse 2 25%, wave as a pulse",
+      raw_patch == [(0, 0, 2), (0, 0, 1), (0, 0, 8), 1], raw_patch)
 check("after fast playing every Game Boy note was released (gate off, releasing or idle)",
       all(g == 0 and st in (0, 3) for g, st in quiet_sound), quiet_sound)
 check("SHIFT+F7 with keys held: every Game Boy voice silent (idle)", after_panic == [(0, 0)] * 3, after_panic)

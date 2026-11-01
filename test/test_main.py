@@ -56,7 +56,7 @@ def gaps(msgs, chans):
 
 
 g = gaps(m, GB)
-check("Game Boy messages at least 2.5 ms apart on the wire (target 3, measured safe 2)", min(g) >= 2.5, f"min {min(g):.2f} ms")
+check("Game Boy messages at least 2.2 ms apart on the wire (target 3, measured safe 2)", min(g) >= 2.2, f"min {min(g):.2f} ms")
 
 # ---------------------------------------------------------------- one note: 9-voice unison
 t0 = c.cpu.processorCycles

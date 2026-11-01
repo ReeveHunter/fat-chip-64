@@ -100,6 +100,9 @@ SMART_WINDOW equ 500           ; ms: SMART latch adds notes pressed within this
 MODE_POLY   equ 0
 MODE_CHORD  equ 1
 MODE_EXT    equ 2
+SND_FAT     equ 0
+SND_PADS    equ 1
+SND_RAW     equ 2
 ENV_IDLE    equ 0
 ENV_A       equ 1
 ENV_D       equ 2
@@ -236,7 +239,8 @@ keyRoot     ds 1               ; 0-11, C = 0
 keyMinor    ds 1
 playMode    ds 1               ; 0 poly, 1 smart chord, 2 extensions
 spice       ds 1               ; extensions: 0 = 7th, 1 = 9th, 2 = 11th, 3 = 13th
-padSound    ds 1               ; 0 fat, 1 pads
+padSound    ds 1               ; 1 = PADS (soundMode 1)
+soundMode   ds 1               ; 0 FAT, 1 PADS, 2 RAW
 arpOct      ds 1               ; SPARKLE arp: octaves up (0-2)
 vOut        ds NUM_VOICES      ; MIDI voices: note actually sounding on the device
 sidCtl      ds 1               ; SID waveform bits (saw $20, pulse $40)

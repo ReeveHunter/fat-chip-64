@@ -521,15 +521,11 @@ ScrCounters:
 	ldx #22
 	ldy #24
 	jsr PrintAt
-	lda #<txtFat
-	ldy #>txtFat
-	ldx padSound
-	beq .sd
-	lda #<txtPads
-	ldy #>txtPads
-.sd:
+	ldx soundMode
+	lda sndTxtLo,x
 	sta ptr
-	sty ptr+1
+	lda sndTxtHi,x
+	sta ptr+1
 	ldx #30
 	ldy #24
 	jsr PrintAt

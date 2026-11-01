@@ -165,9 +165,30 @@ check("muted in PADS: volume 0, filter mode kept", c.raw[0xD418] == 0x10, hex(c.
 c.tap("m", ms=60)
 t0 = c.cpu.processorCycles
 c.tap("v", ms=80)
+check("V again: RAW on screen", c.screen_row(24).rstrip().endswith("V RAW"), c.screen_row(24))
+regs = [(c.raw[0xD405 + 7 * v], c.raw[0xD406 + 7 * v], c.raw[0xD403 + 7 * v], c.sid(v)[1] & 0xF0) for v in range(3)]
+check("RAW: SID pulse, instant attack, full sustain, instant release, widths 50/25/12.5%",
+      regs == [(0x00, 0xF0, 8, 0x40), (0x00, 0xF0, 4, 0x40), (0x00, 0xF0, 2, 0x40)], regs)
+check("RAW: SID filter off", c.raw[0xD417] == 0 and c.raw[0xD418] == 0x0F)
+cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]
+check("RAW: Game Boy instant attack and release on pulses and wave",
+      all((ch, 73, 0) in cc and (ch, 72, 0) in cc for ch in (0, 1, 2)), cc)
+check("RAW: Game Boy pulse 2 at 25%, wave as a pulse, no warble, no glide",
+      (0, 70, 64) in cc and (1, 70, 32) in cc and (2, 71, 24) in cc and (2, 70, 64) in cc and (0, 104, 0) in cc and (1, 5, 0) in cc, cc)
+check("RAW: MidiNES full volume, pulse 2 at 25%", (5, 7, 127) in cc and (5, 1, 64) in cc and (6, 1, 32) in cc, cc)
+t0 = c.cpu.processorCycles
+c.press("q", ms=200)
+on = [x for x in c.midi(since=t0) if (x[1] & 0xF0) == 0x90 and x[3]]
+check("RAW: a note: plain note-ons (no CC7 envelope on the NES)",
+      len(on) == 6 and not [x for x in c.midi(since=t0) if x[1] == 0xB5 and x[2] == 7], on)
+c.release("q", ms=60)
+t0 = c.cpu.processorCycles
+c.tap("v", ms=80)
 check("V again: FAT: saw, filter off", c.sid(0)[1] & 0xF0 == 0x20 and c.raw[0xD417] == 0 and c.raw[0xD418] == 0x0F)
 cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]
-check("FAT: Game Boy envelopes and glide back", (0, 73, 0) in cc and (1, 5, 0) in cc and (0, 104, 24) in cc, cc)
+check("FAT: Game Boy envelopes, duty, wave triangle and warble back",
+      (0, 73, 0) in cc and (0, 72, 40) in cc and (1, 70, 64) in cc and (2, 71, 40) in cc and (2, 70, 0) in cc and (0, 104, 24) in cc, cc)
+check("FAT: MidiNES pulse 2 back to 50%", (6, 1, 64) in cc, cc)
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

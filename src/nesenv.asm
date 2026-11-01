@@ -5,6 +5,7 @@
 ; CC7 stepped through the NES's 16 levels on a 10 ms clock:
 ;   attack 0.6 s to 15, decay 0.4 s to 11, sustain 11, release 2 s to 0
 ; (Reeve's Lab settings). The note-off waits until the release reaches 0.
+; (Off in PADS since v0.09: kept for a future mono bass synth sound.)
 ; The triangle has no volume, so its release is a pitch drop (Reeve's
 ; plugin trick): -24 semitones over 250 ms, slow at first, a bend every
 ; 4 ms (8 ms while the Game Boy is on), then the note-off and the bend back to centre. The drop stops at
@@ -19,6 +20,7 @@ TRI_GAP     equ 4               ; ms between drop bends (Reeve: 4 ms is smoothes
 TRI_GAP_GB  equ 8               ; while the Game Boy is on: its adapter forwards the
                                 ; NES channels too, and can't take a bend every 4 ms
 TRI_FLOOR   equ 21              ; lowest triangle note
+TRI_DROP_PADS equ 0             ; the drop is for a future mono bass sound, not PADS
 
 ; voice -> envelope slot (NES pulse 1 = v2, pulse 2 = v5)
 vEnvSlot:   .byte $FF,$FF,0, $FF,$FF,1, $FF,$FF,$FF
@@ -59,6 +61,9 @@ NesSoftRelease:
 	sec
 	rts
 .tri:
+	if TRI_DROP_PADS == 0
+	jmp .no                 ; PADS: the bass just stops (Reeve, 2026-11-01)
+	endif
 	lda vIdx,x
 	cmp #2
 	bne .no

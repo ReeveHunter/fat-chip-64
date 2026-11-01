@@ -396,6 +396,7 @@ NesStartup:
 	iny
 	cpy #7
 	bne .more
+	jsr NesDuty
 .done:
 	rts
 

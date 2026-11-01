@@ -424,10 +424,22 @@ ApplySettings:
 	sta effMinor
 	rts
 
+; V: FAT -> PADS -> RAW
 SoundKey:
-	lda padSound
-	eor #1
-	sta padSound
+	subroutine
+	ldx soundMode
+	inx
+	cpx #3
+	bcc .s
+	ldx #0
+.s:
+	stx soundMode
+	lda #0
+	cpx #SND_PADS
+	bne .p
+	lda #1
+.p:
+	sta padSound            ; (the PADS-only features test this)
 	jsr SoundApply
 	jmp Dirty
 

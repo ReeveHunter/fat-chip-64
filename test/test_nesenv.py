@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Fat Chip 64 v0.08: MidiNES envelopes (PADS), startup settings, hard cuts."""
+"""Fat Chip 64: MidiNES envelopes (PADS), startup settings, hard cuts.
+(The triangle release drop is off since v0.09; its code is kept for a future
+mono bass sound.)"""
 import os
 import sys
 
@@ -84,32 +86,8 @@ check("PADS: release fades 11 -> 0 before the note-off", rvols[:3] == [80, 72, 6
       rel[-1][1] == "off", rel[-4:])
 check("PADS: release takes about 2 s", off_at is not None and 1700 <= off_at <= 2200, off_at)
 tri = on_ch(c, TRI, t1)
-bends = [bend_val(e[2], e[3]) for e in tri if e[1] == "bend"]
-toff = next((e[0] for e in tri if e[1] == "off"), None)
-check("PADS: triangle drops in pitch before its note-off", len(bends) > 10 and bends[0] > bends[-2] and
-      all(a >= b for a, b in zip(bends, bends[1:-1])), bends[:6])
-check("PADS: the drop stops at the triangle's floor (C2 bass: 15 semitones of room)",
-      min(bends) >= pb_tri(36, -15.3) and toff is not None and 150 <= toff <= 230, (min(bends), pb_tri(36, -15), toff))
-check("PADS: then the bend goes back to centre", tri[-1][1] == "bend" and bend_val(tri[-1][2], tri[-1][3]) == 0, tri[-2:])
-
-c.tap("f1", ms=40)                          # octave up: Q = C4, triangle bass C3 (48): full -24 drop
-t1 = c.cpu.processorCycles
-c.press("q", ms=300)
-c.release("q", ms=700)
-tri = on_ch(c, TRI, t1)
-bends = [bend_val(e[2], e[3]) for e in tri if e[1] == "bend"]
-toff = next((e[0] - 300 for e in tri if e[1] == "off"), None)
-check("PADS, higher note: the full -24 drop in about 250 ms", abs(min(bends) - pb_tri(48, -24)) <= 8 and 230 <= toff <= 300,
-      (min(bends), pb_tri(48, -24), toff))
-c.run_ms(2500)
-c.tap("f7", ms=40)                          # Q = C1, triangle bass C0 (12): below the floor -> cut
-t1 = c.cpu.processorCycles
-c.press("q", ms=300)
-c.release("q", ms=100)
-tri = on_ch(c, TRI, t1)
-check("PADS, below the triangle's range: plain note-off", [e[1] for e in tri if e[1] != "cc"] == ["on", "off"], tri)
-c.run_ms(2500)
-c.tap("f3", ms=40)
+check("PADS: the triangle (bass) just stops on release: note-off, no drop",
+      [e[1] for e in tri] == ["off"] and tri[0][0] < 30, tri)
 
 # re-press during the release cuts it and attacks again
 c.press("q", ms=800)

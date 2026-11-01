@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.09:** a third sound, RAW (classic raw chip: everything square, instant attack and release). In PADS the NES triangle (bass) now just stops on release; the pitch-drop release is kept for a future mono bass sound.
+
 **v0.08:** MidiNES envelopes in PADS: the NES pulses swell and fade with CC7 (A 0.6 s, D 0.4 s, S 11, R 2 s, from the NES Lab), the triangle's release is a quick pitch drop (−24 over 250 ms, slow at first, stopping at its lowest note). At startup the MidiNES gets its hardware envelope off and sweep period 0.
 
 **v0.07:** a latched chord keeps sounding through a mode, extensions or key change; the next note starts a new chord with the new settings.
@@ -54,7 +56,7 @@ lowest key (Q) starts at C3.
 | K + a note | Set the key (hold K, press the key's root; the note doesn't play) |
 | L | Major / minor (natural minor) |
 | **Sound** | |
-| V | FAT (default) / PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES pulses swell and fade (software envelope via CC7), NES triangle releases with a pitch drop |
+| V | Sound: FAT (default) → PADS → RAW. PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES pulses swell and fade (software envelope via CC7), NES triangle just stops. RAW: the classic raw chip sound, FAT's stacking with everything square and instant: SID pulses at 50 / 25 / 12.5%, Game Boy pulses 50 / 25% and the wave channel as a third pulse, NES pulses 50 / 25%, no warble, no filter |
 | **Latch** | |
 | = | OFF → SMART → HOLD → ADD → OFF. SMART: notes pressed within half a second of the last (or while another key is down) build the chord; after a pause the next note starts a new one. HOLD: a fresh press after letting go of everything starts a new chord. ADD: every press adds a note, pressing a latched note takes it out |
 | N | New chord: the current one keeps sounding and the next note starts a new one (screen: N NEXT). Press N twice to clear now |

@@ -7,35 +7,42 @@
 ;             filter that sweeps slowly (about 8 s up and down)
 ;   Game Boy  slow attack and release on pulses + wave, pulse 2 glides
 ;             into each new note, deeper warble
-;   MidiNES   pulses swell and fade (CC7 envelope), triangle releases with a
-;             pitch drop: see nesenv.asm
+;   MidiNES   pulses swell and fade (CC7 envelope, see nesenv.asm); the
+;             triangle (bass) just stops on release
+;
+; RAW, the classic raw chip sound: FAT's stacking, everything square and
+; instant: SID pulse (50 / 25 / 12.5% per voice), attack 0, sustain full,
+; release 0, no filter; Game Boy instant attack and release, no warble,
+; pulses 50% / 25%, wave channel as a third pulse; MidiNES full volume,
+; pulse 2 at 25%. The small detunes between doubled voices stay.
 
 SoundApply:
 	subroutine
 	jsr NesSoundApply       ; leaving PADS: NES envelopes end, full volume
+	jsr NesDuty
 	ldx #2
 .v:
 	ldy sidOfs,x
-	lda padSound
-	beq .fat
-	lda #$A0                ; attack 500 ms, decay -
+	stx t1
+	ldx soundMode
+	lda sndAD,x
 	sta SID+5,y
-	lda #$FB                ; sustain 15, release 2.4 s
+	lda sndSR,x
 	sta SID+6,y
-	lda #$40                ; pulse
-	bne .w
-.fat:
-	lda #$19
-	sta SID+5,y
-	lda #$C9
-	sta SID+6,y
-	lda #$08                ; pulse width back to 50%
+	lda sndWave,x
+	sta t0
+	cpx #SND_RAW
+	bne .pw50
+	ldx t1                  ; RAW: each SID voice its own width
+	lda rawPwHi,x
+	bne .pw
+.pw50:
+	lda #$08                ; 50% (PADS then wobbles it)
+.pw:
 	sta SID+3,y
 	lda #0
 	sta SID+2,y
-	lda #$20                ; saw
-.w:
-	sta t0
+	ldx t1
 	lda sidGate,x
 	and #1
 	ora t0
@@ -64,20 +71,18 @@ SoundApply:
 SoundGb:
 	subroutine
 	lda devOn+DEV_GB
-	beq .x
-	ldx #0                  ; FAT: Fat Chip GB's own defaults
-	ldy #40                 ; release 2
-	lda padSound
-	beq .s
-	ldx #88                 ; attack 5 of 7
-	ldy #100                ; release 6 of 7
-.s:
-	stx t2
-	sty t3
+	bne .on
+	rts
+.on:
+	ldx soundMode
+	lda sndGbAtk,x
+	sta t2
+	lda sndGbRel,x
+	sta t3
 	lda gbBase
 	ora #$B0
 	sta mS
-	ldx #3                  ; pulse 1, pulse 2, wave
+	ldx #3                  ; pulse 1, pulse 2, wave: attack, release
 .ch:
 	lda #73
 	sta mD1
@@ -91,39 +96,100 @@ SoundGb:
 	sta mD2
 	jsr GbPut
 	ldx t1
+	jsr .nextCh
+	dex
+	bne .ch
+	; duty (CC 70) on the pulses
+	lda gbBase
+	ora #$B0
+	sta mS
+	lda #70
+	sta mD1
+	ldx soundMode
+	lda sndGbDuty1,x
+	sta mD2
+	jsr GbPut
+	jsr .nextCh
+	ldx soundMode
+	lda sndGbDuty2,x
+	sta mD2
+	jsr GbPut
+	; pulse 2 glides in PADS
+	lda #5
+	sta mD1
+	ldx soundMode
+	lda sndGbGlide,x
+	sta mD2
+	jsr GbPut
+	; wave channel: triangle (its default), or a third pulse in RAW
+	jsr .nextCh
+	lda #71
+	sta mD1
+	ldx soundMode
+	lda sndWaveMode,x
+	sta mD2
+	jsr GbPut
+	lda #70
+	sta mD1
+	ldx soundMode
+	lda sndWaveShape,x
+	sta mD2
+	jsr GbPut
+	lda #GCC_WARBLE
+	ldy soundMode
+	ldx sndWarble,y
+	jmp GbGlobal
+.nextCh:
 	lda mS
 	clc
 	adc #1
 	and #$0F
 	ora #$B0
 	sta mS
-	dex
-	bne .ch
-	; pulse 2 glides in PADS
-	lda gbBase
-	clc
-	adc #1
-	and #$0F
+	rts
+
+; MidiNES duty (CC 1): 50% on both pulses; RAW: pulse 2 at 25%
+NesDuty:
+	subroutine
+	lda devOn+DEV_NES
+	beq .x
+	lda #1
+	sta mD1
+	lda #64
+	sta mD2
+	lda nesBase
 	ora #$B0
 	sta mS
-	lda #5
-	sta mD1
-	lda #0
-	ldx padSound
-	beq .g
-	lda #64                 ; glide 8 of 15
-.g:
+	jsr NesPut
+	ldx soundMode
+	lda sndNesDuty2,x
 	sta mD2
-	jsr GbPut
-	lda #GCC_WARBLE
-	ldx #24
-	ldy padSound
-	beq .wb
-	ldx #48
-.wb:
-	jsr GbGlobal
+	lda nesBase
+	clc
+	adc #1
+	and #15
+	ora #$B0
+	sta mS
+	jmp NesPut
 .x:
 	rts
+
+; per sound:          FAT  PADS RAW
+sndAD:      .byte $19, $A0, $00   ; SID attack/decay
+sndSR:      .byte $C9, $FB, $F0   ; SID sustain/release: RAW = full sustain, instant release
+sndWave:    .byte $20, $40, $40   ; SID saw / pulse / pulse
+rawPwHi:    .byte $08, $04, $02   ; RAW SID widths: 50%, 25%, 12.5%
+sndGbAtk:   .byte 0, 88, 0        ; Game Boy CC 73 (attack 0 / 5 of 7)
+sndGbRel:   .byte 40, 100, 0      ; CC 72 (release 2 / 6 / 0 of 7)
+sndGbDuty1: .byte 64, 64, 64      ; CC 70 pulse 1: 50%
+sndGbDuty2: .byte 64, 64, 32      ; CC 70 pulse 2: 50% / 25% in RAW
+sndGbGlide: .byte 0, 64, 0        ; CC 5 pulse 2 glide
+sndWaveMode: .byte 40, 40, 24     ; CC 71 wave mode: TRI (2) / PULSE (1)
+sndWaveShape: .byte 0, 0, 64      ; CC 70 wave shape: (triangle) / pulse 50%
+sndWarble:  .byte 24, 48, 0       ; CC 104 warble: none in RAW
+sndNesDuty2: .byte 64, 64, 32     ; MidiNES pulse 2 duty: 25% in RAW
+sndTxtLo:   .byte <txtFat, <txtPads, <txtRaw
+sndTxtHi:   .byte >txtFat, >txtPads, >txtRaw
 
 ; Every keyboard scan (4 ms): filter sweep and pulse-width wobble.
 PadTick:
