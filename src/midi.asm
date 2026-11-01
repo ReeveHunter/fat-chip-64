@@ -375,5 +375,30 @@ NesStartup:
 	iny
 	cpy #2
 	bne .cc16
+	; hardware envelope off (CC 11 = 64) on pulses and noise, sweep off and
+	; sweep period 0 on the pulses (NES Lab: period > 0 is buggy; Fat Chip
+	; does volume with its own envelope)
+	ldy #0
+.more:
+	lda nesInitCh,y
+	clc
+	adc nesBase
+	and #15
+	ora #$B0
+	sta mS
+	lda nesInitCC,y
+	sta mD1
+	lda nesInitVal,y
+	sta mD2
+	sty t1
+	jsr NesPut
+	ldy t1
+	iny
+	cpy #7
+	bne .more
 .done:
 	rts
+
+nesInitCh:  .byte 0,1,3, 0,1, 0,1
+nesInitCC:  .byte 11,11,11, 13,13, 15,15
+nesInitVal: .byte 64,64,64, 0,0, 0,0

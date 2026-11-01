@@ -559,6 +559,14 @@ VoiceSet:
 	beq .go
 	lda #NO_NOTE
 .go:
+	cmp #NO_NOTE
+	bne .mt
+	jsr NesSoftRelease      ; PADS: a NES voice fades / drops instead of a cut
+	bcc .cut
+	rts
+.cut:
+	lda #NO_NOTE
+.mt:
 	jmp MidiTo
 	; ---- SID voice
 .sid:
@@ -662,12 +670,16 @@ MidiTo:
 	lda #0
 	sta mD2
 	jsr DevPut
+	jsr NesAfterOff         ; NES: envelope idle / triangle bend back to centre
 .on:
 	ldx t0
 	lda mtTarget
 	sta vOut,x
 	cmp #NO_NOTE
 	beq .done
+	jsr NesBeforeOn         ; PADS: NES pulse starts at volume 0 and attacks
+	ldx t0
+	lda mtTarget
 	jsr MidiNoteValue
 	sta mD1
 	lda t1
@@ -800,8 +812,13 @@ Panic:
 	sta notePressed,x
 	dex
 	bpl .k
+	lda #1
+	sta hardCut             ; no soft releases: everything off now
 	jsr Allocate            ; nothing held -> every voice off
 	jsr ApplyVoices
+	lda #0
+	sta hardCut
+	jsr NesEnvReset
 	; SID: all gates off
 	ldx #2
 .s:

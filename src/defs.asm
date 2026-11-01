@@ -100,6 +100,11 @@ SMART_WINDOW equ 500           ; ms: SMART latch adds notes pressed within this
 MODE_POLY   equ 0
 MODE_CHORD  equ 1
 MODE_EXT    equ 2
+ENV_IDLE    equ 0
+ENV_A       equ 1
+ENV_D       equ 2
+ENV_S       equ 3
+ENV_R       equ 4
 ARP_UNISON  equ 1
 ARP_SPARKLE equ 2
 PAT_PLAYED  equ 4
@@ -250,7 +255,24 @@ exD         ds 1
 exK         ds 1
 exS         ds 1
 mtTarget    ds 1
-sidFilt     ds 1               ; SID_VOL filter mode bits (pads: low-pass)
+sidFilt     ds 1
+; MidiNES envelopes (nesenv.asm)
+envPh       ds 2               ; per NES pulse: 0 idle, 1 attack, 2 decay, 3 sustain, 4 release
+envLvL      ds 2               ; level 8.8 (0-15)
+envLvH      ds 2
+envSent     ds 2               ; level last sent as CC7
+envRel      ds 2               ; release step
+envY        ds 1
+envLast     ds 1               ; ticks (low byte) of the last envelope step
+triOn       ds 1               ; triangle release drop running
+triK        ds 1
+triNote     ds 1
+triLast     ds 1
+triStart    ds 2
+hardCut     ds 1               ; 1 = no soft releases (panic)
+mulA        ds 2
+mulB        ds 2
+mulR        ds 4               ; SID_VOL filter mode bits (pads: low-pass)
 ctrlDown    ds 1
 octBase     ds 1               ; MIDI note of the lowest overlay key
 latch       ds 1               ; 0 off, 1 hold, 2 build

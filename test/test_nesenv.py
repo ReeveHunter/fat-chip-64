@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Fat Chip 64 v0.08: MidiNES envelopes (PADS), startup settings, hard cuts."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+from sim import C64, CYCLES_PER_MS  # noqa: E402
+
+fails = 0
+
+
+def check(name, cond, info=""):
+    global fails
+    print(("PASS " if cond else "FAIL ") + name + (f"  [{info}]" if info != "" else ""))
+    fails += 0 if cond else 1
+
+
+P1, P2, TRI, NOI = 5, 6, 7, 8          # MidiNES channels (0-based), default block 6-10
+
+
+def ms(cyc, t0):
+    return round((cyc - t0) / CYCLES_PER_MS)
+
+
+def on_ch(c, ch, since):
+    """[(ms, kind, a, b)] for MIDI channel ch since cycle `since`."""
+    out = []
+    for cyc, s, a, b in c.midi(since=since):
+        if s & 15 != ch:
+            continue
+        k = {0x90: "on", 0x80: "off", 0xB0: "cc", 0xE0: "bend"}.get(s & 0xF0, "?")
+        if k == "on" and not b:
+            k = "off"
+        out.append((ms(cyc, since), k, a, b))
+    return out
+
+
+def bend_val(a, b):
+    return ((b << 7) | a) - 8192
+
+
+def pb_tri(n, x):
+    return round(1710 * 0.5 ** ((n - 36) / 12) * (2 - 2 * 0.5 ** (x / 12)) / 4) * 4
+
+
+c = C64()
+c.run_ms(200)
+start = [(s & 15, a, b) for _, s, a, b in c.midi() if (s & 0xF0) == 0xB0 and (s & 15) in (P1, P2, TRI, NOI, 9)]
+check("startup: hardware envelope off (CC11 = 64) on pulses and noise",
+      all((ch, 11, 64) in start for ch in (P1, P2, NOI)), start)
+check("startup: sweep off and sweep period 0 on the pulses",
+      all((ch, 13, 0) in start and (ch, 15, 0) in start for ch in (P1, P2)))
+
+# ---------------------------------------------------------------- FAT: no envelope
+t0 = c.cpu.processorCycles
+c.press("q", ms=400)
+ev = on_ch(c, P1, t0)
+check("FAT: note on, no volume changes", [e[1] for e in ev] == ["on"], ev)
+t1 = c.cpu.processorCycles
+c.release("q", ms=60)
+check("FAT: release = note-off at once", [e[1] for e in on_ch(c, P1, t1)] == ["off"])
+check("FAT: triangle note-off at once, no bends", [e[1] for e in on_ch(c, TRI, t1)] == ["off"])
+
+# ---------------------------------------------------------------- PADS
+c.tap("v", ms=60)
+t0 = c.cpu.processorCycles
+c.press("q", ms=1500)
+ev = on_ch(c, P1, t0)
+kinds = [e[1] for e in ev]
+check("PADS: CC7 = 0 before the note-on", ev[0][1:] == ("cc", 7, 0) and kinds[1] == "on", ev[:3])
+vols = [e[3] for e in ev if e[1] == "cc" and e[2] == 7]
+peak_at = next((e[0] for e in ev if e[1] == "cc" and e[3] == 120), None)
+check("PADS: attack climbs through the levels to 15 (CC7 120)", vols[1:16] == list(range(8, 128, 8)), vols)
+check("PADS: attack takes about 0.6 s", peak_at is not None and 550 <= peak_at <= 700, peak_at)
+check("PADS: decays to sustain 11 (CC7 88) and stays", vols[-1] == 88 and vols[15:] == [120, 112, 104, 96, 88], vols[15:])
+check("PADS: pulse 2 gets the same envelope (C3 = pulse 2's note)",
+      [e[3] for e in on_ch(c, P2, t0) if e[1] == "cc"][:3] == [0, 8, 16])
+t1 = c.cpu.processorCycles
+c.release("q", ms=2600)
+rel = on_ch(c, P1, t1)
+off_at = next((e[0] for e in rel if e[1] == "off"), None)
+rvols = [e[3] for e in rel if e[1] == "cc"]
+check("PADS: release fades 11 -> 0 before the note-off", rvols[:3] == [80, 72, 64] and rvols[-1] == 0 and
+      rel[-1][1] == "off", rel[-4:])
+check("PADS: release takes about 2 s", off_at is not None and 1700 <= off_at <= 2200, off_at)
+tri = on_ch(c, TRI, t1)
+bends = [bend_val(e[2], e[3]) for e in tri if e[1] == "bend"]
+toff = next((e[0] for e in tri if e[1] == "off"), None)
+check("PADS: triangle drops in pitch before its note-off", len(bends) > 10 and bends[0] > bends[-2] and
+      all(a >= b for a, b in zip(bends, bends[1:-1])), bends[:6])
+check("PADS: the drop stops at the triangle's floor (C2 bass: 15 semitones of room)",
+      min(bends) >= pb_tri(36, -15.3) and toff is not None and 150 <= toff <= 230, (min(bends), pb_tri(36, -15), toff))
+check("PADS: then the bend goes back to centre", tri[-1][1] == "bend" and bend_val(tri[-1][2], tri[-1][3]) == 0, tri[-2:])
+
+c.tap("f1", ms=40)                          # octave up: Q = C4, triangle bass C3 (48): full -24 drop
+t1 = c.cpu.processorCycles
+c.press("q", ms=300)
+c.release("q", ms=700)
+tri = on_ch(c, TRI, t1)
+bends = [bend_val(e[2], e[3]) for e in tri if e[1] == "bend"]
+toff = next((e[0] - 300 for e in tri if e[1] == "off"), None)
+check("PADS, higher note: the full -24 drop in about 250 ms", abs(min(bends) - pb_tri(48, -24)) <= 8 and 230 <= toff <= 300,
+      (min(bends), pb_tri(48, -24), toff))
+c.run_ms(2500)
+c.tap("f7", ms=40)                          # Q = C1, triangle bass C0 (12): below the floor -> cut
+t1 = c.cpu.processorCycles
+c.press("q", ms=300)
+c.release("q", ms=100)
+tri = on_ch(c, TRI, t1)
+check("PADS, below the triangle's range: plain note-off", [e[1] for e in tri if e[1] != "cc"] == ["on", "off"], tri)
+c.run_ms(2500)
+c.tap("f3", ms=40)
+
+# re-press during the release cuts it and attacks again
+c.press("q", ms=800)
+c.release("q", ms=500)
+t1 = c.cpu.processorCycles
+c.press("q", ms=100)
+ev = on_ch(c, P1, t1)
+check("PADS: a new note during the release: off, CC7 0, on", [(e[1], e[3]) for e in ev[:3]] == [("off", 0), ("cc", 0), ("on", 100)], ev[:4])
+
+# mute and panic cut at once
+t1 = c.cpu.processorCycles
+c.tap("m", ms=60)
+ev = on_ch(c, P1, t1)
+offs = [e for e in ev if e[1] == "off"]
+check("PADS + mute: note-off at once (no fade)", offs and offs[0][0] < 30 and
+      not [e for e in ev if e[1] == "cc" and e[0] > offs[0][0]], ev[:3])
+c.tap("m", ms=200)
+ev = [e for e in on_ch(c, P1, t1) if e[0] > offs[0][0]]
+check("unmute: attacks again from 0", [(e[1], e[3]) for e in ev][:2] == [("cc", 0), ("on", 100)], ev[:4])
+c.release("q", ms=300)
+t1 = c.cpu.processorCycles
+c.press("lshift", ms=10); c.tap("f7", ms=40); c.release("lshift", ms=10)
+ev = on_ch(c, P1, t1)
+check("PADS + panic during a release: note-off straight away", ev and ev[0][1] == "off" and ev[0][0] < 40, ev[:3])
+c.run_ms(2500)
+check("panic: no envelope left running", c.v("envPh", 2) == [0, 0] and c.v("triOn") == 0)
+
+# back to FAT
+c.press("q", ms=900)
+t1 = c.cpu.processorCycles
+c.tap("v", ms=60)
+ev = on_ch(c, P1, t1)
+check("FAT again: pulses back to full volume (CC7 127)", ("cc", 7, 127) in [e[1:] for e in ev], ev)
+c.release("q", ms=60)
+check("FAT again: plain note-off", [e[1] for e in on_ch(c, P1, c.cpu.processorCycles - 60 * CYCLES_PER_MS)] == ["off"])
+
+print(f"\n{fails} failure(s)")
+sys.exit(1 if fails else 0)

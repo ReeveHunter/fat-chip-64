@@ -145,6 +145,7 @@ shifted("f5", "ctrl")
 check("CTRL+F5: NES on 7-11", c.v("nesBase") == 6 and "CH 7-11" in c.screen_row(5), c.screen_row(5))
 for _ in range(6):                          # 8-12, 9-13, 10-14, 11-15, 12-16, wrap to 1-5
     shifted("f5", "ctrl")
+c.run_ms(80)                                # let the screen catch up
 check("NES channels wrap and overlap warning shows", c.v("nesBase") == 0 and "OVERLAP" in c.screen_row(7),
       (c.v("nesBase"), c.screen_row(7)))
 for _ in range(5):

@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.08:** MidiNES envelopes in PADS: the NES pulses swell and fade with CC7 (A 0.6 s, D 0.4 s, S 11, R 2 s, from the NES Lab), the triangle's release is a quick pitch drop (−24 over 250 ms, slow at first, stopping at its lowest note). At startup the MidiNES gets its hardware envelope off and sweep period 0.
+
 **v0.07:** a latched chord keeps sounding through a mode, extensions or key change; the next note starts a new chord with the new settings.
 
 **v0.06:** SMART CHORD and EXTENSIONS modes with a key, PADS sound, SMART latch, deferred N, mute everything + SPACE momentary, RESTORE = screens, SPARKLE an octave up.
@@ -52,7 +54,7 @@ lowest key (Q) starts at C3.
 | K + a note | Set the key (hold K, press the key's root; the note doesn't play) |
 | L | Major / minor (natural minor) |
 | **Sound** | |
-| V | FAT (default) / PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES keeps its sharp attacks |
+| V | FAT (default) / PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES pulses swell and fade (software envelope via CC7), NES triangle releases with a pitch drop |
 | **Latch** | |
 | = | OFF → SMART → HOLD → ADD → OFF. SMART: notes pressed within half a second of the last (or while another key is down) build the chord; after a pause the next note starts a new one. HOLD: a fresh press after letting go of everything starts a new chord. ADD: every press adds a note, pressing a latched note takes it out |
 | N | New chord: the current one keeps sounding and the next note starts a new one (screen: N NEXT). Press N twice to clear now |
@@ -102,6 +104,7 @@ voices ±7 cents.
   else the NES pulses, else SID 1 and 2. Each arp note rings until its
   voice's next turn; the rest of the chips hold the chord. Fastest step 30 ms
   (the Game Boy link's budget for a nine-voice unison).
+- **MidiNES envelopes (PADS):** the NES Lab showed CC7 changes a sounding note's volume, so the pulses get a software envelope: CC7 0, note-on, then the 16 levels on a 10 ms clock; the note-off waits until the release reaches 0. The triangle has no volume, so its release is a pitch drop (Reeve's Logic plugin trick) made from precomputed tables (`p(n) × h(step)`), a bend every 4 ms (8 ms while the Game Boy is on: the Teensyboy forwards the NES channels too and can't take more), stopping at MIDI 21 where the triangle's 11-bit timer would wrap. Mute, panic, turning the NES off and switching back to FAT cut at once.
 - **Screen:** redrawn in 15 small steps, one per keyboard scan, so a redraw
   never holds up the keys or the arp (the longest step is about 5 ms).
 - **Phantom keys** (filter on with G): the C64 matrix has no diodes, so three held keys on the
@@ -129,6 +132,8 @@ voices ±7 cents.
 | `test/test_main.py` | startup, pacing, stacking, devices, octaves, latch, mute, panic, RESTORE, long silence, link budget |
 | `src/arp.asm` | tap tempo, arpeggiator |
 | `src/pads.asm` | FAT / PADS sound, SPARKLE octave |
+| `src/nesenv.asm`, `src/nestables.asm` | MidiNES envelopes (PADS): CC7 envelope on the pulses, triangle release drop |
+| `test/test_nesenv.py` | MidiNES startup settings, envelopes, drop, hard cuts |
 | `test/test_modes.py` | smart chord, extensions, key, pads, sparkle octave |
 | `test/test_arp.py` | tap tempo, arp modes, patterns, speeds, sparkle panning |
 | `test/test_with_gb.py` | end to end: Fat Chip 64 → Teensyboy model → the Fat Chip GB ROM (PyBoy) |

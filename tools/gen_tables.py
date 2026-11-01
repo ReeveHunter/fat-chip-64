@@ -25,3 +25,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# NOTE: src/nestables.asm (MidiNES triangle release drop) was generated with:
+#   N = 50 steps, DROP = 24 semitones, s_k = DROP * (k/N)^2 (slow at first)
+#   triPb[n]     = round(1710 * 0.5^((n - 36) / 12))   (MidiNES triangle bend scale)
+#   triDropH[k]  = round((2 * 2^(s_k / 12) - 2) * 1024)
+#   triDropS8[k] = round(s_k * 8)

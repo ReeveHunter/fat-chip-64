@@ -55,6 +55,7 @@ Loop:
 	jsr PadTick
 .noScan:
 	jsr ArpTick             ; every pass, so arp steps land on time
+	jsr NesEnvTick          ; MidiNES envelopes (PADS)
 	lda reallocFlag
 	beq .noAlloc
 	jsr Allocate
@@ -245,6 +246,8 @@ Nmi:
 	include "voices.asm"
 	include "arp.asm"
 	include "pads.asm"
+	include "nesenv.asm"
 	include "screen.asm"
 	include "data.asm"
 	include "tables.asm"
+	include "nestables.asm"

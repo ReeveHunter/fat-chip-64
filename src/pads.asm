@@ -11,6 +11,7 @@
 
 SoundApply:
 	subroutine
+	jsr NesSoundApply       ; leaving PADS: NES envelopes end, full volume
 	ldx #2
 .v:
 	ldy sidOfs,x
