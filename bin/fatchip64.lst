@@ -3018,206 +3018,207 @@
       7  19ed							;	       filter that sweeps slowly (about 8 s up and down)
       8  19ed							;   Game Boy  slow attack and release on pulses + wave, pulse 2 glides
       9  19ed							;	       into each new note, deeper warble
-     10  19ed							;   MidiNES   unchanged: the sharp attacks under the swell
-     11  19ed
-     12  19ed				   SoundApply
-     13  19ed					      subroutine
-     14  19ed		       20 41 1e 	      jsr	NesSoundApply	; leaving PADS: NES envelopes end, full volume
-     15  19f0		       a2 02		      ldx	#2
-     16  19f2				   .v
-     17  19f2		       bc d9 24 	      ldy	sidOfs,x
-     18  19f5		       ad 7d c3 	      lda	padSound
-     19  19f8		       f0 0e		      beq	.fat
-     20  19fa		       a9 a0		      lda	#$A0	; attack 500 ms, decay -
-     21  19fc		       99 05 d4 	      sta	SID+5,y
-     22  19ff		       a9 fb		      lda	#$FB	; sustain 15, release 2.4 s
-     23  1a01		       99 06 d4 	      sta	SID+6,y
-     24  1a04		       a9 40		      lda	#$40	; pulse
-     25  1a06		       d0 16		      bne	.w
-     26  1a08				   .fat
-     27  1a08		       a9 19		      lda	#$19
-     28  1a0a		       99 05 d4 	      sta	SID+5,y
-     29  1a0d		       a9 c9		      lda	#$C9
-     30  1a0f		       99 06 d4 	      sta	SID+6,y
-     31  1a12		       a9 08		      lda	#$08	; pulse width back to 50%
-     32  1a14		       99 03 d4 	      sta	SID+3,y
-     33  1a17		       a9 00		      lda	#0
-     34  1a19		       99 02 d4 	      sta	SID+2,y
-     35  1a1c		       a9 20		      lda	#$20	; saw
-     36  1a1e				   .w
-     37  1a1e		       85 23		      sta	t0
-     38  1a20		       bd 19 c3 	      lda	sidGate,x
-     39  1a23		       29 01		      and	#1
-     40  1a25		       05 23		      ora	t0
-     41  1a27		       9d 19 c3 	      sta	sidGate,x
-     42  1a2a		       99 04 d4 	      sta	SID+4,y
-     43  1a2d		       ca		      dex
-     44  1a2e		       10 c2		      bpl	.v
-     45  1a30		       ad 7d c3 	      lda	padSound
-     46  1a33		       f0 11		      beq	.noFilt
-     47  1a35		       a9 77		      lda	#$77	; resonance 7, filter voices 1-3
-     48  1a37		       8d 17 d4 	      sta	SID+$17
-     49  1a3a		       a9 10		      lda	#$10	; low-pass
-     50  1a3c		       8d a0 c3 	      sta	sidFilt
-     51  1a3f		       a9 30		      lda	#$30
-     52  1a41		       8d 16 d4 	      sta	SID+$16
-     53  1a44		       d0 08		      bne	.vol
-     54  1a46				   .noFilt
-     55  1a46		       a9 00		      lda	#0
-     56  1a48		       8d 17 d4 	      sta	SID+$17
-     57  1a4b		       8d a0 c3 	      sta	sidFilt
-     58  1a4e				   .vol
-     59  1a4e		       20 39 10 	      jsr	SidVolume
-     60  1a51							; fall through: the Game Boy's share
-     61  1a51
-     62  1a51							; Game Boy part of the sound (also sent again by GbStartup)
-     63  1a51				   SoundGb
-     64  1a51					      subroutine
-     65  1a51		       ad 0e c3 	      lda	devOn+DEV_GB
-     66  1a54		       f0 6e		      beq	.x
-     67  1a56		       a2 00		      ldx	#0	; FAT: Fat Chip GB's own defaults
-     68  1a58		       a0 28		      ldy	#40	; release 2
-     69  1a5a		       ad 7d c3 	      lda	padSound
-     70  1a5d		       f0 04		      beq	.s
-     71  1a5f		       a2 58		      ldx	#88	; attack 5 of 7
-     72  1a61		       a0 64		      ldy	#100	; release 6 of 7
-     73  1a63				   .s
-     74  1a63		       86 25		      stx	t2
-     75  1a65		       84 26		      sty	t3
-     76  1a67		       ad 10 c3 	      lda	gbBase
-     77  1a6a		       09 b0		      ora	#$B0
-     78  1a6c		       85 20		      sta	mS
-     79  1a6e		       a2 03		      ldx	#3	; pulse 1, pulse 2, wave
-     80  1a70				   .ch
-     81  1a70		       a9 49		      lda	#73
-     82  1a72		       85 21		      sta	mD1
-     83  1a74		       a5 25		      lda	t2
-     84  1a76		       85 22		      sta	mD2
-     85  1a78		       86 24		      stx	t1
-     86  1a7a		       20 ae 0a 	      jsr	GbPut
-     87  1a7d		       a9 48		      lda	#72
-     88  1a7f		       85 21		      sta	mD1
-     89  1a81		       a5 26		      lda	t3
-     90  1a83		       85 22		      sta	mD2
-     91  1a85		       20 ae 0a 	      jsr	GbPut
-     92  1a88		       a6 24		      ldx	t1
-     93  1a8a		       a5 20		      lda	mS
-     94  1a8c		       18		      clc
-     95  1a8d		       69 01		      adc	#1
-     96  1a8f		       29 0f		      and	#$0F
-     97  1a91		       09 b0		      ora	#$B0
-     98  1a93		       85 20		      sta	mS
-     99  1a95		       ca		      dex
-    100  1a96		       d0 d8		      bne	.ch
-    101  1a98							; pulse 2 glides in PADS
-    102  1a98		       ad 10 c3 	      lda	gbBase
-    103  1a9b		       18		      clc
-    104  1a9c		       69 01		      adc	#1
-    105  1a9e		       29 0f		      and	#$0F
-    106  1aa0		       09 b0		      ora	#$B0
-    107  1aa2		       85 20		      sta	mS
-    108  1aa4		       a9 05		      lda	#5
-    109  1aa6		       85 21		      sta	mD1
-    110  1aa8		       a9 00		      lda	#0
-    111  1aaa		       ae 7d c3 	      ldx	padSound
-    112  1aad		       f0 02		      beq	.g
-    113  1aaf		       a9 40		      lda	#64	; glide 8 of 15
-    114  1ab1				   .g
-    115  1ab1		       85 22		      sta	mD2
-    116  1ab3		       20 ae 0a 	      jsr	GbPut
-    117  1ab6		       a9 68		      lda	#GCC_WARBLE
-    118  1ab8		       a2 18		      ldx	#24
-    119  1aba		       ac 7d c3 	      ldy	padSound
-    120  1abd		       f0 02		      beq	.wb
-    121  1abf		       a2 30		      ldx	#48
-    122  1ac1				   .wb
-    123  1ac1		       20 ea 0a 	      jsr	GbGlobal
-    124  1ac4				   .x
-    125  1ac4		       60		      rts
-    126  1ac5
-    127  1ac5							; Every keyboard scan (4 ms): filter sweep and pulse-width wobble.
-    128  1ac5				   PadTick
-    129  1ac5					      subroutine
-    130  1ac5		       ad 7d c3 	      lda	padSound
-    131  1ac8		       d0 01		      bne	.on
-    132  1aca		       60		      rts
-    133  1acb				   .on
-    134  1acb		       ee 89 c3 	      inc	padT
-    135  1ace		       d0 03		      bne	.p
-    136  1ad0		       ee 8a c3 	      inc	padT+1
-    137  1ad3				   .p
-    138  1ad3							; cutoff: triangle over padT / 8 (2048 scans, about 8 s)
-    139  1ad3		       ad 8a c3 	      lda	padT+1
-    140  1ad6		       85 23		      sta	t0
-    141  1ad8		       ad 89 c3 	      lda	padT
-    142  1adb		       46 23		      lsr	t0
-    143  1add		       6a		      ror
-    144  1ade		       46 23		      lsr	t0
-    145  1ae0		       6a		      ror
-    146  1ae1		       46 23		      lsr	t0
-    147  1ae3		       6a		      ror		; A = phase 0-255
-    148  1ae4		       20 20 1b 	      jsr	Tri	; 0-127
-    149  1ae7		       4a		      lsr
-    150  1ae8		       85 23		      sta	t0
-    151  1aea		       4a		      lsr
-    152  1aeb		       18		      clc
-    153  1aec		       65 23		      adc	t0	; x 3/4: 0-95
-    154  1aee		       69 10		      adc	#$10
-    155  1af0		       8d 16 d4 	      sta	SID+$16
-    156  1af3							; pulse widths: each voice its own phase, about 2 s around
-    157  1af3		       a2 02		      ldx	#2
-    158  1af5				   .v
-    159  1af5		       ad 8a c3 	      lda	padT+1
-    160  1af8		       4a		      lsr
-    161  1af9		       ad 89 c3 	      lda	padT
-    162  1afc		       6a		      ror		; phase = padT / 2
-    163  1afd		       18		      clc
-    164  1afe		       7d 27 1b 	      adc	pwPhase,x
-    165  1b01		       20 20 1b 	      jsr	Tri	; 0-127
-    166  1b04		       85 23		      sta	t0
-    167  1b06		       bc d9 24 	      ldy	sidOfs,x
-    168  1b09		       0a		      asl
-    169  1b0a		       0a		      asl
-    170  1b0b		       0a		      asl		; low byte of t0 x 8
-    171  1b0c		       99 02 d4 	      sta	SID+2,y
-    172  1b0f		       a5 23		      lda	t0
-    173  1b11		       4a		      lsr
-    174  1b12		       4a		      lsr
-    175  1b13		       4a		      lsr
-    176  1b14		       4a		      lsr
-    177  1b15		       4a		      lsr		; high bits of t0 x 8
-    178  1b16		       18		      clc
-    179  1b17		       69 03		      adc	#3	; width $300-$6F8 (19-43%)
-    180  1b19		       99 03 d4 	      sta	SID+3,y
-    181  1b1c		       ca		      dex
-    182  1b1d		       10 d6		      bpl	.v
-    183  1b1f		       60		      rts
-    184  1b20
-    185  1b20							; A = 0-255 phase -> 0-127 triangle
-    186  1b20				   Tri
-    187  1b20					      subroutine
-    188  1b20		       c9 80		      cmp	#128
-    189  1b22		       90 02		      bcc	.x
-    190  1b24		       49 ff		      eor	#$FF
-    191  1b26				   .x
-    192  1b26		       60		      rts
-    193  1b27
-    194  1b27		       00 55 aa    pwPhase    .byte.b	0,85,170
-    195  1b2a
-    196  1b2a							; F: SPARKLE arp octave 0 / +1 / +2
-    197  1b2a				   ArpOctKey
-    198  1b2a					      subroutine
-    199  1b2a		       ae 7e c3 	      ldx	arpOct
-    200  1b2d		       e8		      inx
-    201  1b2e		       e0 03		      cpx	#3
-    202  1b30		       90 02		      bcc	.s
-    203  1b32		       a2 00		      ldx	#0
-    204  1b34				   .s
-    205  1b34		       8e 7e c3 	      stx	arpOct
-    206  1b37		       a9 01		      lda	#1
-    207  1b39		       8d 13 c3 	      sta	reallocFlag
-    208  1b3c		       8d 14 c3 	      sta	screenDirty
-    209  1b3f		       60		      rts
+     10  19ed							;   MidiNES   pulses swell and fade (CC7 envelope), triangle releases with a
+     11  19ed							;	       pitch drop: see nesenv.asm
+     12  19ed
+     13  19ed				   SoundApply
+     14  19ed					      subroutine
+     15  19ed		       20 41 1e 	      jsr	NesSoundApply	; leaving PADS: NES envelopes end, full volume
+     16  19f0		       a2 02		      ldx	#2
+     17  19f2				   .v
+     18  19f2		       bc d9 24 	      ldy	sidOfs,x
+     19  19f5		       ad 7d c3 	      lda	padSound
+     20  19f8		       f0 0e		      beq	.fat
+     21  19fa		       a9 a0		      lda	#$A0	; attack 500 ms, decay -
+     22  19fc		       99 05 d4 	      sta	SID+5,y
+     23  19ff		       a9 fb		      lda	#$FB	; sustain 15, release 2.4 s
+     24  1a01		       99 06 d4 	      sta	SID+6,y
+     25  1a04		       a9 40		      lda	#$40	; pulse
+     26  1a06		       d0 16		      bne	.w
+     27  1a08				   .fat
+     28  1a08		       a9 19		      lda	#$19
+     29  1a0a		       99 05 d4 	      sta	SID+5,y
+     30  1a0d		       a9 c9		      lda	#$C9
+     31  1a0f		       99 06 d4 	      sta	SID+6,y
+     32  1a12		       a9 08		      lda	#$08	; pulse width back to 50%
+     33  1a14		       99 03 d4 	      sta	SID+3,y
+     34  1a17		       a9 00		      lda	#0
+     35  1a19		       99 02 d4 	      sta	SID+2,y
+     36  1a1c		       a9 20		      lda	#$20	; saw
+     37  1a1e				   .w
+     38  1a1e		       85 23		      sta	t0
+     39  1a20		       bd 19 c3 	      lda	sidGate,x
+     40  1a23		       29 01		      and	#1
+     41  1a25		       05 23		      ora	t0
+     42  1a27		       9d 19 c3 	      sta	sidGate,x
+     43  1a2a		       99 04 d4 	      sta	SID+4,y
+     44  1a2d		       ca		      dex
+     45  1a2e		       10 c2		      bpl	.v
+     46  1a30		       ad 7d c3 	      lda	padSound
+     47  1a33		       f0 11		      beq	.noFilt
+     48  1a35		       a9 77		      lda	#$77	; resonance 7, filter voices 1-3
+     49  1a37		       8d 17 d4 	      sta	SID+$17
+     50  1a3a		       a9 10		      lda	#$10	; low-pass
+     51  1a3c		       8d a0 c3 	      sta	sidFilt
+     52  1a3f		       a9 30		      lda	#$30
+     53  1a41		       8d 16 d4 	      sta	SID+$16
+     54  1a44		       d0 08		      bne	.vol
+     55  1a46				   .noFilt
+     56  1a46		       a9 00		      lda	#0
+     57  1a48		       8d 17 d4 	      sta	SID+$17
+     58  1a4b		       8d a0 c3 	      sta	sidFilt
+     59  1a4e				   .vol
+     60  1a4e		       20 39 10 	      jsr	SidVolume
+     61  1a51							; fall through: the Game Boy's share
+     62  1a51
+     63  1a51							; Game Boy part of the sound (also sent again by GbStartup)
+     64  1a51				   SoundGb
+     65  1a51					      subroutine
+     66  1a51		       ad 0e c3 	      lda	devOn+DEV_GB
+     67  1a54		       f0 6e		      beq	.x
+     68  1a56		       a2 00		      ldx	#0	; FAT: Fat Chip GB's own defaults
+     69  1a58		       a0 28		      ldy	#40	; release 2
+     70  1a5a		       ad 7d c3 	      lda	padSound
+     71  1a5d		       f0 04		      beq	.s
+     72  1a5f		       a2 58		      ldx	#88	; attack 5 of 7
+     73  1a61		       a0 64		      ldy	#100	; release 6 of 7
+     74  1a63				   .s
+     75  1a63		       86 25		      stx	t2
+     76  1a65		       84 26		      sty	t3
+     77  1a67		       ad 10 c3 	      lda	gbBase
+     78  1a6a		       09 b0		      ora	#$B0
+     79  1a6c		       85 20		      sta	mS
+     80  1a6e		       a2 03		      ldx	#3	; pulse 1, pulse 2, wave
+     81  1a70				   .ch
+     82  1a70		       a9 49		      lda	#73
+     83  1a72		       85 21		      sta	mD1
+     84  1a74		       a5 25		      lda	t2
+     85  1a76		       85 22		      sta	mD2
+     86  1a78		       86 24		      stx	t1
+     87  1a7a		       20 ae 0a 	      jsr	GbPut
+     88  1a7d		       a9 48		      lda	#72
+     89  1a7f		       85 21		      sta	mD1
+     90  1a81		       a5 26		      lda	t3
+     91  1a83		       85 22		      sta	mD2
+     92  1a85		       20 ae 0a 	      jsr	GbPut
+     93  1a88		       a6 24		      ldx	t1
+     94  1a8a		       a5 20		      lda	mS
+     95  1a8c		       18		      clc
+     96  1a8d		       69 01		      adc	#1
+     97  1a8f		       29 0f		      and	#$0F
+     98  1a91		       09 b0		      ora	#$B0
+     99  1a93		       85 20		      sta	mS
+    100  1a95		       ca		      dex
+    101  1a96		       d0 d8		      bne	.ch
+    102  1a98							; pulse 2 glides in PADS
+    103  1a98		       ad 10 c3 	      lda	gbBase
+    104  1a9b		       18		      clc
+    105  1a9c		       69 01		      adc	#1
+    106  1a9e		       29 0f		      and	#$0F
+    107  1aa0		       09 b0		      ora	#$B0
+    108  1aa2		       85 20		      sta	mS
+    109  1aa4		       a9 05		      lda	#5
+    110  1aa6		       85 21		      sta	mD1
+    111  1aa8		       a9 00		      lda	#0
+    112  1aaa		       ae 7d c3 	      ldx	padSound
+    113  1aad		       f0 02		      beq	.g
+    114  1aaf		       a9 40		      lda	#64	; glide 8 of 15
+    115  1ab1				   .g
+    116  1ab1		       85 22		      sta	mD2
+    117  1ab3		       20 ae 0a 	      jsr	GbPut
+    118  1ab6		       a9 68		      lda	#GCC_WARBLE
+    119  1ab8		       a2 18		      ldx	#24
+    120  1aba		       ac 7d c3 	      ldy	padSound
+    121  1abd		       f0 02		      beq	.wb
+    122  1abf		       a2 30		      ldx	#48
+    123  1ac1				   .wb
+    124  1ac1		       20 ea 0a 	      jsr	GbGlobal
+    125  1ac4				   .x
+    126  1ac4		       60		      rts
+    127  1ac5
+    128  1ac5							; Every keyboard scan (4 ms): filter sweep and pulse-width wobble.
+    129  1ac5				   PadTick
+    130  1ac5					      subroutine
+    131  1ac5		       ad 7d c3 	      lda	padSound
+    132  1ac8		       d0 01		      bne	.on
+    133  1aca		       60		      rts
+    134  1acb				   .on
+    135  1acb		       ee 89 c3 	      inc	padT
+    136  1ace		       d0 03		      bne	.p
+    137  1ad0		       ee 8a c3 	      inc	padT+1
+    138  1ad3				   .p
+    139  1ad3							; cutoff: triangle over padT / 8 (2048 scans, about 8 s)
+    140  1ad3		       ad 8a c3 	      lda	padT+1
+    141  1ad6		       85 23		      sta	t0
+    142  1ad8		       ad 89 c3 	      lda	padT
+    143  1adb		       46 23		      lsr	t0
+    144  1add		       6a		      ror
+    145  1ade		       46 23		      lsr	t0
+    146  1ae0		       6a		      ror
+    147  1ae1		       46 23		      lsr	t0
+    148  1ae3		       6a		      ror		; A = phase 0-255
+    149  1ae4		       20 20 1b 	      jsr	Tri	; 0-127
+    150  1ae7		       4a		      lsr
+    151  1ae8		       85 23		      sta	t0
+    152  1aea		       4a		      lsr
+    153  1aeb		       18		      clc
+    154  1aec		       65 23		      adc	t0	; x 3/4: 0-95
+    155  1aee		       69 10		      adc	#$10
+    156  1af0		       8d 16 d4 	      sta	SID+$16
+    157  1af3							; pulse widths: each voice its own phase, about 2 s around
+    158  1af3		       a2 02		      ldx	#2
+    159  1af5				   .v
+    160  1af5		       ad 8a c3 	      lda	padT+1
+    161  1af8		       4a		      lsr
+    162  1af9		       ad 89 c3 	      lda	padT
+    163  1afc		       6a		      ror		; phase = padT / 2
+    164  1afd		       18		      clc
+    165  1afe		       7d 27 1b 	      adc	pwPhase,x
+    166  1b01		       20 20 1b 	      jsr	Tri	; 0-127
+    167  1b04		       85 23		      sta	t0
+    168  1b06		       bc d9 24 	      ldy	sidOfs,x
+    169  1b09		       0a		      asl
+    170  1b0a		       0a		      asl
+    171  1b0b		       0a		      asl		; low byte of t0 x 8
+    172  1b0c		       99 02 d4 	      sta	SID+2,y
+    173  1b0f		       a5 23		      lda	t0
+    174  1b11		       4a		      lsr
+    175  1b12		       4a		      lsr
+    176  1b13		       4a		      lsr
+    177  1b14		       4a		      lsr
+    178  1b15		       4a		      lsr		; high bits of t0 x 8
+    179  1b16		       18		      clc
+    180  1b17		       69 03		      adc	#3	; width $300-$6F8 (19-43%)
+    181  1b19		       99 03 d4 	      sta	SID+3,y
+    182  1b1c		       ca		      dex
+    183  1b1d		       10 d6		      bpl	.v
+    184  1b1f		       60		      rts
+    185  1b20
+    186  1b20							; A = 0-255 phase -> 0-127 triangle
+    187  1b20				   Tri
+    188  1b20					      subroutine
+    189  1b20		       c9 80		      cmp	#128
+    190  1b22		       90 02		      bcc	.x
+    191  1b24		       49 ff		      eor	#$FF
+    192  1b26				   .x
+    193  1b26		       60		      rts
+    194  1b27
+    195  1b27		       00 55 aa    pwPhase    .byte.b	0,85,170
+    196  1b2a
+    197  1b2a							; F: SPARKLE arp octave 0 / +1 / +2
+    198  1b2a				   ArpOctKey
+    199  1b2a					      subroutine
+    200  1b2a		       ae 7e c3 	      ldx	arpOct
+    201  1b2d		       e8		      inx
+    202  1b2e		       e0 03		      cpx	#3
+    203  1b30		       90 02		      bcc	.s
+    204  1b32		       a2 00		      ldx	#0
+    205  1b34				   .s
+    206  1b34		       8e 7e c3 	      stx	arpOct
+    207  1b37		       a9 01		      lda	#1
+    208  1b39		       8d 13 c3 	      sta	reallocFlag
+    209  1b3c		       8d 14 c3 	      sta	screenDirty
+    210  1b3f		       60		      rts
 ------- FILE main.asm
 ------- FILE nesenv.asm LEVEL 2 PASS 2
       0  1b40					      include	"nesenv.asm"

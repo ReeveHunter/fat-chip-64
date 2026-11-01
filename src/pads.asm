@@ -7,7 +7,8 @@
 ;             filter that sweeps slowly (about 8 s up and down)
 ;   Game Boy  slow attack and release on pulses + wave, pulse 2 glides
 ;             into each new note, deeper warble
-;   MidiNES   unchanged: the sharp attacks under the swell
+;   MidiNES   pulses swell and fade (CC7 envelope), triangle releases with a
+;             pitch drop: see nesenv.asm
 
 SoundApply:
 	subroutine
