@@ -446,8 +446,8 @@ ArpDone:                        ; patterns come back here with arpIdx set
 	bne .fromHeld
 	ldx arpIdx
 	lda playOrder,x
-	clc
-	adc octBase
+	tax
+	jsr IdxNote
 	jmp .set
 .fromHeld:
 	ldx arpIdx

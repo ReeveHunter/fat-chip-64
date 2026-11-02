@@ -117,6 +117,8 @@ SidRetrig:
 
 ; ------------------------------------------------------------ allocation
 ; held notes (MIDI notes, ascending, at most 8) -> heldList / heldCount
+; (overlay keys first, ascending by index; then each MIDI-in note is merged
+; in, so the same note from both counts once)
 BuildHeld:
 	subroutine
 	ldx #0
@@ -133,9 +135,21 @@ BuildHeld:
 	iny
 .hn:
 	inx
-	cpx #24
+	cpx #MIDI_FIRST
 	bne .h
 	sty heldCount
+	ldx #MIDI_FIRST
+.m:
+	lda noteHeld,x
+	beq .mn
+	stx exI
+	lda midiNote-MIDI_FIRST,x
+	jsr InsertNote
+	ldx exI
+.mn:
+	inx
+	cpx #NIDX
+	bne .m
 	lda effMode
 	bne Expand
 	rts
@@ -515,12 +529,7 @@ ApplyVoices:
 	lda vWant,x
 	cmp #NO_NOTE
 	beq .cmp
-	sec                     ; pressed just now? (key index = note - octave)
-	sbc octBase
-	cmp #24
-	bcs .cmp
-	tay
-	lda notePressed,y
+	jsr NoteWasPressed      ; pressed just now?
 	sta t3
 .cmp:
 	lda vWant,x
@@ -552,11 +561,41 @@ ApplyVoices:
 	; presses and the arp step handled
 	lda #0
 	sta arpHit
-	ldx #23
+	ldx #NIDX-1
 .p:
 	sta notePressed,x
 	dex
 	bpl .p
+	rts
+
+; A = 1 if MIDI note A was pressed since the last voice update (an overlay
+; key or a MIDI-in note), else 0. Keeps X.
+NoteWasPressed:
+	subroutine
+	sta exV
+	sec
+	sbc octBase
+	cmp #MIDI_FIRST
+	bcs .midi
+	tay
+	lda notePressed,y
+	bne .x
+.midi:
+	ldy #MIDI_SLOTS-1
+.m:
+	lda notePressed+MIDI_FIRST,y
+	beq .n
+	lda midiNote,y
+	cmp exV
+	beq .yes
+.n:
+	dey
+	bpl .m
+	lda #0
+.x:
+	rts
+.yes:
+	lda #1
 	rts
 
 ; A = messages waiting in voice X's device queue (keeps X)
@@ -840,7 +879,7 @@ NextNesChannel:
 ; devices set up again.
 Panic:
 	subroutine
-	ldx #23
+	ldx #NIDX-1
 	lda #0
 	sta latch
 	sta arpRunning
@@ -850,6 +889,7 @@ Panic:
 	sta notePressed,x
 	dex
 	bpl .k
+	jsr MidiInRelease       ; MIDI-in keys let go too
 	lda #1
 	sta hardCut             ; no soft releases: everything off now
 	jsr Allocate            ; nothing held -> every voice off

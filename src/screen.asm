@@ -27,34 +27,22 @@ PrintAt:
 .done:
 	rts
 
-; ptr2 = SCREEN + 40*Y + X
+; ptr2 = SCREEN + 40*Y + X (row table: no loop)
 ScreenAddr:
 	subroutine
-	lda #<SCREEN
-	sta ptr2
-	lda #>SCREEN
-	sta ptr2+1
-	cpy #0
-	beq .col
-.row:
-	lda ptr2
-	clc
-	adc #40
-	sta ptr2
-	bcc .nc
-	inc ptr2+1
-.nc:
-	dey
-	bne .row
-.col:
 	txa
 	clc
-	adc ptr2
+	adc rowAddrLo,y
 	sta ptr2
-	bcc .x
-	inc ptr2+1
-.x:
+	lda rowAddrHi,y
+	adc #0
+	sta ptr2+1
+	ldy #0                  ; (callers expect Y = 0, as the old loop left it)
 	rts
+rowAddrLo:
+	.byte <(SCREEN+0),<(SCREEN+40),<(SCREEN+80),<(SCREEN+120),<(SCREEN+160),<(SCREEN+200),<(SCREEN+240),<(SCREEN+280),<(SCREEN+320),<(SCREEN+360),<(SCREEN+400),<(SCREEN+440),<(SCREEN+480),<(SCREEN+520),<(SCREEN+560),<(SCREEN+600),<(SCREEN+640),<(SCREEN+680),<(SCREEN+720),<(SCREEN+760),<(SCREEN+800),<(SCREEN+840),<(SCREEN+880),<(SCREEN+920),<(SCREEN+960)
+rowAddrHi:
+	.byte >(SCREEN+0),>(SCREEN+40),>(SCREEN+80),>(SCREEN+120),>(SCREEN+160),>(SCREEN+200),>(SCREEN+240),>(SCREEN+280),>(SCREEN+320),>(SCREEN+360),>(SCREEN+400),>(SCREEN+440),>(SCREEN+480),>(SCREEN+520),>(SCREEN+560),>(SCREEN+600),>(SCREEN+640),>(SCREEN+680),>(SCREEN+720),>(SCREEN+760),>(SCREEN+800),>(SCREEN+840),>(SCREEN+880),>(SCREEN+920),>(SCREEN+960)
 
 ; macro-ish helper: PRINT row, col, label
 	mac PRINT
@@ -146,7 +134,7 @@ ScreenDrawAll:
 	PRINT 6, 0, txtPanic
 	PRINT 9, 0, txtVoices
 	PRINT 21, 0, txtOctave
-	PRINT 8, 0, txtGhost
+	PRINT 8, 0, txtMidiIn
 	PRINT 19, 0, txtArp
 	PRINT 22, 0, txtTempo
 	PRINT 24, 0, txtModeLn
@@ -163,7 +151,8 @@ ScreenDrawAll:
 	jsr ScrBottom
 	jsr ScrOct
 	jsr ScrArpLine
-	jmp ScrCounters
+	jsr ScrCounters
+	jmp ScrModeLine
 
 ; Redraw in small steps, one per main loop pass (every 4 ms), so a redraw
 ; never holds up the keyboard or the arp: 15 stages (devices, voice rows,
@@ -207,10 +196,10 @@ ScreenStep:
 .call:
 	jmp (ptr)
 
-SCR_STAGES equ 15
-; stages 1, 2, (3-11 voice rows), 12-15
-stageLo:	.byte <ScrDevices,<ScrDev2,0,0,0,0,0,0,0,0,0,<ScrBottom,<ScrOct,<ScrArpLine,<ScrCounters
-stageHi:	.byte >ScrDevices,>ScrDev2,0,0,0,0,0,0,0,0,0,>ScrBottom,>ScrOct,>ScrArpLine,>ScrCounters
+SCR_STAGES equ 16
+; stages 1, 2, (3-11 voice rows), 12-16
+stageLo:	.byte <ScrDevices,<ScrDev2,0,0,0,0,0,0,0,0,0,<ScrBottom,<ScrOct,<ScrArpLine,<ScrCounters,<ScrModeLine
+stageHi:	.byte >ScrDevices,>ScrDev2,0,0,0,0,0,0,0,0,0,>ScrBottom,>ScrOct,>ScrArpLine,>ScrCounters,>ScrModeLine
 
 ScrDevices:
 	subroutine
@@ -374,13 +363,49 @@ ScrOct:
 	ldy #21
 	jsr PrintAt
 .rs:
-	lda ghostFilter
-	beq .ga
-	PRINT 8, 15, txtGFilter
-	jmp .gd
-.ga:
-	PRINT 8, 15, txtGAllow
-.gd:
+	; ---- MIDI in: octave (H / J), last note received
+	ldy #8
+	ldx #0
+	jsr ScreenAddr
+	lda #'+
+	ldy midiOct
+	bpl .po
+	lda #'-
+.po:
+	ldx #17
+	jsr PutChar
+	lda midiOct
+	bpl .pd
+	eor #$FF
+	clc
+	adc #1
+.pd:
+	clc
+	adc #'0
+	inx
+	jsr PutChar
+	lda lastInNote
+	cmp #NO_NOTE
+	bne .last
+	PRINT 8, 26, txtNoIn
+	rts
+.last:
+	ldx #26
+	lda #'C
+	jsr PutChar
+	inx
+	lda #'H
+	jsr PutChar
+	inx
+	lda lastInCh
+	clc
+	adc #1
+	jsr PutNum
+	lda #32
+	jsr PutChar
+	inx
+	lda lastInNote
+	jsr PutMidiNote
 	rts
 
 ScrArpLine:
@@ -489,7 +514,13 @@ ScrCounters:
 	ldx #33
 	ldy #22
 	jsr PrintAt
-	; ---- mode line: notes mode, key, sound
+	rts
+
+; ---- mode line: notes mode, key, sound; MIDI out counter
+ScrModeLine:
+	subroutine
+	lda #0
+	sta t2
 	ldx playMode
 	cpx #MODE_EXT
 	bne .m1

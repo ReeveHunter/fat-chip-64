@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.11:** MIDI in. Notes arriving at the Kerberos MIDI IN (e.g. the Yamaha SHS-10 keytar) play exactly like overlay keys: notes mode, latch, arp, K + note. Channels 1–11 play; 12–16 are ignored (the SHS-10's accompaniment and drums). H / J move incoming notes down / up an octave (−4 to +4). The screen's MIDI IN line (row 8) shows the octave and the last note and channel received. Nothing from MIDI in is passed on to the Game Boy or NES. The phantom-key toggle (G) and its line are gone (the filter stays off). The main loop is quicker: a screen step and a keyboard scan no longer share a pass (the longest pass went from about 14 ms to 4 ms, so fast arps and MIDI in are steadier).
+
 **v0.10:** = is just OFF / SMART for now (HOLD and ADD wait for the setup menu). The arp starts in FREE at 30 ms and goes down to 10 ms; ; and : are slower / faster (H and J are free again). When a fast arp gets ahead of the Game Boy or NES, that device skips steps instead of overflowing its queue. , and . (the < > keys) pick what SPACE does: MUTES (the momentary mute, default) or BENDS (hold: everything bends down 2 semitones over about 1 s; let go: back up over about 0.5 s).
 
 **v0.09:** a third sound, RAW (classic raw chip: everything square, instant attack and release). In PADS the NES triangle (bass) now just stops on release; the pitch-drop release is kept for a future mono bass sound.
@@ -78,7 +80,8 @@ lowest key (Q) starts at C3.
 | SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent |
 | SHIFT + F7 | Panic: every voice off, latch off, devices set up again |
 | CTRL + F3 / F5 | Game Boy / NES to the next block of channels (1–5, 2–6 … 12–16) |
-| G | *Test for now:* phantom-key filter on / off (off at start, so phantoms play) |
+| **MIDI in** | |
+| H / J | Incoming MIDI notes an octave down / up (−4 to +4). A held note keeps its pitch until its note-off |
 
 **Smart stacking:** nine voices (3 SID, Game Boy pulse 1, pulse 2, wave, NES
 pulse 1, pulse 2, triangle). The Game Boy wave and NES triangle play the
@@ -90,8 +93,16 @@ voices ±7 cents.
 
 ## How it works
 
-- **Timing:** CIA1 timer A interrupts every 1/3 ms. Each interrupt feeds the
-  MIDI chip one byte; every third one is a 1 ms tick that schedules messages.
+- **Timing:** CIA1 timer A interrupts every 1/4 ms. Each interrupt takes a
+  received MIDI byte and feeds the MIDI chip one byte; every fourth one is a 1
+  ms tick that schedules messages (and checks for a received byte again, so a
+  long tick can't miss one: the ACIA holds only one byte).
+- **MIDI in:** received bytes go into a 64-byte ring; the main loop parses
+  them (running status; realtime and system bytes skipped). Notes on channels
+  1–11 take one of eight MIDI slots, note indexes 24–31 next to the overlay's
+  0–23, so everything that works with overlay keys works with them. Held notes
+  from both merge through a 128-bit map (ascending, a note held twice counts
+  once). Panic lets go of every MIDI slot, in case a note-off was lost.
 - **MIDI out:** each device has its own queue. Game Boy messages go out at most
   one per 3 ms (Reeve's Teensyboy Pro drops messages faster than one per 2 ms)
   and only onto an empty wire, so the gap holds on the cable (≥ 2.5 ms worst
@@ -120,9 +131,10 @@ voices ±7 cents.
   new NES note while bent; notes too near the bottom of the NES range don't
   bend. Panic centres everything.
 - **MidiNES envelopes (PADS):** the NES Lab showed CC7 changes a sounding note's volume, so the pulses get a software envelope: CC7 0, note-on, then the 16 levels on a 10 ms clock; the note-off waits until the release reaches 0. The triangle has no volume, so its release is a pitch drop (Reeve's Logic plugin trick) made from precomputed tables (`p(n) × h(step)`), a bend every 4 ms (8 ms while the Game Boy is on: the Teensyboy forwards the NES channels too and can't take more), stopping at MIDI 21 where the triangle's 11-bit timer would wrap. Mute, panic, turning the NES off and switching back to FAT cut at once.
-- **Screen:** redrawn in 15 small steps, one per keyboard scan, so a redraw
-  never holds up the keys or the arp (the longest step is about 5 ms).
-- **Phantom keys** (filter on with G): the C64 matrix has no diodes, so three held keys on the
+- **Screen:** redrawn in 16 small steps, one per keyboard scan, each on its
+  own main-loop pass 2 ms after the scan, so a redraw never holds up the keys,
+  the arp or MIDI in (the longest pass is about 4 ms).
+- **Phantom keys** (filter off; its toggle left for a setup menu): the C64 matrix has no diodes, so three held keys on the
   corners of a rectangle make the fourth read as held. A new key that is the
   corner of such a rectangle waits until it breaks (a real fourth key and a
   ghost look the same). Unused keys are ignored, so a ghost on one costs
@@ -142,11 +154,12 @@ voices ±7 cents.
 | `src/voices.asm` | SID, smart-stacking allocator, device on/off/channels, panic |
 | `src/screen.asm`, `src/data.asm` | screen, key map, voice table, text |
 | `tools/gen_tables.py` | SID frequency table (NTSC) |
-| `test/sim.py` | py65 C64 model: 1/3 ms timer IRQ, keyboard matrix, RESTORE NMI, MC6850 with real byte timing |
+| `test/sim.py` | py65 C64 model: 1/4 ms timer IRQ, keyboard matrix, RESTORE NMI, MC6850 with real byte timing |
 | `test/teensy.py` | Teensyboy model (mGB mode): channel filter, 64-byte buffer, ~0.5 ms per byte |
 | `test/test_main.py` | startup, pacing, stacking, devices, octaves, latch, mute, panic, RESTORE, long silence, link budget |
 | `src/arp.asm` | tap tempo, arpeggiator |
 | `src/pads.asm` | FAT / PADS sound, SPARKLE octave |
+| `src/midiin.asm` | MIDI in: receive, parse, MIDI slots, H / J octave |
 | `src/bend.asm` | SPACE modes, SPACE bend |
 | `src/nesenv.asm`, `src/nestables.asm` | MidiNES envelopes (PADS): CC7 envelope on the pulses, triangle release drop |
 | `test/test_nesenv.py` | MidiNES startup settings, envelopes, drop, hard cuts |
@@ -154,6 +167,7 @@ voices ±7 cents.
 | `test/test_arp.py` | tap tempo, arp modes, patterns, speeds, sparkle panning |
 | `test/test_v010.py` | = OFF / SMART, the 10 ms arp (no hung notes), : ;, SPACE modes and bend |
 | `test/test_fast_link.py` | 10 ms arp + bend through the Teensyboy model: nothing lost |
+| `test/test_midiin.py` | MIDI in: notes, running status, channels, octave, latch / modes / arp, panic, receive timing |
 | `test/test_with_gb.py` | end to end: Fat Chip 64 → Teensyboy model → the Fat Chip GB ROM (PyBoy) |
 
 ## Building and testing

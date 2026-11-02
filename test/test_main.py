@@ -98,6 +98,7 @@ def shifted(key, mod="lshift"):
 
 t0 = c.cpu.processorCycles
 shifted("f3")                               # Game Boy off
+c.run_ms(80)                                # (the screen catches up)
 check("SHIFT+F3: Game Boy off on screen", "OFF" in c.screen_row(4))
 off = [x for x in c.midi(since=t0) if (x[1] & 15) in GB]
 check("Game Boy off: panic CC and all-notes-off sent", (0xB0, 111, 0) in [x[1:] for x in off]
@@ -151,6 +152,7 @@ check("NES channels wrap and overlap warning shows", c.v("nesBase") == 0 and "OV
       (c.v("nesBase"), c.screen_row(7)))
 for _ in range(5):
     shifted("f5", "ctrl")
+c.run_ms(60)
 check("back to 6-10, warning gone", c.v("nesBase") == 5 and "OVERLAP" not in c.screen_row(7))
 c.run_ms(100)
 
@@ -246,11 +248,11 @@ check("latch OFF on screen", "OFF" in c.screen_row(21)[25:], c.screen_row(21))
 c.press("q", "2", ms=40)
 c.press("t", ms=60)
 on = notes_on(c.midi())
-check("filter off (default): Q 2 T also plays the phantom G# (key 6)", 56 in on.values() and "PLAY" in c.screen_row(8), on)
+check("filter off (default): Q 2 T also plays the phantom G# (key 6)", 56 in on.values(), on)
 c.release("q", "2", "t", ms=60)
 check("phantom stops with the chord", notes_on(c.midi()) == {})
-c.tap("g", ms=60)
-check("G: filter on", c.v("ghostFilter") == 1 and "FILTERED" in c.screen_row(8), c.screen_row(8))
+c.set("ghostFilter", 1)                     # (no key for it now: setup menu later)
+c.run_ms(20)
 c.press("q", "2", ms=40)
 c.press("e", ms=60)                         # Q 2 E: the matrix also reads 4 as held
 on = notes_on(c.midi())

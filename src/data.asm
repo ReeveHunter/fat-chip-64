@@ -16,9 +16,9 @@ keymap:
 	; col 2: 5 R D 6 C F T X
 	.byte 6,5,K_D,8,N_,K_F,7,K_X
 	; col 3: 7 Y G 8 B H U V
-	.byte 10,9,K_G,N_,K_B,N_,11,K_V
+	.byte 10,9,N_,N_,K_B,K_H,11,K_V
 	; col 4: 9 I J 0 M K O N
-	.byte 13,12,N_,15,K_M,K_K,14,K_N
+	.byte 13,12,K_J,15,K_M,K_K,14,K_N
 	; col 5: + P L - . : @ ,
 	.byte N_,16,K_L,18,K_PERIOD,K_COLON,17,K_COMMA
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
@@ -47,7 +47,7 @@ vn8:        .byte "NES TRI (BASS)",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.10 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.11 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -95,9 +95,7 @@ patHi:      .byte >PatUp,>PatDown,>PatUpDown,>PatRandom,>PatUp
 ; FREE speeds (ms per step), ; slower / : faster
 freeLo:     .byte <10,<15,<20,<25,<30,<40,<50,<60,<75,<90,<110,<135,<160,<200,<250,<300,<400,<500,<700,<1000
 freeHi:     .byte >10,>15,>20,>25,>30,>40,>50,>60,>75,>90,>110,>135,>160,>200,>250,>300,>400,>500,>700,>1000
-txtGhost:   .byte "G PHANTOM KEYS",0
-txtGAllow:  .byte "PLAY    ",0
-txtGFilter: .byte "FILTERED",0
+txtMidiIn:  .byte "MIDI IN  H/J OCT     LAST",0
 txtLOff:    .byte "OFF  ",0
 txtLHold:   .byte "HOLD ",0
 txtTempo:   .byte "B     BPM   M MUTE      <> SPACE",0
@@ -125,6 +123,7 @@ tO0:        .byte "+0 OCT",0
 tO1:        .byte "+1 OCT",0
 tO2:        .byte "+2 OCT",0
 txtSent:    .byte "MIDI OUT:       MESSAGES",0
+txtNoIn:    .byte "         ",0
 
 ; scale steps, three octaves (Expand)
 scaleMajor: .byte 0,2,4,5,7,9,11,12,14,16,17,19,21,23,24,26,28,29,31,33,35

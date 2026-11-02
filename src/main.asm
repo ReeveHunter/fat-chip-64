@@ -49,11 +49,19 @@ Loop:
 	adc #SCAN_EVERY
 	sta scanAt
 	inc scanned
+	sec
+	sbc #SCAN_EVERY-2       ; (A = ticks + SCAN_EVERY): the screen step at ticks + 2
+	bne .sa
+	lda #1                  ; (0 means none)
+.sa:
+	sta scrAt
 	jsr SidRetrig
 	jsr KeyScan
 	jsr RestoreCheck
 	jsr PadTick
 .noScan:
+	jsr MidiInService       ; notes from the Kerberos MIDI IN (before the
+	                        ;  arp, which starts on a key change)
 	jsr ArpTick             ; every pass, so arp steps land on time
 	jsr NesEnvTick          ; MidiNES envelopes (PADS)
 	jsr BendTick            ; SPACE bend
@@ -74,8 +82,20 @@ Loop:
 	sta applyRetry
 	jsr ApplyVoices
 .alloced:
+	; one screen step per keyboard scan, 2 ms after it, on a pass of its
+	; own (a scan and a screen step in one pass would stretch it)
 	lda scanned
-	beq .x
+	bne .x
+	lda scrAt
+	beq .x                  ; done for this scan
+	sec
+	sbc ticks
+	beq .scr
+	cmp #3
+	bcc .x                  ; 1-2 ms to go
+.scr:
+	lda #0
+	sta scrAt
 	jsr ScreenStep
 .x:
 	jmp Loop
@@ -133,6 +153,7 @@ InitState:
 	sta $C100,x
 	sta $C200,x
 	sta $C300,x
+	sta $C400,x
 	inx
 	bne .ram
 	ldx #NUM_VOICES-1
@@ -143,6 +164,7 @@ InitState:
 	sta vOut,x
 	dex
 	bpl .v
+	sta lastInNote          ; (NO_NOTE: nothing received yet)
 	lda #1
 	sta devOn+DEV_SID
 	sta devOn+DEV_GB
@@ -198,7 +220,8 @@ InitState:
 	rts
 
 ;------------------------------------------------------------- interrupts
-; Every 1/3 ms: feed the ACIA one byte (fast path). Every third time (1 ms):
+; Every 1/4 ms: take a MIDI-in byte, feed the ACIA one byte (fast path).
+; Every fourth time (1 ms):
 ; count a tick and move paced messages onto the wire.
 Irq:
 	subroutine
@@ -206,6 +229,19 @@ Irq:
 	txa
 	pha
 	lda CIA1_ICR            ; acknowledge
+	lda ACIA_STAT           ; MIDI in: a received byte? (RxByte, inline)
+	lsr
+	bcc .noRx
+	lda ACIA_RX
+	ldx rxHead
+	sta rxBuf,x
+	inx
+	txa
+	and #63
+	cmp rxTail
+	beq .noRx               ; full: dropped
+	sta rxHead
+.noRx:
 	ldx wireTail
 	cpx wireHead
 	beq .noByte
@@ -218,7 +254,7 @@ Irq:
 .noByte:
 	dec subTick
 	bpl .out
-	lda #2
+	lda #3
 	sta subTick
 	tya
 	pha
@@ -228,6 +264,7 @@ Irq:
 .t:
 	jsr Schedule
 	jsr TxByte              ; start a just-scheduled message now if the ACIA is free
+	jsr RxByte              ; (again: this pass was long, a byte may be in)
 	pla
 	tay
 .out:
@@ -257,6 +294,7 @@ Nmi:
 	include "pads.asm"
 	include "nesenv.asm"
 	include "bend.asm"
+	include "midiin.asm"
 	include "screen.asm"
 	include "data.asm"
 	include "tables.asm"

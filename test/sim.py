@@ -1,6 +1,6 @@
 """py65 model of the parts of a C64 Fat Chip 64 uses.
 
-- CIA1 timer A: an IRQ every 341 cycles (1/3 ms) when enabled ($DC0D bit 0)
+- CIA1 timer A: an IRQ every 256 cycles (1/4 ms) when enabled ($DC0D bit 0)
 - keyboard matrix through CIA1 ports A/B (press keys by name)
 - RESTORE: an NMI
 - Kerberos MIDI out (MC6850 at $DE04-$DE07, DATEL layout): a byte written to
@@ -16,7 +16,7 @@ from py65.memory import ObservableMemory
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..")
 CYCLES_PER_MS = 1023
-IRQ_CYCLES = 341
+IRQ_CYCLES = 256
 BYTE_CYCLES = 327
 
 # key name -> (column bit for $DC00, row bit for $DC01)
@@ -66,6 +66,10 @@ class C64:
         self.timer_on = False
         self.next_irq = IRQ_CYCLES
         self.irq_pending = False
+        self.rx_q = []          # (arrival cycle, byte) still on the way in
+        self.rx_last = 0
+        self.rdr = None         # ACIA receive data register
+        self.rx_overrun = 0
 
         m = self.mem
 
@@ -105,8 +109,23 @@ class C64:
             elif not v & 0x80 and v & 1:
                 self.timer_on = False
 
+        def rx_update():
+            now = self.cpu.processorCycles
+            while self.rx_q and self.rx_q[0][0] <= now:
+                _, b = self.rx_q.pop(0)
+                if self.rdr is None:
+                    self.rdr = b
+                else:
+                    self.rx_overrun += 1
+
         def rd_stat(_):
-            return 0x02 if self.cpu.processorCycles >= self.tx_busy_until else 0x00
+            rx_update()
+            return (0x02 if self.cpu.processorCycles >= self.tx_busy_until else 0x00) | (1 if self.rdr is not None else 0)
+
+        def rd_rx(_):
+            rx_update()
+            b, self.rdr = self.rdr, None
+            return 0 if b is None else b
 
         def wr_tx(_, v):
             now = self.cpu.processorCycles
@@ -120,6 +139,7 @@ class C64:
         m.subscribe_to_write([0xDC0D], wr_icr)
         m.subscribe_to_read([0xDE06], rd_stat)
         m.subscribe_to_write([0xDE05], wr_tx)
+        m.subscribe_to_read([0xDE07], rd_rx)
         m.subscribe_to_read([0xD012], lambda _: (self.cpu.processorCycles // 65) & 0xFF)
 
         self.cpu = MPU(memory=m)
@@ -163,6 +183,16 @@ class C64:
     def tap(self, *keys, ms=12):
         self.press(*keys, ms=ms)
         self.release(*keys, ms=ms)
+
+    def midi_in(self, *data, ms=0):
+        """Bytes arriving at MIDI IN, back to back at 31250 baud from now."""
+        t = max(self.cpu.processorCycles, self.rx_last)
+        for b in data:
+            t += BYTE_CYCLES
+            self.rx_q.append((t, b))
+        self.rx_last = t
+        if ms:
+            self.run_ms(ms)
 
     def restore(self):
         self.cpu.nmi()

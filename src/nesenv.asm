@@ -164,7 +164,15 @@ NesEnvTick:
 	sbc envLast
 	cmp #10
 	bcc .tri
+	cmp #40
+	bcs .resync             ; far behind: start the clock again from now
+	lda envLast             ; on a steady 10 ms clock (a slow loop pass
+	clc                     ;  doesn't stretch the envelope)
+	adc #10
+	bne .clk
+.resync:
 	lda ticks
+.clk:
 	sta envLast
 	ldy #0
 	jsr EnvStep

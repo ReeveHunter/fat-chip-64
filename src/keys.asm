@@ -173,20 +173,22 @@ Suspect:
 ;   F1/F3/F5/F7    octave: C4 / C3 / C2 / C1 on the lowest key
 ;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
 ;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
-;   M              mute everything        SPACE  momentary (flips mute while held)
-;   =              latch: OFF -> SMART -> HOLD -> ADD -> OFF
+;   M              mute everything        SPACE  per its mode
+;   =              latch: OFF <-> SMART (HOLD / ADD: menu later)
 ;   N              new chord: the next note starts one (twice: clear now)
 ;   Z / X          notes mode (POLY, CHORD, EXT) / extensions (7 9 11 13)
-;   K + note / L   key root / major-minor        V  sound: FAT or PADS
+;   K + note / L   key root / major-minor        V  sound: FAT / PADS / RAW
 ;   A / S / D / F  arp mode / pattern / speed / SPARKLE octave
-;   H / J          free arp speed            B  tap tempo
-;   G              phantom-key filter on / off (off at start; for testing)
+;   ; / :          free arp speed            B  tap tempo
+;   , / .          SPACE mode (MUTES / BENDS)
+;   H / J          MIDI in octave down / up
+;   (the phantom-key filter stays off: GhostKey is kept for a setup menu)
 KeyDown:
 	subroutine
 	cmp #24
-	bcc .isNote
+	bcc NoteDown
 	jmp .cmd
-.isNote:
+NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24-31)
 	tax
 	lda kDown
 	beq .note
@@ -316,9 +318,9 @@ KeyDown:
 	rts
 
 ; key -> handler (KeyDown)
-cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_G,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,0
-cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<GhostKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext
-cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>GhostKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext
+cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,K_H,K_J,0
+cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp
+cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp
 
 CtrlDown:
 	lda #1
@@ -358,7 +360,7 @@ KeyKeyDown:
 ; K held + note X: that note is the key's root
 SetKeyRoot:
 	subroutine
-	txa
+	jsr IdxNote
 .m:
 	cmp #12
 	bcc .r
@@ -404,7 +406,7 @@ SettingChanged:
 	jsr Dirty
 	lda latch
 	beq .apply
-	ldx #23
+	ldx #NIDX-1
 .c:
 	lda noteHeld,x
 	bne .wait
@@ -483,7 +485,7 @@ NewChordKey:
 	jsr Dirty
 KeepPhysical:
 	jsr ApplySettings
-	ldx #23
+	ldx #NIDX-1
 .l0:
 	lda physKey,x
 	sta noteHeld,x
@@ -503,7 +505,7 @@ octaves:    .byte 60,48,36,24
 
 ClearNotes:
 	subroutine
-	ldy #23
+	ldy #NIDX-1
 	lda #0
 .c:
 	sta noteHeld,y
@@ -515,6 +517,7 @@ KeyUp:
 	subroutine
 	cmp #24
 	bcs .cmd
+NoteUp:                         ; A = note index
 	tax
 	lda #0
 	sta physKey,x

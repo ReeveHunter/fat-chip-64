@@ -37,6 +37,7 @@ TxService:
 	php
 	sei
 	jsr TxByte
+	jsr RxByte
 	plp
 	rts
 
@@ -79,10 +80,12 @@ Schedule:
 .gbDue:
 	; only onto an empty wire, so the gap holds on the cable itself (NES
 	; bytes already waiting would otherwise delay this one and squeeze it
-	; against the next)
+	; against the next). While a Game Boy message is due, the NES doesn't
+	; start one (v0.11), so NES bursts fill the Game Boy's gaps instead of
+	; holding its notes back.
 	lda wireHead
 	cmp wireTail
-	bne .nes
+	bne .done               ; (and the NES waits too: the Game Boy goes first)
 	jsr LinkRoom
 	bcc .nes
 	ldx gbqTail
@@ -101,6 +104,7 @@ Schedule:
 	adc #GB_GAP
 	sta gbNext
 .nes:
+	jsr RxByte              ; (MIDI in: a long IRQ mustn't miss a byte)
 	lda nesqTail
 	cmp nesqHead
 	beq .done

@@ -34,9 +34,10 @@ SCREEN      equ $0400
 COLRAM      equ $D800
 
 ; ------------------------------------------------------------ timing
-TICK_LATCH  equ 340            ; CIA1 timer A: 341 cycles = 1/3 ms (NTSC), about one
-                               ; MIDI byte time, so the ACIA is fed even while
-                               ; the main loop is busy; every third IRQ is a tick
+TICK_LATCH  equ 255            ; CIA1 timer A: 256 cycles = 1/4 ms (NTSC), quicker
+                               ; than a MIDI byte (327 cycles), so the ACIA is fed
+                               ; and read (MIDI in) even while the main loop is
+                               ; busy; every fourth IRQ is a tick
 SCAN_EVERY  equ 4              ; keyboard scan every 4 ms
 GB_GAP      equ 3              ; ms between messages to the Game Boy (measured safe: 2)
 LINK_MAX    equ 45             ; bytes we let pile up in the Teensyboy (its buffer: 64)
@@ -84,6 +85,8 @@ K_G         equ $90
 K_A         equ $91
 K_S         equ $92
 K_D         equ $93
+K_H         equ $94           ; MIDI in octave down
+K_J         equ $95           ; MIDI in octave up
 K_B         equ $96
 K_F         equ $97
 K_Z         equ $98
@@ -95,6 +98,11 @@ K_COLON     equ $9D           ; : arp faster
 K_SEMI      equ $9E           ; ; arp slower
 K_COMMA     equ $9F           ; , (<) SPACE mode back
 K_PERIOD    equ $A0           ; . (>) SPACE mode on
+MIDI_FIRST  equ 24            ; note indexes: 0-23 overlay, 24-31 MIDI in
+MIDI_SLOTS  equ 8
+NIDX        equ MIDI_FIRST+MIDI_SLOTS
+MIDI_IN_CHANS equ 11          ; MIDI in plays channels 1-11 (12-16: SHS-10 accompaniment)
+MIDI_OCT_MAX equ 4
 SPC_MUTE    equ 0             ; SPACE modes: held = mute flips
 SPC_BEND    equ 1             ;  held = everything bends down
 SPC_MODES   equ 2
@@ -133,6 +141,7 @@ K_NONE      equ $FF
 	org $10
 ticks       ds 2               ; 1 ms counter (IRQ)
 scanAt      ds 1               ; low byte of ticks for the next scan
+scrAt       ds 1               ; ... for the next screen step
 lastStatus  ds 1               ; running status on the wire
 wireHead    ds 1               ; wire ring: head = write, tail = read
 wireTail    ds 1
@@ -155,7 +164,7 @@ t3          ds 1
 ptr         ds 2
 ptr2        ds 2
 irqT        ds 1               ; IRQ-only temporary
-subTick     ds 1               ; IRQs since the last 1 ms tick (0-2)
+subTick     ds 1               ; IRQs until the next 1 ms tick (3-0)
 linkLoad    ds 1               ; estimated bytes waiting in the Teensyboy (IRQ only)
 
 ; ------------------------------------------------------------ RAM ($C000-$CFFF)
@@ -171,10 +180,10 @@ nesqD2      ds 64
 keyNow      ds 8
 keyUsed     ds 8               ; keys with a job (the rest are ignored)
 keyAcc      ds 8               ; keys accepted (phantom filter)
-noteHeld    ds 24              ; 1 = note sounding (key held, or latched)
-physKey     ds 24              ; 1 = overlay key physically down
+noteHeld    ds NIDX            ; 1 = note sounding (key held, or latched)
+physKey     ds NIDX            ; 1 = key physically down (overlay or MIDI in)
 physCount   ds 1
-notePressed ds 24              ; 1 = pressed since the last voice update
+notePressed ds NIDX             ; 1 = pressed since the last voice update
 heldList    ds 8               ; held notes, ascending (MIDI notes)
 heldCount   ds 1
 covered     ds 8
@@ -301,6 +310,19 @@ bT3         ds 1
 sidBaseLo   ds 3               ; SID frequency before the bend
 sidBaseHi   ds 3
 applyRetry  ds 1               ; a voice change waits for a device queue
+; v0.11 MIDI in
+rxBuf       ds 64
+rxHead      ds 1
+rxTail      ds 1
+rxStatus    ds 1
+rxCnt       ds 1
+rxD1        ds 1
+rxD2        ds 1
+midiNote    ds MIDI_SLOTS      ; note each MIDI slot plays
+midiSrc     ds MIDI_SLOTS      ; note number that came in
+midiOct     ds 1               ; H / J: -4..+4 octaves
+lastInNote  ds 1               ; last note received ($FF = none yet)
+lastInCh    ds 1
 ctrlDown    ds 1
 octBase     ds 1               ; MIDI note of the lowest overlay key
 latch       ds 1               ; 0 off, 1 hold, 2 build
