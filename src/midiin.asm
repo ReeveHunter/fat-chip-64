@@ -89,6 +89,16 @@ MidiInMsg:
 	subroutine
 	lda rxStatus
 	and #15
+	cmp #DRUM_CH_IN         ; channel 16: the keytar's rhythm -> MidiNES drums
+	bne .notes
+	lda rxStatus
+	and #$F0
+	cmp #$90
+	bne .x
+	lda rxD2
+	beq .x
+	jmp KeytarDrum
+.notes:
 	cmp #MIDI_IN_CHANS
 	bcs .x                  ; channels 12-16: the keytar's accompaniment
 	sta t3

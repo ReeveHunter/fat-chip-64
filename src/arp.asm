@@ -574,18 +574,30 @@ Random:
 	rts
 
 ; ------------------------------------------------------------ as played
-; Key index X was pressed: add it to playOrder (if new; drops the oldest
-; when full). Keeps X.
+; Key index X was pressed: it goes to the end of playOrder (notes no longer
+; sounding are dropped first; a note already there moves to the end, so
+; MONO's "last key pressed" is right; the oldest drops when full). Keeps X.
 PlayAdd:
 	subroutine
-	ldy playCount
+	stx exI
+	jsr PlayPrune
+	ldx exI
+	ldy #0
 .f:
-	dey
-	bmi .add
+	cpy playCount
+	beq .add
 	txa
 	cmp playOrder,y
+	beq .rm
+	iny
 	bne .f
-	rts                     ; already there
+.rm:
+	lda playOrder+1,y       ; take it out
+	sta playOrder,y
+	iny
+	cpy playCount
+	bne .rm
+	dec playCount
 .add:
 	lda playCount
 	cmp #8

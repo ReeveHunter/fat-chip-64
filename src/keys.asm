@@ -177,7 +177,9 @@ Suspect:
 ;   =              latch: OFF <-> SMART (HOLD / ADD: menu later)
 ;   N              new chord: the next note starts one (twice: clear now)
 ;   Z / X          notes mode (POLY, CHORD, EXT) / extensions (7 9 11 13)
-;   K + note / L   key root / major-minor        V  sound: FAT / PADS / RAW
+;   K + note / L   key root / major-minor
+;   V / SHIFT+V    next / previous sound           C  POLY / MONO
+;   G / RETURN     next beat (and drum kit) / beat start-stop
 ;   A / S / D / F  arp mode / pattern / speed / SPARKLE octave
 ;   ; / :          free arp speed            B  tap tempo
 ;   , / .          SPACE mode (MUTES / BENDS)
@@ -318,9 +320,9 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 	rts
 
 ; key -> handler (KeyDown)
-cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,K_H,K_J,0
-cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp
-cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp
+cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,K_H,K_J,K_C,K_G,K_RETURN,0
+cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<MonoKey,<BeatKey,<BeatRunKey
+cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>MonoKey,>BeatKey,>BeatRunKey
 
 CtrlDown:
 	lda #1
@@ -433,25 +435,6 @@ ApplySettings:
 	lda keyMinor
 	sta effMinor
 	rts
-
-; V: FAT -> PADS -> RAW
-SoundKey:
-	subroutine
-	ldx soundMode
-	inx
-	cpx #3
-	bcc .s
-	ldx #0
-.s:
-	stx soundMode
-	lda #0
-	cpx #SND_PADS
-	bne .p
-	lda #1
-.p:
-	sta padSound            ; (the PADS-only features test this)
-	jsr SoundApply
-	jmp Dirty
 
 LatchKey:
 	subroutine

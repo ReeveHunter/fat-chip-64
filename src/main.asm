@@ -24,8 +24,10 @@ Start:
 	jsr InitState
 	jsr ScreenInit
 	jsr SidInit
+	jsr SoundSid
 	jsr MidiInit
 	cli
+StartDevices:                   ; (the tests can move the channels here)
 	jsr GbStartup
 	jsr NesStartup
 	jsr ScreenDrawAll
@@ -58,13 +60,14 @@ Loop:
 	jsr SidRetrig
 	jsr KeyScan
 	jsr RestoreCheck
-	jsr PadTick
 .noScan:
 	jsr MidiInService       ; notes from the Kerberos MIDI IN (before the
 	                        ;  arp, which starts on a key change)
 	jsr ArpTick             ; every pass, so arp steps land on time
 	jsr NesEnvTick          ; MidiNES envelopes (PADS)
 	jsr BendTick            ; SPACE bend
+	jsr BeatTick            ; beat demos
+	jsr DrumTick            ; noise hits end
 	lda reallocFlag
 	beq .noAlloc
 	lda #0
@@ -84,19 +87,39 @@ Loop:
 .alloced:
 	; one screen step per keyboard scan, 2 ms after it, on a pass of its
 	; own (a scan and a screen step in one pass would stretch it)
+	; (v0.12: the SID effects take a non-scan pass the screen doesn't need)
+	; when both are due they take turns (a redraw after a key press would
+	; otherwise freeze vibrato and glides for 70 ms)
 	lda scanned
 	bne .x
 	lda scrAt
-	beq .x                  ; done for this scan
+	beq .fx                 ; done for this scan
 	sec
 	sbc ticks
-	beq .scr
+	beq .sdue
 	cmp #3
-	bcc .x                  ; 1-2 ms to go
+	bcc .fx                 ; 1-2 ms to go
+.sdue:
+	lda fxTurn
+	and fxBusy              ; (only sounds with SID effects need the turns)
+	beq .scr
+	lda ticks
+	sec
+	sbc fxLast
+	cmp #FX_EVERY
+	bcc .scr                ; effects not due: the screen
+	lda #0
+	sta fxTurn
+	beq .fx
 .scr:
 	lda #0
 	sta scrAt
+	lda #1
+	sta fxTurn
 	jsr ScreenStep
+	jmp Loop
+.fx:
+	jsr FxTick              ; SID vibrato, glide, filter, width; duty steps
 .x:
 	jmp Loop
 
@@ -154,6 +177,8 @@ InitState:
 	sta $C200,x
 	sta $C300,x
 	sta $C400,x
+	sta $C500,x
+	sta $C600,x
 	inx
 	bne .ram
 	ldx #NUM_VOICES-1
@@ -169,10 +194,18 @@ InitState:
 	sta devOn+DEV_SID
 	sta devOn+DEV_GB
 	sta devOn+DEV_NES
-	lda #0                  ; Game Boy on channels 1-5 (Fat Chip GB default)
+	lda #GB_BASE_DEFAULT    ; Game Boy on 11-15 (Fat Chip 64 moves it there: CC 113)
 	sta gbBase
-	lda #5                  ; MidiNES on channels 6-10 (set with the NES D-pad)
+	lda #NES_BASE_DEFAULT   ; MidiNES on 1-5, its power-on default
 	sta nesBase
+	lda #$FF
+	sta dmcBank
+	sta nzNote
+	sta dmcNote
+	lda #$80                ; drums: the last hits were long ago
+	sta dmcAt+1
+	sta nzAt+1
+	jsr SoundVars           ; FAT's settings
 	lda #OCT_DEFAULT
 	sta octBase
 	lda #1
@@ -295,7 +328,11 @@ Nmi:
 	include "nesenv.asm"
 	include "bend.asm"
 	include "midiin.asm"
+	include "sounds.asm"
+	include "drums.asm"
 	include "screen.asm"
 	include "data.asm"
 	include "tables.asm"
 	include "nestables.asm"
+	include "soundtab.asm"
+	include "beats.asm"

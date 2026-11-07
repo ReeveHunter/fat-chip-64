@@ -40,8 +40,8 @@ check("screen: MIDI IN line, octave +0, nothing received yet",
 # ---------------------------------------------------------------- one note
 c.midi_in(0x90, 60, 64, ms=140)             # SHS-10: fixed velocity 64, channel 1
 on = notes_on(c.midi())
-check("note-on ch 1: plays like an overlay key (GB pulses, NES, bass an octave down)",
-      on.get(0) == 60 and on.get(1) == 60 and on.get(5) == 60 and on.get(2) == 48 and on.get(7) == 48, on)
+check("note-on ch 1: plays like an overlay key (GB pulses, NES, Fat Bass folded to C2)",
+      on.get(0) == 60 and on.get(1) == 60 and on.get(5) == 60 and on.get(2) == 36 and on.get(7) == 36, on)
 check("note-on: SID gated", all(c.raw[0xD404 + 7 * v] & 1 for v in range(3)))
 check("screen: last note CH 1 C 4", "LAST CH1 C 4" in c.screen_row(8).replace("  ", " "), c.screen_row(8))
 check("held row shows it", "C 4" in c.screen_row(20), c.screen_row(20))

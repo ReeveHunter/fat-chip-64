@@ -13,9 +13,11 @@
 ; would wrap to a high pitch).
 ; FAT sound: no envelopes (CC7 full). Mute, panic and device off cut at once.
 
-ENV_ATK     equ 64              ; 8.8 level per 10 ms: 15 levels in 0.6 s
-ENV_DEC     equ 26              ; 4 levels (15 -> 11) in 0.4 s
-ENV_SUS     equ 11
+; v0.12: the envelope comes from the sound (envAtkV, envDecV, envSusV,
+; envPeakV, envRelV; PADS keeps 64 / 26 / 11 / 15 / 5), every sound but FAT
+; and RAW uses it (it also sets the pulses' loudness), and the sound may add
+; a tremolo: the level sent is level - level x amount / 16, the amount
+; following a triangle (or square) LFO on the 10 ms clock, both pulses in step.
 TRI_GAP     equ 4               ; ms between drop bends (Reeve: 4 ms is smoothest)
 TRI_GAP_GB  equ 8               ; while the Game Boy is on: its adapter forwards the
                                 ; NES channels too, and can't take a bend every 4 ms
@@ -30,13 +32,18 @@ slotVoice:  .byte 2,5
 ; note keeps sounding for now). X = voice (= t0).
 NesSoftRelease:
 	subroutine
-	lda padSound
-	beq .no
+	jmp .go
+.nope:
+	clc
+	rts
+.go:
+	lda nesEnvOn
+	beq .nope
 	lda muteNow
 	ora hardCut
-	bne .no
+	bne .nope
 	lda devOn+DEV_NES
-	beq .no
+	beq .nope
 	lda vDev,x
 	cmp #DEV_NES
 	bne .no
@@ -45,16 +52,32 @@ NesSoftRelease:
 	beq .no
 	ldy vEnvSlot,x
 	bmi .tri
-	; pulse: release from the current level; step = 1.25 x level + 1 (8.8),
-	; so any level fades out in about 2 s
+	; pulse: release from the current level; step = level x factor / 4 + 1
+	; (8.8 per 10 ms), so any level fades out in 10.24 s / factor (PADS: 5,
+	; about 2 s). Factor 0: no release, cut.
+	lda envRelV
+	beq .no
+	stx t2
+	sty t3
 	lda envLvH,y
-	lsr
-	lsr
-	sta envRel,y
-	lda envLvH,y
-	clc
-	adc envRel,y
+	ldy envRelV
+	jsr Mul8
+	lsr mt16+1
+	ror mt16
+	lsr mt16+1
+	ror mt16
+	ldy t3
+	ldx t2
+	lda mt16+1
+	bne .max
+	lda mt16
+	cmp #255
+	bcs .max
 	adc #1
+	bne .rel
+.max:
+	lda #255
+.rel:
 	sta envRel,y
 	lda #ENV_R
 	sta envPh,y
@@ -123,7 +146,7 @@ NesAfterOff:
 ; Before its note-on: in PADS a NES pulse starts from volume 0 and attacks.
 NesBeforeOn:
 	subroutine
-	lda padSound
+	lda nesEnvOn
 	beq .x
 	ldx t0
 	lda vDev,x
@@ -131,19 +154,30 @@ NesBeforeOn:
 	bne .x
 	ldy vEnvSlot,x
 	bmi .x
-	lda #ENV_A
-	sta envPh,y
 	lda #0
 	sta envLvL,y
 	sta envLvH,y
+	lda #ENV_A
+	ldx envAtkV
+	bne .ph
+	lda envPeakV            ; no attack: straight to the peak
+	sta envLvH,y
+	lda #ENV_D
+.ph:
+	sta envPh,y
+	sty envY
+	jsr TremLevel
+	ldy envY
 	sta envSent,y
+	asl
+	asl
+	asl
+	sta mD2                 ; CC7 = level x 8
 	lda t1
 	ora #$B0
 	sta mS
 	lda #7
 	sta mD1
-	lda #0
-	sta mD2
 	jmp NesPut
 .x:
 	rts
@@ -174,6 +208,7 @@ NesEnvTick:
 	lda ticks
 .clk:
 	sta envLast
+	jsr TremTick
 	ldy #0
 	jsr EnvStep
 	ldy #1
@@ -210,14 +245,14 @@ EnvStep:
 	bne .d
 	lda envLvL,y
 	clc
-	adc #ENV_ATK
+	adc envAtkV
 	sta envLvL,y
 	lda envLvH,y
 	adc #0
 	sta envLvH,y
-	cmp #15
+	cmp envPeakV
 	bcc .send
-	lda #15
+	lda envPeakV
 	sta envLvH,y
 	lda #0
 	sta envLvL,y
@@ -227,16 +262,20 @@ EnvStep:
 .d:
 	cmp #ENV_D
 	bne .r
+	lda envDecV
+	beq .sus                ; no decay
 	lda envLvL,y
 	sec
-	sbc #ENV_DEC
+	sbc envDecV
 	sta envLvL,y
 	lda envLvH,y
 	sbc #0
 	sta envLvH,y
-	cmp #ENV_SUS
+	bcc .sus
+	cmp envSusV
 	bcs .send
-	lda #ENV_SUS
+.sus:
+	lda envSusV
 	sta envLvH,y
 	lda #0
 	sta envLvL,y
@@ -245,7 +284,7 @@ EnvStep:
 	bne .send
 .r:
 	cmp #ENV_R
-	bne .x                  ; sustain: nothing to do
+	bne .send               ; sustain: only the tremolo moves
 	lda envLvL,y
 	sec
 	sbc envRel,y
@@ -268,10 +307,12 @@ EnvStep:
 	lda #NO_NOTE
 	jmp MidiTo
 .send:
-	lda envLvH,y
+	jsr TremLevel
+	ldy envY
 	cmp envSent,y
 	beq .x
 	sta envSent,y
+	jmp .cc7t
 .cc7:
 	; CC7 = level x 8 on this pulse's channel
 	ldy envY
@@ -286,11 +327,49 @@ EnvStep:
 	lda #7
 	sta mD1
 	lda envLvH,y
+.cc7v:
 	asl
 	asl
 	asl
 	sta mD2
 	jmp NesPut
+.cc7t:
+	; CC7 = the level after the tremolo
+	ldy envY
+	lda slotVoice,y
+	tax
+	lda vIdx,x
+	clc
+	adc nesBase
+	and #15
+	ora #$B0
+	sta mS
+	lda #7
+	sta mD1
+	lda envSent,y
+	jmp .cc7v
+.x:
+	rts
+
+; A = level of slot envY after the tremolo: level - level x tremA / 16
+TremLevel:
+	subroutine
+	ldy envY
+	lda envLvH,y
+	ldx tremA
+	beq .x
+	sta exS                 ; (not t0-t3: MidiTo holds the channel in t1)
+	ldy tremA
+	jsr Mul8
+	lda mt16                ; / 16
+	lsr
+	lsr
+	lsr
+	lsr
+	sta exK
+	lda exS
+	sec
+	sbc exK
 .x:
 	rts
 
@@ -443,11 +522,45 @@ Mul16:
 	bne .l
 	rts
 
+; tremolo LFO, every 10 ms: tremA = 0-15
+TremTick:
+	subroutine
+	ldx soundMode
+	lda nesTrem,x
+	bne .on
+	sta tremA
+	rts
+.on:
+	lda tremPhL
+	clc
+	adc nesTremRL,x
+	sta tremPhL
+	lda tremPhH
+	adc nesTremRH,x
+	sta tremPhH
+	ldy nesTremSq,x
+	beq .tri
+	cmp #128                ; square: full depth half the time
+	lda #0
+	bcs .st
+	lda nesTrem,x
+	bne .st
+.tri:
+	jsr Tri                 ; 0-127
+	ldy nesTrem,x
+	jsr Mul8
+	asl mt16
+	lda mt16+1
+	rol                     ; / 128
+.st:
+	sta tremA
+	rts
+
 ; Sound switched (V): leaving PADS ends any NES envelope at once and puts the
 ; pulses back at full volume.
 NesSoundApply:
 	subroutine
-	lda padSound
+	lda nesEnvOn
 	bne .x
 	jsr NesCutAll
 	jmp NesFullVolume

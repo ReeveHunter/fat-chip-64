@@ -46,7 +46,10 @@ def load_symbols(path):
 
 
 class C64:
-    def __init__(self, prg=None, sym=None, seed=1):
+    def __init__(self, prg=None, sym=None, seed=1, channels=(0, 5)):
+        """channels = (Game Boy base, NES base) set before the devices start:
+        (0, 5) is v0.11's layout (Game Boy on 1-5, MidiNES on 6-10), which the
+        older tests assume; None keeps the program's own (11-15, 1-5)."""
         prg = prg or os.path.join(ROOT, "bin", "fatchip64.prg")
         sym = sym or os.path.join(ROOT, "bin", "fatchip64.sym")
         self.sym = load_symbols(sym)
@@ -145,6 +148,10 @@ class C64:
         self.cpu = MPU(memory=m)
         self.cpu.pc = 0x0810
         self.cpu.sp = 0xFF
+        self.run_until(self.sym["StartDevices"], limit=3_000_000)
+        if channels is not None:
+            self.set("gbBase", channels[0])
+            self.set("nesBase", channels[1])
         self.run_until(self.sym["Loop"], limit=3_000_000)
 
     # ------------------------------------------------------------ running

@@ -38,12 +38,13 @@ c.run_ms(150)
 m = c.midi()
 gb = [(s, a, b) for _, s, a, b in m if (s & 15) in GB]
 nes = [(s, a, b) for _, s, a, b in m if (s & 15) in NES]
-check("GB startup: FAT CHIP profile first", gb[0] == (0xB0, 102, 70), gb[:1])
+check("GB startup: channels first (CC 113 = 64 + base), then the FAT CHIP profile",
+      gb[0] == (0xB0, 113, 64) and gb[1] == (0xB0, 102, 70), gb[:2])
 check("GB startup: panic, tune, warble",
-      gb[1:5] == [(0xB0, 111, 0), (0xB0, 103, 64), (0xB0, 104, 24), (0xB0, 105, 40)], gb[1:5])
+      gb[2:6] == [(0xB0, 111, 0), (0xB0, 103, 64), (0xB0, 104, 24), (0xB0, 105, 40)], gb[2:6])
 check("GB startup: pulses detuned apart", (0xB0, 94, 58) in gb and (0xB1, 94, 70) in gb)
 check("NES startup: CC7=127 on channels 6-10",
-      [x for x in nes if x[1] == 7] == [(0xB0 | ch, 7, 127) for ch in NES])
+      [x for x in nes if x[1] == 7][:5] == [(0xB0 | ch, 7, 127) for ch in NES])
 check("NES startup: CC16=127 on the pulses", [x for x in nes if x[1] == 16] == [(0xB5, 16, 127), (0xB6, 16, 127)])
 check("screen header", c.screen_row(0).startswith(" FAT CHIP 64"))
 check("screen shows channels", c.screen_row(4).rstrip().endswith("CH 1-5") and c.screen_row(5).rstrip().endswith("CH 6-10"),
@@ -71,6 +72,7 @@ check("one note: all three SID voices gated", all(ctl == SID_ON for _, ctl in si
 f = [fr for fr, _ in sids]
 check("one note: SID voices detuned apart", f[1] > f[0] > f[2], f)
 check("voice table shows C3", "C 3" in c.screen_row(10) and "C 2" in c.screen_row(17), c.screen_row(17))
+c.run_ms(40)
 check("held row", "C 3" in c.screen_row(20), c.screen_row(20))
 
 c.release("q", ms=60)
@@ -111,7 +113,7 @@ c.release("q", ms=60)
 shifted("f3", "rshift")                     # back on: startup again
 c.run_ms(60)
 gb_new = [x for x in c.midi(since=t0) if (x[1] & 15) in GB]
-check("SHIFT+F3 again: Game Boy startup resent", gb_new and gb_new[0][1:] == (0xB0, 102, 70), gb_new[:1])
+check("SHIFT+F3 again: Game Boy startup resent", len(gb_new) > 1 and gb_new[0][1:] == (0xB0, 113, 64) and gb_new[1][1:] == (0xB0, 102, 70), gb_new[:2])
 
 shifted("f1")
 check("SID off: volume 0 (no hum)", c.raw[0xD418] & 15 == 0 and "OFF" in c.screen_row(3))
@@ -168,14 +170,14 @@ def tap_note(key, f):
 
 check("F1: Q plays C4", tap_note("q", "f1").get(0) == 60)
 check("F5: Q plays C2", tap_note("q", "f5").get(0) == 36)
-check("F7: Q plays C1, bass C0", tap_note("q", "f7") == {0: 24, 1: 24, 2: 12, 5: 24, 6: 24, 7: 12})
+check("F7: Q plays C1, Fat Bass folds the bass up to C2", tap_note("q", "f7") == {0: 24, 1: 24, 2: 36, 5: 24, 6: 24, 7: 36})
 c.tap("f3", ms=60)
 check("F3: back to C3, on screen", "C 3" in c.screen_row(21) and c.v("octBase") == 48, c.screen_row(21))
 c.press("q", ms=60)
 c.tap("f1", ms=60)
 on = notes_on(c.midi())
 check("octave change while holding: the note moves, no hung old note",
-      on.get(0) == 60 and on.get(1) == 60 and on.get(2) == 48 and on.get(7) == 48, on)
+      on.get(0) == 60 and on.get(1) == 60 and on.get(2) == 36 and on.get(7) == 36, on)
 c.release("q", ms=60)
 check("released after an octave change: all off", notes_on(c.midi()) == {})
 c.tap("f3", ms=30)
@@ -200,14 +202,14 @@ check("smart: ...and builds on quickly", {50, 52} <= sounding() and 57 not in so
 c.tap("n", ms=60)
 check("N: chord keeps sounding, N NEXT on screen", {50, 52} <= sounding() and "N NEXT" in c.screen_row(21), c.screen_row(21))
 c.tap("u", ms=60)                           # within the window, but N said new
-check("after N the next note starts a new chord", sounding() <= {59, 47} and 59 in sounding(), sounding())
+check("after N the next note starts a new chord", sounding() <= {59, 35} and 59 in sounding(), sounding())
 c.tap("n", ms=20); c.tap("n", ms=60)
 check("N twice: clear now", sounding() == set() and "N NEW" in c.screen_row(21))
 
 c.tap("=", ms=60)
 check("= again: back to OFF (= is OFF / SMART for now)", c.v("latch") == 0 and "OFF" in c.screen_row(21)[25:], c.screen_row(21))
 # HOLD and ADD stay in the code for a menu later: set them directly
-c.set("latch", 2); c.set("screenDirty", 1); c.run_ms(80)
+c.set("latch", 2); c.set("screenDirty", 1); c.run_ms(150)
 check("HOLD (set directly)", "HOLD" in c.screen_row(21), c.screen_row(21))
 c.press("q", "t", ms=60)
 c.release("q", "t", ms=60)

@@ -14,9 +14,9 @@ keymap:
 	; col 1: 3 W A 4 Z S E LSHIFT
 	.byte 3,2,K_A,N_,K_Z,K_S,4,K_LSHIFT
 	; col 2: 5 R D 6 C F T X
-	.byte 6,5,K_D,8,N_,K_F,7,K_X
+	.byte 6,5,K_D,8,K_C,K_F,7,K_X
 	; col 3: 7 Y G 8 B H U V
-	.byte 10,9,N_,N_,K_B,K_H,11,K_V
+	.byte 10,9,K_G,N_,K_B,K_H,11,K_V
 	; col 4: 9 I J 0 M K O N
 	.byte 13,12,K_J,15,K_M,K_K,14,K_N
 	; col 5: + P L - . : @ ,
@@ -42,12 +42,12 @@ vn3:        .byte "SID 2",0
 vn4:        .byte "GB PULSE 2",0
 vn5:        .byte "NES PULSE 2",0
 vn6:        .byte "SID 3",0
-vn7:        .byte "GB WAVE (BASS)",0
-vn8:        .byte "NES TRI (BASS)",0
+vn7:        .byte "GB WAVE",0
+vn8:        .byte "NES TRIANGLE",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.11 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.12 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -103,7 +103,7 @@ spcTxtLo:   .byte <tSMute,<tSBend
 spcTxtHi:   .byte >tSMute,>tSBend
 tSMute:     .byte "MUTES",0
 tSBend:     .byte "BENDS",0
-txtModeLn:  .byte "Z            K KEY          V",0
+txtModeLn:  .byte "Z            K KEY",0
 modeTxtLo:  .byte <tMPoly,<tMChord,<tMEx7,<tMEx9,<tMEx11,<tMEx13
 modeTxtHi:  .byte >tMPoly,>tMChord,>tMEx7,>tMEx9,>tMEx11,>tMEx13
 tMPoly:     .byte "POLY      ",0
@@ -114,9 +114,14 @@ tMEx11:     .byte "EXT 11TH  ",0
 tMEx13:     .byte "EXT 13TH  ",0
 txtMajor:   .byte "MAJOR",0
 txtMinor:   .byte "MINOR",0
-txtFat:     .byte "FAT ",0
-txtPads:    .byte "PADS",0
-txtRaw:     .byte "RAW ",0
+txtSoundLn: .byte "V                   C       ",0
+txtPoly:    .byte "POLY",0
+txtMono:    .byte "MONO",0
+txtFatBass: .byte "FAT BASS",0
+txtNoBass:  .byte "        ",0
+txtBeatLn:  .byte "G",0
+txtPlay:    .byte "PLAY",0
+txtStop:    .byte "STOP",0
 octTxtLo:   .byte <tO0,<tO1,<tO2
 octTxtHi:   .byte >tO0,>tO1,>tO2
 tO0:        .byte "+0 OCT",0

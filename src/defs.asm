@@ -98,6 +98,15 @@ K_COLON     equ $9D           ; : arp faster
 K_SEMI      equ $9E           ; ; arp slower
 K_COMMA     equ $9F           ; , (<) SPACE mode back
 K_PERIOD    equ $A0           ; . (>) SPACE mode on
+K_C         equ $A1           ; C: POLY / MONO
+GCC_CHANNELS equ 113          ; Fat Chip GB v0.08: 64 + n moves its voices to channels n+1..n+5 (any channel)
+GB_BASE_DEFAULT equ 10        ; Game Boy on channels 11-15
+NES_BASE_DEFAULT equ 0        ; MidiNES on channels 1-5 (its power-on default)
+BASS_LO     equ 28            ; Fat Bass: the bass voices keep the lowest note in E1-E2,
+BASS_HI     equ 40            ;  folding by octaves
+FX_EVERY    equ 4             ; ms per SID effect step (vibrato, glide, filter, width)
+DRUM_CH_IN  equ 15            ; MIDI in channel 16: the keytar's rhythm
+NUM_BEATS   equ 6
 MIDI_FIRST  equ 24            ; note indexes: 0-23 overlay, 24-31 MIDI in
 MIDI_SLOTS  equ 8
 NIDX        equ MIDI_FIRST+MIDI_SLOTS
@@ -258,7 +267,6 @@ keyRoot     ds 1               ; 0-11, C = 0
 keyMinor    ds 1
 playMode    ds 1               ; 0 poly, 1 smart chord, 2 extensions
 spice       ds 1               ; extensions: 0 = 7th, 1 = 9th, 2 = 11th, 3 = 13th
-padSound    ds 1               ; 1 = PADS (soundMode 1)
 soundMode   ds 1               ; 0 FAT, 1 PADS, 2 RAW
 arpOct      ds 1               ; SPARKLE arp: octaves up (0-2)
 vOut        ds NUM_VOICES      ; MIDI voices: note actually sounding on the device
@@ -330,3 +338,63 @@ sidMute     ds 1
 rsSingle    ds 1               ; RESTORE test counters
 rsDouble    ds 1
 scrStage    ds 1               ; ScreenStep: 0 idle, 1-11 drawing
+; v0.12 sounds (sounds.asm)
+monoMode    ds 1               ; 1 = MONO (one note, legato): the sound's default, C flips it
+fatBass     ds 1               ; 1 = bass voices keep the lowest note in BASS_LO-BASS_HI
+nesEnvOn    ds 1               ; 1 = NES pulses use the CC7 envelope (PADS and the new sounds)
+legatoNow   ds 1               ; MidiTo: change notes without a re-attack
+fxLast      ds 1               ; ticks (low byte) of the last SID effect step
+fPhL        ds 1               ; filter LFO phase (16 bits)
+fPhH        ds 1
+pPhL        ds 1               ; PWM LFO phase
+pPhH        ds 1
+vPhL        ds 1               ; vibrato LFO phase
+vPhH        ds 1
+fEnv        ds 1               ; filter envelope (opens on each attack, falls back)
+fxVoice     ds 1               ; SID voice whose width the next effect call updates
+fxN         ds 1               ; 4 ms steps this effect call catches up
+vibNow      ds 1               ; vibrato now (voices in step)
+fxTurn      ds 1               ; 1 = the effects go first when the screen is also due
+fxBusy      ds 1               ; 1 = this sound has SID effects or a duty sequence
+vibT        ds 3               ; per SID voice: 4 ms steps since its attack (for the vibrato delay)
+vibAmt      ds 3               ; per SID voice: signed vibrato, f x amt / 4096
+sidTgtLo    ds 3               ; SID frequency the voice is gliding to
+sidTgtHi    ds 3
+dutyIdx     ds 1               ; duty sequence step
+dutyMs      ds 1               ; ms into this step
+tremPhL     ds 1               ; NES tremolo phase (10 ms clock)
+tremPhH     ds 1
+envAtkV     ds 1               ; NES envelope for this sound: attack step (0 = instant)
+envDecV     ds 1               ;  decay step
+envSusV     ds 1               ;  sustain level
+envPeakV    ds 1               ;  peak level
+envRelV     ds 1               ;  release factor (0 = cut)
+tremA       ds 1               ; NES tremolo amount now (0-15)
+mt16        ds 2               ; Mul8: 16-bit result
+; v0.12 drums (drums.asm)
+beatSel     ds 1               ; G: which beat (also the kit the keytar's drums use)
+beatRun     ds 1               ; RETURN: playing
+beatStep    ds 1
+beatBaseL   ds 1               ; ms time of the current step (unswung)
+beatBaseH   ds 1
+beatFrac    ds 1               ; 1/16 ms
+beatAtL     ds 1               ; when the next step plays (swing included)
+beatAtH     ds 1
+step16L     ds 1               ; step length in 1/16 ms
+step16H     ds 1
+dmcBank     ds 1               ; bank the MidiNES has selected ($FF = unknown)
+dmcPrio     ds 1               ; priority of the last sample hit
+dmcAt       ds 2               ; ticks of it
+nzPrio      ds 1               ; same for the noise channel
+nzAt        ds 2
+nzNote      ds 1               ; noise note sounding ($FF none)
+nzOffL      ds 1               ; when it stops
+nzOffH      ds 1
+drumLvl     ds 1               ; DrumHit: 0 ghost, 1 hit, 2 accent
+drumKind    ds 1
+drumTom     ds 1
+dmcNote     ds 1               ; last sample note sent ($FF none)
+nzVol       ds 1               ; noise level last sent (CC7 / 8)
+nzLen       ds 1
+bA          ds 1               ; BeatPlay: the step's two bytes
+bB          ds 1

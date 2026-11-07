@@ -301,6 +301,14 @@ GbStartup:
 	subroutine
 	lda devOn+DEV_GB
 	beq .done
+	; first, move the Game Boy's voices to our channels (Fat Chip GB v0.08
+	; hears CC 113 on any channel, so its own setting doesn't matter)
+	lda gbBase
+	clc
+	adc #64
+	tax
+	lda #GCC_CHANNELS
+	jsr GbGlobal
 	lda #GCC_PROFILE
 	ldx #PROFILE_F
 	jsr GbGlobal
@@ -398,12 +406,21 @@ NesStartup:
 	jsr NesPut
 	ldy t1
 	iny
-	cpy #7
+	cpy #NES_INITS
 	bne .more
-	jsr NesDuty
+	lda #$FF                ; drums: nothing known or sounding
+	sta dmcBank
+	sta dmcNote
+	sta nzNote
+	lda #0
+	sta nzVol
+	jsr SoundNes
 .done:
 	rts
 
-nesInitCh:  .byte 0,1,3, 0,1, 0,1
-nesInitCC:  .byte 11,11,11, 13,13, 15,15
-nesInitVal: .byte 64,64,64, 0,0, 0,0
+; ... plus the sample channel: pitch CC3 = 127 (full rate, as the Sample Lab
+; heard them; the bank follows with the first hit)
+nesInitCh:  .byte 0,1,3, 0,1, 0,1, 4
+nesInitCC:  .byte 11,11,11, 13,13, 15,15, 3
+nesInitVal: .byte 64,64,64, 0,0, 0,0, 127
+NES_INITS   equ 8

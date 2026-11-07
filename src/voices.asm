@@ -319,6 +319,15 @@ Allocate:
 	sta allocList,y
 	jmp .cp
 .cpd:
+	lda monoMode            ; MONO: just the last key pressed
+	beq .poly
+	lda heldCount
+	beq .poly
+	jsr MonoNote
+	sta allocList
+	lda #1
+	sta allocCount
+.poly:
 	lda arpMode
 	cmp #ARP_UNISON
 	bne .w0
@@ -353,6 +362,7 @@ Allocate:
 	jsr VoiceEnabled
 	beq .p1n
 	lda vBass,x
+	and fatBass             ; Fat Bass off: the bass voices join the rest
 	beq .p1n
 	lda allocList
 	sta vWant,x
@@ -368,6 +378,7 @@ Allocate:
 	jsr VoiceEnabled
 	beq .p2n
 	lda vBass,x
+	and fatBass
 	bne .p2n
 	ldy #0
 .find:
@@ -532,6 +543,22 @@ ApplyVoices:
 	jsr NoteWasPressed      ; pressed just now?
 	sta t3
 .cmp:
+	; MONO: a voice already sounding moves to the new note without a new
+	; attack (legato), unless an arp step re-attacks it
+	lda #0
+	sta legatoNow
+	lda monoMode
+	beq .poly
+	lda vArpHit,x
+	bne .poly
+	lda vNote,x
+	cmp #NO_NOTE
+	beq .poly
+	lda #0
+	sta t3
+	lda #1
+	sta legatoNow
+.poly:
 	lda vWant,x
 	cmp vNote,x
 	bne .change
@@ -553,6 +580,8 @@ ApplyVoices:
 	ldx t0
 	lda vWant,x
 	sta vNote,x
+	lda #0
+	sta legatoNow
 .next:
 	ldx t0
 	inx
@@ -652,36 +681,73 @@ VoiceSet:
 	sta SID+4,x
 	rts
 .sidOn:
+	ldx soundMode           ; the sound may play the SID an octave off
+	clc
+	adc sndOct,x
+	bpl .o1
+	clc
+	adc #12
+.o1:
 	tax
 	lda sidFreqLo,x
 	sta ptr
 	lda sidFreqHi,x
 	sta ptr+1
-	; detune: SID 2 a little sharp, SID 3 a little flat (+-1/256, ~7 cents)
+	; detune: SID 2 sharp, SID 3 flat by (high byte x det / 8); FAT's 8 is
+	; about 7 cents
+	cpy #0
+	beq .freq
+	sty t1
+	lda ptr+1
+	ldx soundMode
+	ldy sndDet,x
+	jsr Mul8
+	lsr mt16+1
+	ror mt16
+	lsr mt16+1
+	ror mt16
+	lsr mt16+1
+	ror mt16
+	ldy t1
 	cpy #1
-	bne .notUp
+	bne .flat
 	lda ptr
 	clc
-	adc ptr+1
+	adc mt16
 	sta ptr
-	bcc .freq
-	inc ptr+1
-	bne .freq
-.notUp:
-	cpy #2
-	bne .freq
+	lda ptr+1
+	adc mt16+1
+	sta ptr+1
+	jmp .freq
+.flat:
 	lda ptr
 	sec
-	sbc ptr+1
+	sbc mt16
 	sta ptr
-	bcs .freq
-	dec ptr+1
+	lda ptr+1
+	sbc mt16+1
+	sta ptr+1
 .freq:
+	lda ptr
+	sta sidTgtLo,y
+	lda ptr+1
+	sta sidTgtHi,y
+	; jump straight there, unless the sound glides and the voice was already
+	; playing (then FxTick slides sidBase to the target)
+	ldx soundMode
+	lda sndGlide,x
+	beq .jump
+	ldx t0
+	lda vNote,x
+	cmp #NO_NOTE
+	bne .glide
+.jump:
 	lda ptr
 	sta sidBaseLo,y
 	lda ptr+1
 	sta sidBaseHi,y
-	jsr SidFreqOut          ; (with the SPACE bend)
+.glide:
+	jsr SidFreqOut          ; (with the SPACE bend and vibrato)
 	; gate
 	ldx t0
 	lda vNote,x
@@ -690,6 +756,7 @@ VoiceSet:
 	lda t3
 	beq .legato             ; same voice, new note, not a new press: glide
 	; re-attack: gate off now, on at the next scan
+	jsr SidAttackFx
 	lda sidGate,y
 	and #$FE
 	sta sidGate,y
@@ -700,12 +767,32 @@ VoiceSet:
 	sta vRetrig,x
 	rts
 .gateOn:
+	jsr SidAttackFx
 	lda sidGate,y
 	ora #1
 	sta sidGate,y
 	ldx t2
 	sta SID+4,x
 .legato:
+	rts
+
+; A SID voice (Y) attacks: its vibrato delay starts again, the filter
+; envelope opens. Keeps Y.
+SidAttackFx:
+	lda #0
+	sta vibT,y
+	sta vibAmt,y
+	ldx soundMode
+	lda sndFEnv,x
+	beq .x
+	sta fEnv
+	clc                     ; open the filter now (FxTick takes it from here)
+	adc sndCut,x
+	bcc .c
+	lda #$FF
+.c:
+	sta SID+$16
+.x:
 	rts
 
 ; MIDI voice t0: from what it sounds now (vOut) to note A (or NO_NOTE):
@@ -727,6 +814,16 @@ MidiTo:
 	adc vIdx,x
 	and #15
 	sta t1                  ; channel
+	lda legatoNow
+	beq .normal
+	lda vOut,x
+	cmp #NO_NOTE
+	beq .normal
+	lda mtTarget
+	cmp #NO_NOTE
+	beq .normal
+	jmp MidiLegato
+.normal:
 	lda vOut,x
 	cmp #NO_NOTE
 	beq .on
@@ -768,16 +865,47 @@ MidiTo:
 .done:
 	rts
 
-; A = MIDI note for voice t0 -> note to send (bass voices an octave down)
-MidiNoteValue:
+; MONO legato on voice t0 (channel t1): from vOut to mtTarget without a new
+; attack. Game Boy: the new note-on first, then the old note-off (with CC 68
+; on it changes pitch, gliding if the sound glides). MidiNES: off, then on,
+; and the CC7 envelope carries on where it was.
+MidiLegato:
 	subroutine
+	lda vDev,x
+	cmp #DEV_GB
+	bne .nes
+	jsr .noteOn
+	jsr .noteOff
+	jmp .done
+.nes:
+	jsr .noteOff
+	jsr .noteOn
+.done:
 	ldx t0
-	ldy vBass,x
-	beq .x
-	sec
-	sbc #12
-.x:
+	lda mtTarget
+	sta vOut,x
 	rts
+.noteOn:
+	lda mtTarget
+	jsr MidiNoteValue
+	sta mD1
+	lda t1
+	ora #$90
+	sta mS
+	lda #VELOCITY
+	sta mD2
+	jmp DevPut
+.noteOff:
+	ldx t0
+	lda vOut,x
+	jsr MidiNoteValue
+	sta mD1
+	lda t1
+	ora #$80
+	sta mS
+	lda #0
+	sta mD2
+	jmp DevPut
 
 ; queue mS/mD1/mD2 for voice t0's device
 DevPut:
@@ -917,6 +1045,9 @@ Panic:
 	jsr GbStartup           ; includes the Game Boy's panic CC
 .nes:
 	jsr NesStartup
+	lda #0
+	sta beatRun             ; the beat demo stops
+	jsr NoiseOff
 	lda #0
 	sta bendLvl             ; the bend ends: SID now, MIDI centred next pass
 	jsr SidBendAll

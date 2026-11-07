@@ -72,7 +72,7 @@ check("unison: the NES plays the same notes", nes[i0:] == notes[i0:len(nes)], ne
 sid_gates = c.sid(0)[1] & 1
 check("unison: the SID plays too", sid_gates == 1)
 bass = [n for _, n in ons(c, 2, t0)]
-check("unison: GB wave follows an octave down", bass[i0:i0 + 3] == [36, 40, 43], bass)
+check("unison: GB wave follows, Fat Bass folding it into E1-E2", bass[i0:i0 + 3] == [36, 40, 31], bass)
 
 t0 = c.cpu.processorCycles
 c.tap("s", ms=20)                           # DOWN: from the top at the next step

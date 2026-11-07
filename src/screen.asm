@@ -152,7 +152,8 @@ ScreenDrawAll:
 	jsr ScrOct
 	jsr ScrArpLine
 	jsr ScrCounters
-	jmp ScrModeLine
+	jsr ScrModeLine
+	jmp ScrSoundLine
 
 ; Redraw in small steps, one per main loop pass (every 4 ms), so a redraw
 ; never holds up the keyboard or the arp: 15 stages (devices, voice rows,
@@ -196,10 +197,10 @@ ScreenStep:
 .call:
 	jmp (ptr)
 
-SCR_STAGES equ 16
-; stages 1, 2, (3-11 voice rows), 12-16
-stageLo:	.byte <ScrDevices,<ScrDev2,0,0,0,0,0,0,0,0,0,<ScrBottom,<ScrOct,<ScrArpLine,<ScrCounters,<ScrModeLine
-stageHi:	.byte >ScrDevices,>ScrDev2,0,0,0,0,0,0,0,0,0,>ScrBottom,>ScrOct,>ScrArpLine,>ScrCounters,>ScrModeLine
+SCR_STAGES equ 17
+; stages 1, 2, (3-11 voice rows), 12-17
+stageLo:	.byte <ScrDevices,<ScrDev2,0,0,0,0,0,0,0,0,0,<ScrBottom,<ScrOct,<ScrArpLine,<ScrCounters,<ScrModeLine,<ScrSoundLine
+stageHi:	.byte >ScrDevices,>ScrDev2,0,0,0,0,0,0,0,0,0,>ScrBottom,>ScrOct,>ScrArpLine,>ScrCounters,>ScrModeLine,>ScrSoundLine
 
 ScrDevices:
 	subroutine
@@ -562,14 +563,6 @@ ScrModeLine:
 	ldx #22
 	ldy #24
 	jsr PrintAt
-	ldx soundMode
-	lda sndTxtLo,x
-	sta ptr
-	lda sndTxtHi,x
-	sta ptr+1
-	ldx #30
-	ldy #24
-	jsr PrintAt
 	; ---- messages sent
 	PRINT 23, 0, txtSent
 	ldy #23
@@ -583,6 +576,69 @@ ScrModeLine:
 	cli
 	ldx #10
 	jsr PutDec16
+	rts
+
+; ---- sound line (row 1) and the beat demo (row 23, right)
+ScrSoundLine:
+	subroutine
+	lda #0
+	sta t2
+	; ---- row 1: sound, POLY / MONO, Fat Bass
+	PRINT 1, 0, txtSoundLn
+	ldx soundMode
+	lda sndNameLo,x
+	sta ptr
+	lda sndNameHi,x
+	sta ptr+1
+	ldx #2
+	ldy #1
+	jsr PrintAt
+	lda #<txtPoly
+	ldy #>txtPoly
+	ldx monoMode
+	beq .pm
+	lda #<txtMono
+	ldy #>txtMono
+.pm:
+	sta ptr
+	sty ptr+1
+	ldx #22
+	ldy #1
+	jsr PrintAt
+	lda #<txtNoBass
+	ldy #>txtNoBass
+	ldx fatBass
+	beq .fb
+	lda #<txtFatBass
+	ldy #>txtFatBass
+.fb:
+	sta ptr
+	sty ptr+1
+	ldx #28
+	ldy #1
+	jsr PrintAt
+	; ---- row 23, right: beat demo
+	PRINT 23, 25, txtBeatLn
+	ldx beatSel
+	lda beatNameLo,x
+	sta ptr
+	lda beatNameHi,x
+	sta ptr+1
+	ldx #27
+	ldy #23
+	jsr PrintAt
+	lda #<txtStop
+	ldy #>txtStop
+	ldx beatRun
+	beq .br
+	lda #<txtPlay
+	ldy #>txtPlay
+.br:
+	sta ptr
+	sty ptr+1
+	ldx #36
+	ldy #23
+	jsr PrintAt
 	rts
 
 ; 16-bit number in t1:t0 at column X of row ptr2, five digits

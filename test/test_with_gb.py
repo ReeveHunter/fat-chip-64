@@ -61,7 +61,9 @@ c.run_ms(200)
 c.tap("v", ms=60)                       # RAW
 t_raw = c.cpu.processorCycles
 c.run_ms(200)
-c.tap("v", ms=60)                       # FAT
+c.press("lshift", ms=10)                # SHIFT+V twice: back to FAT
+c.tap("v", ms=30); c.tap("v", ms=60)
+c.release("lshift", ms=10)
 c.run_ms(300)
 t_quiet = c.cpu.processorCycles
 # a minute of silence (v0.1 froze its queues after 33 s): skip the clock ahead

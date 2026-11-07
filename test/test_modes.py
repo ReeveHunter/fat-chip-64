@@ -32,8 +32,8 @@ def chord(*keys, ms=80):
     return h
 
 
-check("mode line: POLY, key C MAJOR, FAT", c.screen_row(24).startswith("Z POLY") and "KEY C  MAJOR" in c.screen_row(24)
-      and c.screen_row(24).rstrip().endswith("V FAT"), c.screen_row(24))
+check("mode line: POLY, key C MAJOR; sound line: FAT", c.screen_row(24).startswith("Z POLY") and "KEY C  MAJOR" in c.screen_row(24)
+      and c.screen_row(1).startswith("V FAT "), c.screen_row(1))
 check("POLY: one key, one note", chord("w") == [50])
 
 c.tap("z", ms=60)
@@ -145,14 +145,14 @@ c.tap("a", ms=40)                           # arp off
 
 # ---------------------------------------------------------------- PADS sound
 t0 = c.cpu.processorCycles
-c.tap("v", ms=80)
-check("V: PADS on screen", c.screen_row(24).rstrip().endswith("V PADS"), c.screen_row(24))
+c.tap("v", ms=150)
+check("V: PADS on screen", c.screen_row(1).startswith("V PADS "), c.screen_row(1))
 check("PADS: SID slow attack, long release, pulse wave", c.raw[0xD405] == 0xA0 and c.raw[0xD406] == 0xFB
       and c.sid(0)[1] & 0xF0 == 0x40, (hex(c.raw[0xD405]), hex(c.raw[0xD406])))
 check("PADS: SID low-pass filter on all voices", c.raw[0xD417] == 0x77 and c.raw[0xD418] == 0x1F, hex(c.raw[0xD418]))
 cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]
 check("PADS: Game Boy slow attack + release on pulses and wave",
-      all((ch, 73, 88) in cc and (ch, 72, 100) in cc for ch in (0, 1, 2)), cc)
+      all((ch, 73, 80) in cc and (ch, 72, 96) in cc for ch in (0, 1, 2)), cc)      # attack 5, release 6 of 7
 check("PADS: Game Boy pulse 2 glides, deeper warble", (1, 5, 64) in cc and (0, 104, 48) in cc, cc)
 f0 = c.raw[0xD416]
 c.run_ms(1500)
@@ -164,8 +164,8 @@ c.tap("m", ms=60)
 check("muted in PADS: volume 0, filter mode kept", c.raw[0xD418] == 0x10, hex(c.raw[0xD418]))
 c.tap("m", ms=60)
 t0 = c.cpu.processorCycles
-c.tap("v", ms=80)
-check("V again: RAW on screen", c.screen_row(24).rstrip().endswith("V RAW"), c.screen_row(24))
+c.tap("v", ms=150)
+check("V again: RAW on screen", c.screen_row(1).startswith("V RAW "), c.screen_row(1))
 regs = [(c.raw[0xD405 + 7 * v], c.raw[0xD406 + 7 * v], c.raw[0xD403 + 7 * v], c.sid(v)[1] & 0xF0) for v in range(3)]
 check("RAW: SID pulse, instant attack, full sustain, instant release, widths 50/25/12.5%",
       regs == [(0x00, 0xF0, 8, 0x40), (0x00, 0xF0, 4, 0x40), (0x00, 0xF0, 2, 0x40)], regs)
@@ -174,7 +174,7 @@ cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]
 check("RAW: Game Boy instant attack and release on pulses and wave",
       all((ch, 73, 0) in cc and (ch, 72, 0) in cc for ch in (0, 1, 2)), cc)
 check("RAW: Game Boy pulse 2 at 25%, wave as a pulse, no warble, no glide",
-      (0, 70, 64) in cc and (1, 70, 32) in cc and (2, 71, 24) in cc and (2, 70, 64) in cc and (0, 104, 0) in cc and (1, 5, 0) in cc, cc)
+      (0, 70, 64) in cc and (1, 70, 32) in cc and (2, 71, 19) in cc and (2, 70, 64) in cc and (0, 104, 0) in cc and (1, 5, 0) in cc, cc)
 check("RAW: MidiNES full volume, pulse 2 at 25%", (5, 7, 127) in cc and (5, 1, 64) in cc and (6, 1, 32) in cc, cc)
 t0 = c.cpu.processorCycles
 c.press("q", ms=200)
@@ -183,11 +183,15 @@ check("RAW: a note: plain note-ons (no CC7 envelope on the NES)",
       len(on) == 6 and not [x for x in c.midi(since=t0) if x[1] == 0xB5 and x[2] == 7], on)
 c.release("q", ms=60)
 t0 = c.cpu.processorCycles
+c.press("lshift", ms=12)
+c.tap("v", ms=40)
 c.tap("v", ms=80)
-check("V again: FAT: saw, filter off", c.sid(0)[1] & 0xF0 == 0x20 and c.raw[0xD417] == 0 and c.raw[0xD418] == 0x0F)
+c.release("lshift", ms=12)
+check("SHIFT+V twice: back to FAT", c.v("soundMode") == 0)
+check("FAT: saw, filter off", c.sid(0)[1] & 0xF0 == 0x20 and c.raw[0xD417] == 0 and c.raw[0xD418] == 0x0F)
 cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]
 check("FAT: Game Boy envelopes, duty, wave triangle and warble back",
-      (0, 73, 0) in cc and (0, 72, 40) in cc and (1, 70, 64) in cc and (2, 71, 40) in cc and (2, 70, 0) in cc and (0, 104, 24) in cc, cc)
+      (0, 73, 0) in cc and (0, 72, 32) in cc and (1, 70, 64) in cc and (2, 71, 37) in cc and (2, 70, 0) in cc and (0, 104, 24) in cc, cc)
 check("FAT: MidiNES pulse 2 back to 50%", (6, 1, 64) in cc, cc)
 
 print(f"\n{fails} failure(s)")

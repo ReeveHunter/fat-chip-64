@@ -186,6 +186,10 @@ SidFreqOut:
 	sbc mulR+2
 	sta bT3
 .w:
+	lda vibAmt,y            ; vibrato (sounds.asm)
+	beq .out
+	jsr SidVib
+.out:
 	ldx sidOfs,y
 	lda bT2
 	sta SID+0,x
