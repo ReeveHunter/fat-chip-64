@@ -1,45 +1,41 @@
-; Fat Chip 64 - SPACE modes and the SPACE bend (v0.10)
+; Fat Chip 64 - bends (SPACE / the keytar's buttons and wheel), v0.13
 ;
-; , and . (the < > keys) pick what SPACE does:
-;   MUTES  (default) held = the mute flips (the momentary mute / play key)
-;   BENDS  held = everything bends down 2 semitones over about 1 s;
-;          let go and it comes back up over about 0.5 s
-;
-; bendLvl 0-255 is the depth (255 = 2 semitones down).
-;   SID       frequency x (1 - k / 256), k = lvl / 8 - lvl / 64 (max 28: 0.891,
-;             2 semitones), every change (4 ms steps)
-;   Game Boy  pitch bend on its three channels (Fat Chip GB bend range is
-;             2 semitones): 8192 - lvl x 32, every BEND_TICK ms
-;   MidiNES   its bend moves the timer, so the amount depends on the note:
-;             p(n) x lvl / 1024 for the triangle, twice that for the pulses
-;             (p = the MidiNES triangle bend scale, 1710 at MIDI 36; 2 semitones
-;             is p x 0.245, this is p x 0.249). Sent every BEND_TICK ms, and
-;             before each new NES note while bent. Notes too near the bottom
-;             of the NES range (the timer would wrap) don't bend.
+; What everything is bent by: m = 0-192 sixteenths of a semitone (an octave
+; at most), up or down (bendMag, bendUp), from three things added together:
+;   the BEND DOWN / BEND UP actions (SPACE or a keytar button, held): bendLvl
+;     0-255 ramps up over about 1 s while held, back over about 0.5 s; full =
+;     the menu's BEND RANGE (1-12 semitones, default 2)
+;   the keytar's wheel: wheelMag 0-255 up or down, full = BEND RANGE
+;   VINYL STOP (held): vinylLvl 0-255 the same way, full = an octave down
+;     (and the beat demo and arp slow to half speed with it)
+; Then:
+;   SID       its frequency x 2^(+-m/192), from tables (bendtab.asm)
+;   Game Boy  bend range 12 (CC 85, sent with the sound), bend = 8192 +- m x 8192 / 192
+;   MidiNES   p(n) x the table / 8192 for the triangle, twice for the pulses
+;             (p = the MidiNES triangle bend scale, 1710 at MIDI 36); notes
+;             without room at the bottom of the NES range don't bend down.
+; Bends go out every BEND_TICK ms at most, and before each new NES note.
 
-; , : SPACE mode back
+; , : SPACE's action back
 SpaceBack:
 	subroutine
-	ldx spaceMode
+	ldx spaceAct
 	bne .d
-	ldx #SPC_MODES
+	ldx #NUM_ACTS
 .d:
 	dex
 	jmp SpaceSet
 
-; . : SPACE mode on
+; . : SPACE's action on
 SpaceNext:
 	subroutine
-	ldx spaceMode
+	ldx spaceAct
 	inx
-	cpx #SPC_MODES
+	cpx #NUM_ACTS
 	bcc SpaceSet
 	ldx #0
 SpaceSet:
-	stx spaceMode
-	lda #0
-	sta moment              ; a mute held in the old mode ends
-	jsr MuteChanged
+	stx spaceAct            ; (one held now ends with its own action: spaceHeld)
 	jmp Dirty
 
 ; Main loop, every pass.
@@ -65,60 +61,99 @@ BendTick:
 	lsr
 	lsr
 	sta bT0                 ; n
-	lda bendBtn             ; the keytar's BEND DOWN button, held
-	bne .down
-	lda spaceDown
-	beq .up
-	lda spaceMode
-	cmp #SPC_BEND
-	bne .up
-.down:
-	; down: +n, to 255
+	; ---- BEND DOWN / BEND UP held: up to 255; let go: back twice as fast
+	lda actCnt+A_BENDDN
+	ora actCnt+A_BENDUP
+	beq .bup
+	ldx #0                  ; direction: up only when just BEND UP is held
+	lda actCnt+A_BENDDN
+	bne .dir
+	inx
+.dir:
+	stx bendDir
 	lda bendLvl
-	cmp #255
-	beq .midi
 	clc
 	adc bT0
-	bcc .set
+	bcc .bs
 	lda #255
-	bne .set
-.up:
+	bne .bs
+.bup:
 	lda bendLvl
-	beq .midi
 	sec
 	sbc bT0
-	bcc .zero
-	sbc bT0                 ; up twice as fast
-	bcs .set
-.zero:
+	bcc .bz
+	sbc bT0
+	bcs .bs
+.bz:
 	lda #0
-.set:
+.bs:
 	sta bendLvl
-.midi:
-	; v0.13: the bend everything gets = the wheel (up or down) and the SPACE
-	; bend (down) together: bendMag (0-255 = 2 semitones), bendUp
-	lda wheelUp
-	bne .wu
-	lda wheelMag
+	; ---- VINYL STOP the same way
+	lda actCnt+A_VINYL
+	beq .vup
+	lda vinylLvl
 	clc
-	adc bendLvl
-	bcc .wd
+	adc bT0
+	bcc .vs
 	lda #255
-.wd:
-	ldx #0
-	beq .comb
-.wu:
-	lda wheelMag
+	bne .vs
+.vup:
+	lda vinylLvl
 	sec
-	sbc bendLvl
-	ldx #1
-	bcs .comb
-	eor #$FF                ; the SPACE bend is bigger: down
-	adc #1
-	ldx #0
-.comb:
-	sta bendMag
-	stx bendUp
+	sbc bT0
+	bcc .vz
+	sbc bT0
+	bcs .vs
+.vz:
+	lda #0
+.vs:
+	sta vinylLvl
+.midi:
+	; the total only when something in it changed
+	lda bendLvl
+	cmp btIn
+	bne .tot
+	lda wheelMag
+	cmp btIn+1
+	bne .tot
+	lda vinylLvl
+	cmp btIn+2
+	bne .tot
+	lda bendDir             ; key: dir, wheel dir, range (0-11)
+	asl
+	ora wheelUp
+	asl
+	asl
+	asl
+	asl
+	ora bendRange
+	sta t0
+	cmp btIn+3
+	beq .same
+	bne .tot2
+.tot:
+	lda bendDir             ; key: dir, wheel dir, range (0-11)
+	asl
+	ora wheelUp
+	asl
+	asl
+	asl
+	asl
+	ora bendRange
+	sta t0
+.tot2:
+	lda bendLvl
+	sta btIn
+	lda wheelMag
+	sta btIn+1
+	lda vinylLvl
+	sta btIn+2
+	lda t0
+	sta btIn+3
+	jsr BendTotal
+.same:
+	lda bendMag
+	ldx bendUp
 	cmp bendSidMag
 	bne .sid
 	cpx bendSidUp
@@ -173,6 +208,110 @@ BendTick:
 .x:
 	rts
 
+; bendMag / bendUp = the actions' bend + the wheel - vinyl, in 1/16 semitones
+BendTotal:
+	subroutine
+	ldy bendRange
+	iny                     ; 1-12 semitones
+	lda bendLvl
+	jsr .scale              ; (lvl + 1) x range / 16: 0-192
+	ldx bendDir
+	jsr .addS
+	ldy bendRange
+	iny
+	lda wheelMag
+	jsr .scale
+	ldx wheelUp
+	jsr .add
+	lda vinylLvl            ; (lvl + 1) x 3/4: 0-192, always down
+	beq .v0
+	lsr
+	sta t0
+	lsr
+	sec
+	adc t0
+.v0:
+	ldx #0
+	jsr .add
+	; -> magnitude (at most 192) and direction
+	lda btH
+	bmi .neg
+	ldx #1
+	ora btL
+	bne .mag
+	tax                     ; nothing: centre, "down"
+	beq .mag
+.neg:
+	lda #0
+	sec
+	sbc btL
+	sta btL
+	lda #0
+	sbc btH
+	sta btH
+	ldx #0
+.mag:
+	lda btH
+	bne .cap
+	lda btL
+	cmp #193
+	bcc .st
+.cap:
+	lda #192
+.st:
+	sta bendMag
+	stx bendUp
+	rts
+; A = level 0-255, Y = semitones: 0 if 0, else (A + 1) x Y / 16
+.scale:
+	cmp #0
+	beq .s0
+	sty t0
+	jsr Mul8
+	lda mt16
+	clc
+	adc t0
+	sta mt16
+	bcc .div16
+	inc mt16+1
+.div16:
+	lda mt16+1
+	asl mt16
+	rol
+	asl mt16
+	rol
+	asl mt16
+	rol
+	asl mt16
+	rol                     ; (mt16 >> 4, fits a byte)
+.s0:
+	rts
+; start the total: A up (X = 1) or down
+.addS:
+	ldy #0
+	sty btL
+	sty btH
+.add:
+	cpx #0
+	beq .sub
+	clc
+	adc btL
+	sta btL
+	lda btH
+	adc #0
+	sta btH
+	rts
+.sub:
+	sta t0
+	lda btL
+	sec
+	sbc t0
+	sta btL
+	lda btH
+	sbc #0
+	sta btH
+	rts
+
 ; All three SID voices from their base frequency, bent by bendLvl.
 SidBendAll:
 	subroutine
@@ -187,66 +326,45 @@ SidBendAll:
 ; Keeps Y.
 SidFreqOut:
 	subroutine
-	lda bendMag
-	bne .bend
 	lda sidBaseLo,y
 	sta bT2
-	lda sidBaseHi,y
-	sta bT3
-	jmp .w
-.bend:
-	lsr
-	lsr
-	lsr
-	sta bT0                 ; lvl / 8
-	ldx bendUp
-	bne .upK                ; up: x (1 + lvl / 8 / 256), 2 semitones at 255
-	lda bendMag
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr                     ; lvl / 64
-	eor #$FF
-	sec
-	adc bT0                 ; k = lvl / 8 - lvl / 64
-	sta mulB
-	lda #0
-	sta mulB+1
-	lda sidBaseLo,y
 	sta mulA
-	sta bT2
 	lda sidBaseHi,y
-	sta mulA+1
 	sta bT3
-	jsr Mul16               ; base x k, (>> 8 = bytes 1-2)
+	sta mulA+1
+	ldx bendMag
+	beq .w
+	lda bendUp
+	bne .up
+	lda sidDnL,x
+	sta mulB
+	lda sidDnH,x
+	sta mulB+1
+	jsr Mul16               ; f x k / 65536 = bytes 2-3
 	lda bT2
 	sec
-	sbc mulR+1
+	sbc mulR+2
 	sta bT2
 	lda bT3
-	sbc mulR+2
+	sbc mulR+3
 	sta bT3
 	jmp .w
-.upK:
-	lda bT0
+.up:
+	lda sidUpL,x
 	sta mulB
-	lda #0
+	lda sidUpH,x
 	sta mulB+1
-	lda sidBaseLo,y
-	sta mulA
-	sta bT2
-	lda sidBaseHi,y
-	sta mulA+1
-	sta bT3
 	jsr Mul16
 	lda bT2
 	clc
-	adc mulR+1
+	adc mulR+2
 	sta bT2
 	lda bT3
-	adc mulR+2
+	adc mulR+3
+	bcc .u
+	lda #$FF                ; (the top of the SID's range)
+	sta bT2
+.u:
 	sta bT3
 .w:
 	lda vibAmt,y            ; vibrato (sounds.asm)
@@ -282,7 +400,7 @@ BendMidiAll:
 	bne .v
 	rts
 
-; Game Boy voice t0: 8192 - lvl x 32
+; Game Boy voice t0 (bend range 12)
 GbBendVoice:
 	subroutine
 	ldx t0
@@ -292,16 +410,26 @@ GbBendVoice:
 	and #15
 	ora #$E0
 	sta mS
+	lda #<683               ; m x 8192 / 192 = m x 683 / 16
+	sta mulA
+	lda #>683
+	sta mulA+1
 	lda bendMag
-	sta bT3
+	sta mulB
 	lda #0
-	sta bT2                 ; bT2:bT3 = lvl (hi:lo)
-	ldx #5
-.sh:
-	asl bT3
-	rol bT2
+	sta mulB+1
+	jsr Mul16
+	ldx #4
+.d:
+	lsr mulR+2
+	ror mulR+1
+	ror mulR
 	dex
-	bne .sh                 ; x 32
+	bne .d
+	lda mulR+1
+	sta bT2
+	lda mulR
+	sta bT3
 	jsr BendFromAmt
 	jmp GbPut
 
@@ -328,59 +456,70 @@ NesBendVoice:
 .send0:
 	jmp .send
 .note:
-	jsr MidiNoteValue       ; (bass voices an octave down)
+	jsr MidiNoteValue       ; (Fat Bass, octaves)
 	sta bT1
+	lda bendUp
+	bne .calc               ; (going up can't wrap at the bottom)
+	lda bendMag             ; going down: room for ceil(m / 16) semitones
+	clc
+	adc #15
+	lsr
+	lsr
+	lsr
+	lsr
+	sta bT0
 	ldx t0
 	lda vIdx,x
 	cmp #2
 	beq .tri
-	lda bendUp
-	bne .calc               ; (going up can't wrap at the bottom)
-	lda bT1
-	cmp #TRI_FLOOR+14       ; pulse: lowest note an octave above the
-	bcc .send               ;  triangle's, and 2 semitones of room
-	bcs .calc
+	lda #TRI_FLOOR+12       ; pulses: the lowest note is an octave up
+	bne .fl
 .tri:
-	lda bendUp
-	bne .calc
+	lda #TRI_FLOOR
+.fl:
+	clc
+	adc bT0
+	sta bT0
 	lda bT1
-	cmp #TRI_FLOOR+2
-	bcc .send
+	cmp bT0
+	bcc .send               ; no room: no bend
 .calc:
 	ldx bT1
 	lda triPbLo,x
 	sta mulA
 	lda triPbHi,x
 	sta mulA+1
-	lda bendMag
-	ldx bendUp
-	beq .m
-	lsr                     ; up: 7/8 of it (the timer's maths isn't symmetric)
-	lsr
-	lsr
-	eor #$FF
-	sec
-	adc bendMag
-.m:
+	ldx bendMag
+	lda bendUp
+	bne .u
+	lda nesDnL,x
 	sta mulB
-	lda #0
+	lda nesDnH,x
 	sta mulB+1
-	jsr Mul16               ; p x lvl
-	; triangle >> 10, pulse >> 9: bytes 1-2 shifted right 2 or 1
+	jmp .mul
+.u:
+	lda nesUpL,x
+	sta mulB
+	lda nesUpH,x
+	sta mulB+1
+.mul:
+	jsr Mul16
+	; triangle >> 13, pulses >> 12 (bytes 1-3 >> 5 or 4)
+	ldx #4
+	ldy t0
+	lda vIdx,y
+	cmp #2
+	bne .sh
+	inx
+.sh:
+	lsr mulR+3
+	ror mulR+2
+	ror mulR+1
+	dex
+	bne .sh
 	lda mulR+2
 	sta bT2
 	lda mulR+1
-	sta bT3
-	ldx t0
-	lda vIdx,x
-	cmp #2
-	bne .one
-	lsr bT2
-	ror bT3
-.one:
-	lsr bT2
-	ror bT3
-	lda bT3
 	and #$FC                ; MidiNES bends move in steps of 4
 	sta bT3
 .send:

@@ -59,11 +59,11 @@ c.release("lshift", ms=40)
 check("SHIFT+RETURN: the menu", c.v("menuOn") == 1 and "MENU" in c.screen_row(0), c.screen_row(0))
 rows = [c.screen_row(r) for r in range(25)]
 check("menu: SOUND, PLAYING, then DEVICE SYNC at the bottom",
-      rows[2].startswith("SOUND") and rows[5].startswith("PLAYING") and rows[9].startswith("DEVICE SYNC"), rows[9])
-check("menu: defaults", "AS SOUND" in rows[3] and "SMART" in rows[6] and "MUTES" in rows[7] and "KEYTAR" in rows[10]
-      and "KEYTAR" in rows[11] and "PICK BEAT" in rows[12] and "IGNORE" in rows[13] and "PICK SOUND" in rows[14]
-      and "BEND" in rows[15] and "VIBRATO" in rows[16] and "GLIDE" in rows[17] and "SUSTAIN" in rows[18],
-      [rows[r][23:] for r in (3, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18)])
+      rows[2].startswith("SOUND") and rows[5].startswith("PLAYING") and rows[10].startswith("DEVICE SYNC"), rows[10])
+check("menu: defaults", "AS SOUND" in rows[3] and "SMART" in rows[6] and "BEND DOWN" in rows[7] and "2 SEMITONES" in rows[8]
+      and "KEYTAR" in rows[11] and "KEYTAR" in rows[12] and "PICK BEAT" in rows[13] and "IGNORE" in rows[14]
+      and "PICK SOUND" in rows[15] and "BEND" in rows[16] and "VIBRATO" in rows[17] and "GLIDE" in rows[18]
+      and "SUSTAIN" in rows[19], [rows[r][23:] for r in (3, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19)])
 check("menu: the cursor on FAT BASS", rows[3].startswith(">"), rows[3])
 c.tap("return", ms=40)
 check("RETURN: FAT BASS ALWAYS", c.v("fbLock") == 1 and "ALWAYS" in c.screen_row(3), c.screen_row(3))
@@ -79,7 +79,7 @@ c.tap("=", ms=40)
 check("= in the menu turns latch on as HOLD", c.v("latch") == 2)
 c.tap("=", ms=40)
 c.press("lshift", ms=10); c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40); c.release("lshift", ms=10)
-check("SHIFT+CRSR DOWN twice: up, wraps to SUSTAIN BUTTON", c.screen_row(18).startswith(">"), c.screen_row(18))
+check("SHIFT+CRSR DOWN twice: up, wraps to SUSTAIN BUTTON", c.screen_row(19).startswith(">"), c.screen_row(19))
 t0 = c.cpu.processorCycles
 c.press("q", ms=100)
 check("notes play while the menu is up", 60 - 12 in [a for _, s, a, b in since(c, t0) if (s & 0xF0) == 0x90 and b])
@@ -155,7 +155,7 @@ f1 = sid_freq(c, 0)
 gbb = [((b << 7) | a) for _, s, a, b in since(c, t0) if s == 0xEA]
 nesb = [((b << 7) | a) for _, s, a, b in since(c, t0) if s == 0xE0]
 check("wheel up: SID up 2 semitones", abs(f1 / f0 - 2 ** (2 / 12)) < 0.01, round(f1 / f0, 4))
-check("wheel up: Game Boy bend 16383", gbb and gbb[-1] >= 16350, gbb[-1:])
+check("wheel up: Game Boy bend 8192 + 2/12 (its range is 12)", gbb and gbb[-1] == 8192 + 1366, gbb[-1:])
 check("wheel up: NES pulse bend above centre", nesb and nesb[-1] > 8192, nesb[-1:])
 c.midi_in(0xE0, 0, 0, ms=150)
 f2 = sid_freq(c, 0)
@@ -186,8 +186,8 @@ c.midi_in(0x90, 60, 64, ms=150)
 fa = sid_freq(c, 0)
 c.midi_in(0x80, 60, 0, 0x90, 67, 64, ms=8)
 path = []
-for _ in range(8):
-    c.run_ms(8)
+for _ in range(10):
+    c.run_ms(15)
     path.append(sid_freq(c, 0))
 check("PORTAMENTO button: the SID glides", len(set(path)) >= 4 and path[0] < path[-1], (fa, path))
 c.midi_in(0x80, 67, 0, 0xB0, 65, 0, ms=200)
@@ -199,13 +199,13 @@ check("SUSTAIN button: a released note keeps sounding", c.v("heldCount") >= 1, c
 c.midi_in(0xB0, 64, 0, ms=200)
 check("SUSTAIN let go: it stops", c.v("heldCount") == 0, c.v("heldCount"))
 # a button with another task
-c.set("btnTask", 3)                          # VIBRATO button -> MUTE
+c.set("btnTask", 0)                          # VIBRATO button -> MUTE (action 0)
 c.midi_in(0x90, 60, 64, ms=150)
 c.midi_in(0xB0, 1, 127, ms=60)
 check("VIBRATO button set to MUTE: mutes while held", c.v("moment") == 1)
 c.midi_in(0xB0, 1, 0, ms=60)
 check("... and lets go", c.v("moment") == 0)
-c.set("btnTask", 0)
+c.set("btnTask", 3)                          # back to VIBRATO
 c.midi_in(0x80, 60, 0, ms=200)
 
 # ---------------------------------------------------------------- Synthcart
@@ -223,6 +223,90 @@ c.tap(";", ms=40)
 c.tap(";", ms=40)
 c.run_ms(150)
 check("; is faster (FREE 30 -> 25 -> 20 ms)", "20MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+
+# ---------------------------------------------------------------- SPACE actions, bend range, bass display
+c.tap("a", ms=30); c.tap("a", ms=60)        # arp off (UNISON -> SPARKLE -> OFF)
+check("arp off again", c.v("arpMode") == 0)
+c.run_ms(150)
+check("SPACE: BEND DOWN by default", c.v("spaceAct") == 1 and "BEND DN" in c.screen_row(22), c.screen_row(22))
+t0 = c.cpu.processorCycles
+c.run_ms(10)
+rng = [x[1:] for x in c.midi() if x[2] == 85 and (x[1] & 15) in GB]
+check("Game Boy bend range 12 (CC 85 = 62) on its three channels", sorted(set(x[0] & 15 for x in rng)) == [10, 11, 12]
+      and all(x[2] == 62 for x in rng), rng[:3])
+c.press("o", ms=300)                         # D4 (62)
+check("voice table: Fat Bass voices show the note they play (D 2)", c.screen_row(17)[16:19] == "D 2"
+      and c.screen_row(18)[16:19] == "D 2" and c.screen_row(10)[16:19] == "D 4", (c.screen_row(17), c.screen_row(10)))
+f0 = sid_freq(c, 0)
+
+c.set("spaceAct", 2)                         # BEND UP
+c.press("space", ms=1200)
+check("BEND UP: SID up 2 semitones", abs(sid_freq(c, 0) / f0 - 2 ** (2 / 12)) < 0.004, round(sid_freq(c, 0) / f0, 4))
+c.release("space", ms=700)
+check("BEND UP let go: back", sid_freq(c, 0) == f0)
+
+c.set("bendRange", 11)                       # 12 semitones
+c.midi_in(0xE0, 0, 0, ms=150)                # wheel all the way down
+check("BEND RANGE 12: wheel down = an octave down", abs(sid_freq(c, 0) / f0 - 0.5) < 0.004, round(sid_freq(c, 0) / f0, 4))
+gbb = [((b << 7) | a) for t, s, a, b in c.midi() if (s & 0xF0) == 0xE0 and (s & 15) == 10]
+check("... the Game Boy bottoms out (range 12)", gbb and gbb[-1] <= 4, gbb[-1:])
+c.midi_in(0xE0, 0, 64, ms=150)
+check("wheel centred", sid_freq(c, 0) == f0)
+c.set("bendRange", 1)
+
+c.set("spaceAct", 7)                         # VINYL STOP
+c.press("space", ms=1200)
+check("VINYL STOP: pitch an octave down", abs(sid_freq(c, 0) / f0 - 0.5) < 0.004 and c.v("vinylLvl") == 255,
+      round(sid_freq(c, 0) / f0, 4))
+c.release("space", ms=700)
+check("VINYL STOP let go: winds back up", sid_freq(c, 0) == f0 and c.v("vinylLvl") == 0)
+
+c.set("spaceAct", 3)                         # VIBRATO
+c.press("space", ms=100)
+f = set()
+for _ in range(20):
+    c.run_ms(15)
+    f.add(sid_freq(c, 0))
+check("SPACE VIBRATO: SID vibrato while held", len(f) >= 5, len(f))
+c.release("space", ms=100)
+check("... gone when let go", sid_freq(c, 0) == f0)
+
+c.set("spaceAct", 4)                         # TREMOLO
+t0 = c.cpu.processorCycles
+c.press("space", ms=50)
+vols = set()
+for _ in range(30):
+    c.run_ms(10)
+    vols.add(c.raw[0xD418] & 15)
+cc7 = [b for t, s, a, b in since(c, t0) if s in (0xB0, 0xB1) and a == 7]
+check("TREMOLO in FAT: SID volume moves", len(vols) >= 4, sorted(vols))
+check("TREMOLO in FAT: NES pulse levels move (CC7)", len(set(cc7)) >= 3, cc7[:8])
+c.release("space", ms=60)
+cc7 = [b for t, s, a, b in since(c, t0) if s in (0xB0, 0xB1) and a == 7]
+check("TREMOLO let go: SID volume 15, NES back to 127", c.raw[0xD418] & 15 == 15 and cc7[-2:] == [127, 127], cc7[-2:])
+
+c.set("spaceAct", 5)                         # ARP
+c.press("space", ms=200)
+check("ARP held: the arp runs (in the last mode A chose: SPARKLE)", c.v("arpMode") == 2 and c.v("arpRunning") == 1, c.v("arpMode"))
+c.release("space", ms=60)
+check("ARP let go: off again", c.v("arpMode") == 0)
+
+c.set("spaceAct", 6)                         # STUTTER
+c.set("syncTempo", 1)
+t0 = c.cpu.processorCycles
+c.press("space", ms=10)
+cut = []
+for _ in range(400):
+    c.run_ms(5)
+    cut.append(c.v("stutCut"))
+changes = sum(1 for a, b in zip(cut, cut[1:]) if a != b)
+offs = [x for x in since(c, t0) if x[1] == 0x8A]
+check("STUTTER: the chord cuts in and out (2 s)", changes >= 4 and offs, (changes, len(offs)))
+check("STUTTER: no red border (not a mute you set)", c.raw[0xD020] & 15 == 0)
+c.release("space", ms=100)
+check("STUTTER let go: sounding again", c.v("stutCut") == 0 and c.v("muteNow") == 0)
+c.release("o", ms=100)
+c.set("spaceAct", 1)
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

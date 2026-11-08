@@ -14,11 +14,9 @@
 ;   DRUM NOTES      IGNORE / PLAY: its drum notes on the MidiNES (drums.asm)
 ;   VOICE BUTTONS   PICK SOUND / IGNORE: its voice (Program Change 0-24 on the
 ;                   key channel) picks a sound (voiceSound)
-;   WHEEL           BEND / OFF: +-2 semitones on everything (bend.asm)
-;   VIBRATO / PORTAMENTO / SUSTAIN BUTTON  a task each (CC 1 / 65 / 64, 127
-;                   held, 0 let go): VIBRATO, GLIDE, SUSTAIN, MUTE, BEND DOWN,
-;                   OCTAVE UP, NEW CHORD, TAP TEMPO, BEAT ON/OFF, NEXT SOUND,
-;                   NOTHING. The first six act while held, the rest on a press.
+;   WHEEL           BEND / OFF: +-BEND RANGE on everything (bend.asm)
+;   VIBRATO / PORTAMENTO / SUSTAIN BUTTON  an action each (CC 1 / 65 / 64,
+;                   127 held, 0 let go), the same list as SPACE (actions below)
 ;
 ; The IRQ (RxByte) counts clocks itself and stamps every 24th (clkAt*, to the
 ; 1/4 ms); a Start makes the next clock a beat.
@@ -28,18 +26,7 @@ TEMPO_OWN    equ 1
 TEMPO_SC     equ 2
 CLK_ALIVE    equ 300            ; ms: no clock for this long = not following
 
-T_VIBRATO   equ 0
-T_GLIDE     equ 1
-T_SUSTAIN   equ 2
-T_MUTE      equ 3
-T_BEND      equ 4
-T_OCTUP     equ 5
-T_NEWCHORD  equ 6
-T_TAP       equ 7
-T_BEAT      equ 8
-T_SOUND     equ 9
-T_NOTHING   equ 10
-NUM_TASKS   equ 11
+
 
 ; ------------------------------------------------------------ clock
 ; Main loop, every pass
@@ -78,6 +65,7 @@ ClockTick:
 	rts
 .beat:
 	sta clkBeatSeen
+
 	; this beat clock's time in 1/4 ms (16 bits)
 	sei
 	lda clkAtL
@@ -117,6 +105,7 @@ ClockTick:
 	sta clkLastQL
 	lda t1
 	sta clkLastQH
+.meas:
 	lda clkSkip             ; (a Start moved the beat: no period this time)
 	bne .start
 	lda clkHave
@@ -471,41 +460,129 @@ KeytarCC:
 	beq .x                  ; no change
 	sta btnHeld,x
 	sta t3
-	lda btnTask,x
-	jmp DoTask
+	beq .up
+	lda btnTask,x           ; pressed: its action now (let go: the same one)
+	sta btnAct,x
+	jmp DoAction
+.up:
+	lda btnAct,x
+	jmp DoAction
 .x:
 	rts
 
 btnCC:      .byte 1, 65, 64     ; vibrato, portamento, sustain (the keytar's order)
 
-; A = task, t3 = 1 pressed / 0 let go
-DoTask:
+; ------------------------------------------------------------ actions
+; What SPACE and the keytar's buttons do (menu: SPACE, ... BUTTON):
+;   held     MUTE, BEND DOWN, BEND UP, VIBRATO, TREMOLO, ARP, STUTTER,
+;            VINYL STOP, GLIDE, SUSTAIN, OCTAVE UP
+;   a press  NEW CHORD, TAP TEMPO, BEAT ON/OFF, NEXT SOUND; or NOTHING
+; A held action can be held by several at once; it ends when the last lets go.
+;
+; A = action, t3 = 1 pressed / 0 let go
+DoAction:
 	subroutine
-	cmp #T_NOTHING
-	bcs .x
+	cmp #A_HELD
+	bcs .press
+	tax
+	lda t3
+	beq .rel
+	inc actCnt,x
+	lda actCnt,x
+	cmp #1
+	bne .x
+	beq .go
+.rel:
+	lda actCnt,x
+	beq .x
+	dec actCnt,x
+	bne .x
+.go:
+	lda actCnt,x            ; (1 on, 0 off)
+	beq .z
+	lda #1
+.z:
+	sta t3
+	txa
 	asl
 	tax
-	lda taskJump+1,x
+	lda heldJump+1,x
 	pha
-	lda taskJump,x
+	lda heldJump,x
 	pha
 	lda t3
-	rts                     ; (jump: A = held)
+	rts                     ; (jump: A = on / off)
+.press:
+	cmp #A_NOTHING
+	bcs .x
+	ldx t3
+	beq .x
+	sec
+	sbc #A_HELD
+	asl
+	tax
+	lda pressJump+1,x
+	pha
+	lda pressJump,x
+	pha
 .x:
 	rts
 
-taskJump:   .word TaskVib-1, TaskGlide-1, TaskSustain-1, TaskMute-1, TaskBend-1
-	        .word TaskOctUp-1, TaskNewChord-1, TaskTap-1, TaskBeat-1, TaskSound-1
+heldJump:   .word ActMute-1, ActNone-1, ActNone-1, ActVib-1, ActTrem-1, ActArp-1
+	        .word ActStut-1, ActNone-1, ActGlide-1, ActSus-1, ActOctUp-1
+pressJump:  .word NewChordKey-1, TapTempo-1, BeatRunKey-1, ActSound-1
 
-TaskVib:
+; Panic: every held action ends
+ActionsEnd:
+	subroutine
+	lda #0
+	ldx #A_HELD-1
+.c:
+	sta actCnt,x
+	dex
+	bpl .c
+	sta spaceDown
+	sta btnHeld
+	sta btnHeld+1
+	sta btnHeld+2
+	sta moment
+	sta stutCut
+	sta tremBtn
+	sta vibBtn
+	sta glideBtn
+	sta sustainOn
+	sta vinylLvl
+	sta bendLvl
+	lda arpTemp
+	beq .a
+	lda #0
+	sta arpTemp
+	sta arpMode
+	jsr ArpModeApply
+.a:
+	jsr FxButtons
+	jmp MuteChanged
+
+ActNone:                        ; (BEND DOWN / UP, VINYL STOP: BendTick reads actCnt)
+	rts
+
+ActMute:
+	sta moment
+	jmp MuteChanged
+
+ActVib:
 	sta vibBtn
 	jmp FxButtons
 
-TaskGlide:
+ActGlide:
 	sta glideBtn
 	jmp FxButtons
 
-TaskSustain:
+ActTrem:
+	sta tremBtn             ; (TremTick does it)
+	rts
+
+ActSus:
 	subroutine
 	sta sustainOn
 	bne .x
@@ -515,15 +592,7 @@ TaskSustain:
 .x:
 	rts
 
-TaskMute:
-	sta moment
-	jmp MuteChanged
-
-TaskBend:
-	sta bendBtn
-	rts
-
-TaskOctUp:
+ActOctUp:
 	subroutine
 	cmp #0
 	beq .dn
@@ -531,33 +600,133 @@ TaskOctUp:
 .dn:
 	jmp MidiOctDown
 
-TaskNewChord:
+; ARP held: the arp on (in the last mode A chose), off again when let go
+ActArp:
 	subroutine
+	cmp #0
+	beq .off
+	lda arpMode
+	bne .x                  ; already on: leave it
+	lda arpLast
+	sta arpMode
+	lda #1
+	sta arpTemp
+	jmp ArpModeApply
+.off:
+	lda arpTemp
 	beq .x
-	jmp NewChordKey
+	lda #0
+	sta arpTemp
+	sta arpMode
+	jmp ArpModeApply
 .x:
 	rts
 
-TaskTap:
+; STUTTER held: the notes keep sounding but cut out on some 16ths
+ActStut:
 	subroutine
+	cmp #0
+	beq .off
+	jsr GetTicks
+	lda nowL
+	sta stutAtL
+	lda nowH
+	sta stutAtH
+	lda #$FF
+	sta stutStep
+	lda beatRun             ; a beat playing: on its grid
 	beq .x
-	jmp TapTempo
+	lda beatAtL
+	sta stutAtL
+	lda beatAtH
+	sta stutAtH
+	ldx beatStep
+	dex
+	stx stutStep
 .x:
 	rts
-
-TaskBeat:
-	subroutine
+.off:
+	lda stutCut
 	beq .x
-	jmp BeatRunKey
-.x:
-	rts
+	lda #0
+	sta stutCut
+	jmp MuteChanged
 
-TaskSound:
-	subroutine
-	beq .x
+ActSound:
 	lda #0
 	sta shiftDown
 	jmp SoundKey
+
+; Main loop: STUTTER's 16ths. The first 16th of each beat always sounds; on
+; the others a sounding chord cuts out about a third of the time, and a cut
+; comes back three times in four.
+StutterTick:
+	subroutine
+	lda actCnt+A_STUT
+	bne .go
+	rts
+.go:
+	jsr GetTicks
+	lda nowL
+	sec
+	sbc stutAtL
+	lda nowH
+	sbc stutAtH
+	bpl .due
+	rts
+.due:
+	lda beatMs+1            ; next 16th: a quarter beat on (slower with VINYL STOP)
+	lsr
+	sta t1
+	lda beatMs
+	ror
+	lsr t1
+	ror
+	sta t0
+	ldx vinylLvl
+	beq .add
+	lda t0
+	sta mulA
+	lda t1
+	sta mulA+1
+	txa
+	jsr Mul16x8
+	lda t0
+	clc
+	adc mulR+1
+	sta t0
+	lda t1
+	adc mulR+2
+	sta t1
+.add:
+	lda stutAtL
+	clc
+	adc t0
+	sta stutAtL
+	lda stutAtH
+	adc t1
+	sta stutAtH
+	inc stutStep
+	lda stutStep
+	and #3
+	beq .on
+	jsr Random              ; 0-127
+	ldx stutCut
+	bne .cut
+	cmp #45
+	bcs .x
+	lda #1
+	sta stutCut
+	jmp MuteChanged
+.cut:
+	cmp #32
+	bcc .x                  ; stays cut
+.on:
+	lda stutCut
+	beq .x
+	lda #0
+	sta stutCut
+	jmp MuteChanged
 .x:
 	rts
 

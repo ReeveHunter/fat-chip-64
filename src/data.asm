@@ -99,10 +99,25 @@ txtMidiIn:  .byte "MIDI IN  H/J OCT     LAST",0
 txtLOff:    .byte "OFF  ",0
 txtLHold:   .byte "HOLD ",0
 txtTempo:   .byte "B     BPM   M MUTE      <> SPACE",0
-spcTxtLo:   .byte <tSMute,<tSBend
-spcTxtHi:   .byte >tSMute,>tSBend
-tSMute:     .byte "MUTES",0
-tSBend:     .byte "BENDS",0
+; SPACE's action on the tempo line (7 characters)
+spcTxtLo:   .byte <tS0,<tS1,<tS2,<tS3,<tS4,<tS5,<tS6,<tS7,<tS8,<tS9,<tS10,<tS11,<tS12,<tS13,<tS14,<tS15
+spcTxtHi:   .byte >tS0,>tS1,>tS2,>tS3,>tS4,>tS5,>tS6,>tS7,>tS8,>tS9,>tS10,>tS11,>tS12,>tS13,>tS14,>tS15
+tS0:        .byte "MUTE   ",0
+tS1:        .byte "BEND DN",0
+tS2:        .byte "BEND UP",0
+tS3:        .byte "VIBRATO",0
+tS4:        .byte "TREMOLO",0
+tS5:        .byte "ARP    ",0
+tS6:        .byte "STUTTER",0
+tS7:        .byte "VINYL  ",0
+tS8:        .byte "GLIDE  ",0
+tS9:        .byte "SUSTAIN",0
+tS10:       .byte "OCT UP ",0
+tS11:       .byte "NEW CHD",0
+tS12:       .byte "TAP    ",0
+tS13:       .byte "BEAT   ",0
+tS14:       .byte "SOUND  ",0
+tS15:       .byte "NOTHING",0
 txtModeLn:  .byte "Z            K KEY",0
 modeTxtLo:  .byte <tMPoly,<tMChord,<tMEx7,<tMEx9,<tMEx11,<tMEx13
 modeTxtHi:  .byte >tMPoly,>tMChord,>tMEx7,>tMEx9,>tMEx11,>tMEx13

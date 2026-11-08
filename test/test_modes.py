@@ -138,7 +138,7 @@ c.press("q", ms=500)
 up2 = [a for cyc, s, a, b in c.midi(since=t0) if s in (0x90, 0x91) and b]
 c.release("q", ms=60)
 check("+2: two octaves up", set(up2) == {72}, up2)
-c.tap("f", ms=60)
+c.tap("f", ms=150)
 check("F again: +0", "+0 OCT" in c.screen_row(19))
 c.tap("f", ms=40)
 c.tap("a", ms=40)                           # arp off
@@ -157,9 +157,13 @@ check("PADS: Game Boy pulse 2 glides, deeper warble", (1, 5, 64) in cc and (0, 1
 f0 = c.raw[0xD416]
 c.run_ms(1500)
 check("PADS: the filter sweeps", c.raw[0xD416] != f0, (f0, c.raw[0xD416]))
-pw = (c.raw[0xD402], c.raw[0xD409])
-c.run_ms(300)
-check("PADS: pulse widths wobble, each voice its own", (c.raw[0xD402], c.raw[0xD409]) != pw and pw[0] != pw[1], pw)
+def widths():
+    return (c.raw[0xD402] | c.raw[0xD403] << 8, c.raw[0xD409] | c.raw[0xD40A] << 8)
+ws = []
+for _ in range(6):
+    ws.append(widths())
+    c.run_ms(100)
+check("PADS: pulse widths wobble, each voice its own", len(set(ws)) >= 4 and sum(a != b for a, b in ws) >= 5, ws)
 c.tap("m", ms=60)
 check("muted in PADS: volume 0, filter mode kept", c.raw[0xD418] == 0x10, hex(c.raw[0xD418]))
 c.tap("m", ms=60)

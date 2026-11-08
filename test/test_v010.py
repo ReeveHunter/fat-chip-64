@@ -79,13 +79,17 @@ check("10 ms arp: every voice off", all(v == 255 for v in c.v("vOut", 9)) and al
 c.tap("a", ms=30); c.tap("a", ms=30)        # arp off
 
 # ---------------------------------------------------------------- SPACE modes
-check("SPACE mode MUTES by default", "<> SPACE MUTES" in c.screen_row(22), c.screen_row(22))
-c.tap(".", ms=80)
-check(". : SPACE BENDS", c.v("spaceMode") == 1 and "SPACE BENDS" in c.screen_row(22), c.screen_row(22))
-c.tap(".", ms=80)
-check(". again wraps to MUTES", c.v("spaceMode") == 0)
-c.tap(",", ms=80)
-check(", : back to BENDS", c.v("spaceMode") == 1 and "SPACE BENDS" in c.screen_row(22), c.screen_row(22))
+c.run_ms(150)
+check("SPACE: BEND DOWN by default (v0.13)", "<> SPACE BEND DN" in c.screen_row(22), c.screen_row(22))
+c.tap(".", ms=150)
+check(". : SPACE BEND UP", c.v("spaceAct") == 2 and "SPACE BEND UP" in c.screen_row(22), c.screen_row(22))
+c.tap(",", ms=10)
+c.tap(",", ms=150)
+check(", , : MUTE", c.v("spaceAct") == 0 and "SPACE MUTE" in c.screen_row(22), c.screen_row(22))
+c.tap(",", ms=10)
+c.tap(",", ms=150)
+check(", , : wraps to NOTHING, then NEXT SOUND", c.v("spaceAct") == 14, c.v("spaceAct"))
+c.set("spaceAct", 1)                        # BEND DOWN
 
 c.press("w", ms=200)                        # D: SID 38+12.. (whatever), GB, NES
 base = [sid_freq(c, v) for v in range(3)]
@@ -94,14 +98,14 @@ t0 = c.cpu.processorCycles
 c.press("space", ms=500)
 mid = c.v("bendLvl")
 check("bend: half way after 0.5 s", 110 <= mid <= 135, mid)
-check("bend: SPACE doesn't mute in BENDS", c.raw[0xD418] & 15 == 15 and notes_on(c.midi()) == on)
+check("bend: SPACE doesn't mute in BEND DOWN", c.raw[0xD418] & 15 == 15 and notes_on(c.midi()) == on)
 c.run_ms(700)
 check("bend: all the way after about 1 s", c.v("bendLvl") == 255)
 ratio = [sid_freq(c, v) / base[v] for v in range(3) if base[v]]
 check("bend: SID 2 semitones down (x 0.891)", ratio and all(abs(r - 0.8909) < 0.004 for r in ratio), ratio)
 b = bends(c, t0)
 gbv = [x for x in b if x[1] in GB]
-check("bend: Game Boy channels end at 8192 - 8160", all(gbv and [x for x in gbv if x[1] == ch][-1][2] == 32 for ch in GB), gbv[-3:])
+check("bend: Game Boy channels end at 8192 - 2/12 of 8192 (range 12)", all(gbv and [x for x in gbv if x[1] == ch][-1][2] == 8192 - 1366 for ch in GB), gbv[-3:])
 gaps = sorted({x[0] for x in gbv if x[1] == 0})
 gaps = [y - x for x, y in zip(gaps, gaps[1:])]
 check("bend: MIDI bends about every 20 ms, not faster", gaps and min(gaps) >= 15 and max(gaps) < 40, gaps)
@@ -109,7 +113,7 @@ check("bend: falling all the way", [x[2] for x in gbv if x[1] == 0] == sorted([x
 for ch, tri in ((5, False), (6, False), (7, True)):
     n = on.get(ch)
     last = [x for x in b if x[1] == ch][-1][2]
-    want = 8192 - (((p_tri(n) * 255) >> (10 if tri else 9)) & ~3)
+    want = 8192 - (((p_tri(n) * 2006) >> (13 if tri else 12)) & ~3)     # 2006 = 2 (2^(1/6) - 1) x 8192
     check(f"bend: MidiNES ch {ch + 1} (note {n}) bent by its note's amount", last == want, (last, want))
 
 # a new NES note while bent gets its bend first
@@ -119,7 +123,7 @@ c.press("y", ms=100)
 m = [(x[1] & 0xF0, x[2], x[3]) for x in c.midi(since=t1) if x[1] & 15 == 5]
 i_on = next(i for i, x in enumerate(m) if x[0] == 0x90 and x[2])
 n = m[i_on][1]
-want = 8192 - (((p_tri(n) * 255) >> 9) & ~3)
+want = 8192 - (((p_tri(n) * 2006) >> 12) & ~3)
 pre = [x for x in m[:i_on] if x[0] == 0xE0]
 check("bend: a new NES note gets its own bend before the note-on",
       pre and ((pre[-1][2] << 7) | pre[-1][1]) == want, (m[:i_on + 1], want))
@@ -141,11 +145,11 @@ c.run_ms(250)                               # (v0.12: the Game Boy's sound setup
 b = bends(c, c.cpu.processorCycles - 310 * CYCLES_PER_MS)
 check("panic during a bend: straight back to centre", c.v("bendLvl") == 0 and b and all(x[2] == 8192 for x in b[-6:]), b[-6:])
 c.release("y", ms=40)
-c.tap(",", ms=60)
-check(", : MUTES again", c.v("spaceMode") == 0)
+c.set("spaceAct", 0)
+check("SPACE set to MUTE", c.v("spaceAct") == 0)
 c.press("w", ms=100)
 c.press("space", ms=60)
-check("MUTES: SPACE flips the mute again", c.raw[0xD418] & 15 == 0 and notes_on(c.midi()) == {})
+check("MUTE: SPACE flips the mute", c.raw[0xD418] & 15 == 0 and notes_on(c.midi()) == {})
 c.release("space", ms=60)
 c.release("w", ms=60)
 

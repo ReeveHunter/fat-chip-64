@@ -69,6 +69,7 @@ Loop:
 	jsr ClockTick           ; the keytar's clock: tempo
 	jsr BeatTick            ; beat demos
 	jsr DrumTick            ; noise hits end
+	jsr StutterTick         ; STUTTER held
 	lda reallocFlag
 	beq .noAlloc
 	lda #0
@@ -206,10 +207,18 @@ InitState:
 	lda #$80                ; drums: the last hits were long ago
 	sta dmcAt+1
 	sta nzAt+1
-	lda #1                  ; the keytar buttons: vibrato, glide, sustain
+	lda #A_VIB              ; the keytar buttons: vibrato, glide, sustain
+	sta btnTask
+	lda #A_GLIDE
 	sta btnTask+1
-	lda #2
+	lda #A_SUS
 	sta btnTask+2
+	lda #A_BENDDN           ; SPACE bends down
+	sta spaceAct
+	lda #ARP_UNISON         ; ARP (held) uses UNISON until A picks another
+	sta arpLast
+	lda #1                  ; bend range 2 semitones
+	sta bendRange
 	jsr SoundVars           ; FAT's settings
 	lda #OCT_DEFAULT
 	sta octBase
@@ -339,3 +348,4 @@ Nmi:
 	include "nestables.asm"
 	include "soundtab.asm"
 	include "beats.asm"
+	include "bendtab.asm"

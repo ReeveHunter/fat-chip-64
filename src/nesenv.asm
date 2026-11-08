@@ -191,6 +191,15 @@ NesEnvTick:
 	sta envPh
 	sta envPh+1
 	sta triOn
+	lda ticks               ; (the tremolo still runs, for the SID)
+	sec
+	sbc envLast
+	cmp #10
+	bcc .r
+	lda ticks
+	sta envLast
+	jmp TremTick
+.r:
 	rts
 .on:
 	lda ticks
@@ -522,38 +531,128 @@ Mul16:
 	bne .l
 	rts
 
-; tremolo LFO, every 10 ms: tremA = 0-15
+; tremolo LFO, every 10 ms: tremA = 0-15. The sound's own (NES pulses with
+; an envelope), or TREMOLO held (SPACE / a button): then the SID's volume and
+; the NES pulses of sounds without an envelope follow it too (a sound with
+; none gets depth 10 at 6 Hz). The Game Boy has no tremolo yet.
 TremTick:
 	subroutine
 	ldx soundMode
 	lda nesTrem,x
+	sta exS                 ; depth
+	lda nesTremRL,x
+	sta exI                 ; rate
+	lda nesTremRH,x
+	sta exK
+	lda nesTremSq,x
+	sta exD                 ; square?
+	lda tremBtn
+	beq .d
+	lda exS
+	bne .d
+	lda #10
+	sta exS
+	lda #<3932
+	sta exI
+	lda #>3932
+	sta exK
+	lda #0
+	sta exD
+.d:
+	lda exS
 	bne .on
 	sta tremA
-	rts
+	beq .out
 .on:
 	lda tremPhL
 	clc
-	adc nesTremRL,x
+	adc exI
 	sta tremPhL
 	lda tremPhH
-	adc nesTremRH,x
+	adc exK
 	sta tremPhH
-	ldy nesTremSq,x
+	ldy exD
 	beq .tri
 	cmp #128                ; square: full depth half the time
 	lda #0
 	bcs .st
-	lda nesTrem,x
+	lda exS
 	bne .st
 .tri:
 	jsr Tri                 ; 0-127
-	ldy nesTrem,x
+	ldy exS
 	jsr Mul8
 	asl mt16
 	lda mt16+1
 	rol                     ; / 128
 .st:
 	sta tremA
+.out:
+	lda tremBtn
+	bne TremDirect
+	lda tremWas
+	bne TremEnd
+	rts
+
+; TREMOLO held: the SID's volume and envelope-less NES pulses follow tremA
+TremDirect:
+	subroutine
+	lda #1
+	sta tremWas
+	lda devOn+DEV_SID
+	beq .nes
+	lda muteNow
+	bne .nes
+	lda #15
+	sec
+	sbc tremA
+	ora sidFilt
+	sta SID_VOL
+.nes:
+	lda nesEnvOn
+	bne .x
+	lda tremA
+	cmp tremSent
+	beq .x
+	sta tremSent
+	lda #15
+	sec
+	sbc tremA
+	asl
+	asl
+	asl
+	jmp TremCC7
+.x:
+	rts
+
+; TREMOLO let go: volumes back
+TremEnd:
+	lda #0
+	sta tremWas
+	sta tremSent
+	jsr SidVolume
+	lda nesEnvOn
+	bne .x
+	lda #127
+TremCC7:                        ; A = CC7 value on both NES pulses
+	subroutine
+	ldx devOn+DEV_NES
+	beq .x
+	sta mD2
+	lda #7
+	sta mD1
+	lda nesBase
+	ora #$B0
+	sta mS
+	jsr NesPut
+	lda nesBase
+	clc
+	adc #1
+	and #15
+	ora #$B0
+	sta mS
+	jmp NesPut
+.x:
 	rts
 
 ; Sound switched (V): leaving PADS ends any NES envelope at once and puts the

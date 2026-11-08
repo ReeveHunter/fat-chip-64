@@ -34,6 +34,8 @@ RxGot:
 	bne .buf
 	ldx #23                 ; Start: the next clock is beat 1
 	stx clkPhase
+	stx clkSkip             ; (and its period isn't a beat: set here, before
+	                        ;  the main loop could measure it)
 	ldx clkBeat
 	stx clkStartBeat
 .buf:

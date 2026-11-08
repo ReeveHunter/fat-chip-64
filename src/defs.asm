@@ -112,9 +112,26 @@ MIDI_SLOTS  equ 8
 NIDX        equ MIDI_FIRST+MIDI_SLOTS
 MIDI_IN_CHANS equ 11          ; MIDI in plays channels 1-11 (12-16: SHS-10 accompaniment)
 MIDI_OCT_MAX equ 4
-SPC_MUTE    equ 0             ; SPACE modes: held = mute flips
-SPC_BEND    equ 1             ;  held = everything bends down
-SPC_MODES   equ 2
+; actions (v0.13): what SPACE and the keytar's three buttons do. The first
+; A_HELD act while held, the rest on a press.
+A_MUTE      equ 0
+A_BENDDN    equ 1
+A_BENDUP    equ 2
+A_VIB       equ 3
+A_TREM      equ 4
+A_ARP       equ 5
+A_STUT      equ 6
+A_VINYL     equ 7
+A_GLIDE     equ 8
+A_SUS       equ 9
+A_OCTUP     equ 10
+A_HELD      equ 11
+A_NEWCHORD  equ 11
+A_TAP       equ 12
+A_BEAT      equ 13
+A_SOUND     equ 14
+A_NOTHING   equ 15
+NUM_ACTS    equ 16
 BEND_DOWN_MS equ 4            ; bendLvl 0-255: +1 per 4 ms down (about 1 s)
 BEND_TICK   equ 20            ; ms between bend updates to the Game Boy / NES
 Q_BACKLOG   equ 8             ; messages waiting: a device skips voice changes
@@ -305,7 +322,7 @@ mulA        ds 2
 mulB        ds 2
 mulR        ds 4
 ; v0.10
-spaceMode   ds 1               ; SPC_MUTE / SPC_BEND (, and .)
+spaceAct    ds 1               ; SPACE's action (, and . or the menu)
 bendLvl     ds 1               ; 0 = none, 255 = 2 semitones down
 bendLast    ds 1               ; ticks (low byte) of the last bend step
 bendSentAt  ds 1               ; ticks (low byte) of the last MIDI bend
@@ -414,7 +431,25 @@ btnHeld     ds 3
 vibBtn      ds 1               ; held: vibrato
 glideBtn    ds 1               ; held: glide
 sustainOn   ds 1               ; held: sustain
-bendBtn     ds 1               ; held: bend down (like SPACE in BENDS)
+spaceHeld   ds 1               ; the action SPACE is holding (it ends with that one)
+btnAct      ds 3               ; the actions the keytar's buttons are holding
+actCnt      ds A_HELD          ; how many keys / buttons hold each held action
+bendDir     ds 1               ; BEND DOWN / UP: 1 = up
+vinylLvl    ds 1               ; VINYL STOP 0-255
+bendRange   ds 1               ; menu: BEND RANGE - 1 (0-11)
+btL         ds 1               ; BendTotal: signed 1/16 semitones
+btIn        ds 4               ; ... what it was last worked out from
+btH         ds 1
+tremBtn     ds 1               ; TREMOLO held
+tremWas     ds 1               ; ... it was last tick (to put things back)
+tremSent    ds 1               ; NES CC7 level sent for it (sounds without an envelope)
+arpTemp     ds 1               ; ARP held turned the arp on (it goes off on release)
+arpLast     ds 1               ; the last arp mode chosen with A (ARP uses it)
+stutCut     ds 1               ; STUTTER: cut now
+stutAtL     ds 1               ; ... next 16th
+stutAtH     ds 1
+stutStep    ds 1
+muteVis     ds 1               ; the mute you see (M, MUTE): border, screen
 wheelMag    ds 1               ; the wheel: 0-255 (255 = 2 semitones)
 wheelUp     ds 1               ;  1 = up
 bendMag     ds 1               ; the bend everything gets: wheel and SPACE together

@@ -348,16 +348,17 @@ MuteKey:
 	sta sidMute
 	jmp MuteChanged
 
+; SPACE: its action (the menu's SPACE, or , and .), held while it's down
 MomentDown:
 	subroutine
+	lda spaceDown
+	bne .x
 	lda #1
 	sta spaceDown
-	lda spaceMode
-	cmp #SPC_MUTE
-	bne .x                  ; BENDS: BendTick does it
-	lda #1
-	sta moment
-	jmp MuteChanged
+	sta t3
+	lda spaceAct
+	sta spaceHeld
+	jmp DoAction
 .x:
 	rts
 
@@ -540,10 +541,15 @@ NoteUp:                         ; A = note index
 .s:
 	cmp #K_SPACE
 	bne .k
+	lda spaceDown
+	beq .k0
 	lda #0
 	sta spaceDown
-	sta moment
-	jmp MuteChanged
+	sta t3
+	lda spaceHeld
+	jmp DoAction
+.k0:
+	rts
 .k:
 	cmp #K_K
 	bne .sh

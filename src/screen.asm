@@ -291,8 +291,25 @@ ScrVoiceRow:
 	iny
 	bne .n
 .note:
+	; the note the voice really plays: Fat Bass folds the bass voices, a
+	; sound can put the Game Boy pulses or the SID an octave off
 	ldx t3
 	lda vNote,x
+	cmp #NO_NOTE
+	beq .pn
+	ldy vDev,x
+	beq .sid
+	stx t0
+	jsr MidiNoteValue
+	jmp .pn
+.sid:
+	ldy soundMode
+	clc
+	adc sndOct,y
+	bpl .pn
+	clc
+	adc #12
+.pn:
 	ldx #16
 	jsr PutNote
 	; off-device voices are drawn dark
@@ -520,7 +537,7 @@ ScrCounters:
 	ldx #19
 	ldy #22
 	jsr PrintAt
-	ldx spaceMode           ; what SPACE does
+	ldx spaceAct            ; what SPACE does
 	lda spcTxtLo,x
 	sta ptr
 	lda spcTxtHi,x
@@ -805,18 +822,6 @@ PutNote:
 	inx
 	jmp PutChar
 .n:
-	; bass voices sound an octave down
-	ldy t3
-	cpy #NUM_VOICES
-	bcs PutMidiNote
-	pha
-	lda vBass,y
-	tay
-	pla
-	cpy #0
-	beq PutMidiNote
-	sec
-	sbc #12
 ; MIDI note A at column X: name + octave (C4 = 60)
 PutMidiNote:
 	ldy #0

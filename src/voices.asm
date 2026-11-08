@@ -61,11 +61,21 @@ MuteChanged:
 	subroutine
 	lda sidMute
 	eor moment
-	sta muteNow
+	cmp muteVis
+	beq .same               ; (STUTTER's cuts: no border, no redraw)
+	sta muteVis
+	pha
+	lda #1
+	sta screenDirty
+	pla
 	beq .b
 	lda #2                  ; red border while muted
 .b:
 	sta BORDER
+.same:
+	lda muteVis
+	ora stutCut
+	sta muteNow
 	jsr SidVolume
 	ldx #0
 .v:
@@ -85,8 +95,6 @@ MuteChanged:
 	inx
 	cpx #NUM_VOICES
 	bne .v
-	lda #1
-	sta screenDirty
 	rts
 
 ; Gate SID voices back on one scan after a retrigger.
@@ -1017,6 +1025,7 @@ Panic:
 	dex
 	bpl .k
 	jsr MidiInRelease       ; MIDI-in keys let go too
+	jsr ActionsEnd          ; SPACE / buttons: nothing held
 	lda #1
 	sta hardCut             ; no soft releases: everything off now
 	jsr Allocate            ; nothing held -> every voice off
@@ -1052,7 +1061,7 @@ Panic:
 	sta bendMag
 	sta bendUp
 	sta wheelMag
-	sta bendBtn
+	sta vinylLvl
 	sta bendSidMag
 	sta bendSidUp
 	jsr SidBendAll

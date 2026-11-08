@@ -469,6 +469,22 @@ BeatTick:
 	sta step16L
 	lda dvdH
 	sta step16H
+	lda vinylLvl            ; VINYL STOP: slower, down to half speed
+	beq .nv
+	lda step16L
+	sta mulA
+	lda step16H
+	sta mulA+1
+	lda vinylLvl
+	jsr Mul16x8
+	lda step16L
+	clc
+	adc mulR+1
+	sta step16L
+	lda step16H
+	adc mulR+2
+	sta step16H
+.nv:
 	; base += (frac + step) / 16
 	lda step16L
 	clc

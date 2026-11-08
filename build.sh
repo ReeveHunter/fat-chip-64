@@ -7,6 +7,7 @@ mkdir -p bin
 python3 tools/gen_tables.py >/dev/null
 python3 tools/gen_sounds.py >/dev/null
 python3 tools/gen_beats.py >/dev/null
+python3 tools/gen_bend.py >/dev/null
 cd src
 $DASM main.asm -f1 -o../bin/fatchip64.prg -s../bin/fatchip64.sym -l../bin/fatchip64.lst -v1 | grep -v "^Complete" || true
 cd ..

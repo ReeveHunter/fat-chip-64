@@ -53,7 +53,7 @@ check("one tap after a long gap doesn't change the tempo", c.v("bpm") == 100)
 c.tap("a", ms=60)
 check("A: UNISON", c.v("arpMode") == 1 and "UNISON" in c.screen_row(19), c.screen_row(19))
 c.tap("d", ms=30)                           # FREE -> 1/4
-c.tap("d", ms=30)                           # 1/8
+c.tap("d", ms=150)                          # 1/8
 check("D steps the speed: 1/8", c.v("arpLen") == 1 and "1/8 " in c.screen_row(19), c.screen_row(19))
 t0 = c.cpu.processorCycles
 c.press("q", "e", "t", ms=1700)             # C E G held

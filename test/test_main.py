@@ -116,6 +116,7 @@ gb_new = [x for x in c.midi(since=t0) if (x[1] & 15) in GB]
 check("SHIFT+F3 again: Game Boy startup resent", len(gb_new) > 1 and gb_new[0][1:] == (0xB0, 113, 64) and gb_new[1][1:] == (0xB0, 102, 70), gb_new[:2])
 
 shifted("f1")
+c.run_ms(150)
 check("SID off: volume 0 (no hum)", c.raw[0xD418] & 15 == 0 and "OFF" in c.screen_row(3))
 shifted("f1")
 check("SID on: volume back", c.raw[0xD418] & 15 == 15)
@@ -128,6 +129,7 @@ check("M: the Game Boy and NES get note-offs (nothing sounds)", notes_on(c.midi(
 c.release("q", ms=40)
 c.press("w", ms=60)
 check("muted: new notes aren't sent", notes_on(c.midi()) == {})
+c.set("spaceAct", 0)                        # SPACE = MUTE (v0.13 default: BEND DOWN)
 c.press("space", ms=60)
 on = notes_on(c.midi())
 check("muted + SPACE held: the chord plays", on.get(0) == 50 and c.raw[0xD418] & 15 == 15, on)
@@ -203,11 +205,11 @@ c.tap("n", ms=60)
 check("N: chord keeps sounding, N NEXT on screen", {50, 52} <= sounding() and "N NEXT" in c.screen_row(21), c.screen_row(21))
 c.tap("u", ms=60)                           # within the window, but N said new
 check("after N the next note starts a new chord", sounding() <= {59, 35} and 59 in sounding(), sounding())
-c.tap("n", ms=20); c.tap("n", ms=60)
+c.tap("n", ms=20); c.tap("n", ms=150)
 check("N twice: clear now", sounding() == set() and "N NEW" in c.screen_row(21))
 
-c.tap("=", ms=60)
-check("= again: back to OFF (= is OFF / SMART for now)", c.v("latch") == 0 and "OFF" in c.screen_row(21)[25:], c.screen_row(21))
+c.tap("=", ms=150)
+check("= again: back to OFF (latch style SMART)", c.v("latch") == 0 and "OFF" in c.screen_row(21)[25:], c.screen_row(21))
 # HOLD and ADD stay in the code for a menu later: set them directly
 c.set("latch", 2); c.set("screenDirty", 1); c.run_ms(150)
 check("HOLD (set directly)", "HOLD" in c.screen_row(21), c.screen_row(21))

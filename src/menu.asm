@@ -5,7 +5,7 @@
 ; usual (notes play; V, F keys, = ... too: the values here follow).
 ; The play screen pauses while the menu is up and redraws when it closes.
 
-MENU_ITEMS  equ 12
+MENU_ITEMS  equ 13
 MENU_VALCOL equ 23
 
 
@@ -21,7 +21,7 @@ MenuOpen:
 	sta t2
 	PRINT 2, 0, mHdrSound
 	PRINT 5, 0, mHdrPlay
-	PRINT 9, 0, mHdrSync
+	PRINT 10, 0, mHdrSync
 	PRINT 21, 0, mHelp1
 	PRINT 22, 0, mHelp2
 	PRINT 23, 0, mHelp3
@@ -213,7 +213,7 @@ LatchStyleHook:
 	rts
 
 SpaceHook:
-	ldx spaceMode
+	ldx spaceAct
 	jmp SpaceSet
 
 TempoHook:
@@ -231,29 +231,6 @@ WheelHook:
 	sta wheelUp
 	rts
 
-; a button got a new task: whatever the buttons were holding ends
-BtnHook:
-	subroutine
-	lda #0
-	sta btnHeld
-	sta btnHeld+1
-	sta btnHeld+2
-	sta vibBtn
-	sta glideBtn
-	sta bendBtn
-	sta moment
-	jsr MuteChanged
-	jsr FxButtons
-	lda sustainOn
-	beq .x
-	lda #0
-	sta sustainOn
-	lda latch
-	bne .x
-	jmp KeepPhysical
-.x:
-	rts
-
 mTitle:     .byte " FAT CHIP 64 MENU    SHIFT+RETURN: BACK ",0
 mHdrSound:  .byte "SOUND",0
 mHdrPlay:   .byte "PLAYING",0
@@ -261,16 +238,16 @@ mHdrSync:   .byte "DEVICE SYNC: KEYTAR (MIDI IN), SYNTHCART",0
 mHelp1:     .byte "CRSR DOWN / SHIFT+CRSR DOWN: CHOOSE",0
 mHelp2:     .byte "CRSR RIGHT OR RETURN: NEXT VALUE",0
 mHelp3:     .byte "SHIFT+CRSR RIGHT: PREVIOUS VALUE",0
-menuRowY:   .byte 3,6,7,10,11,12,13,14,15,16,17,18
-menuCount:  .byte 3,3,2,3,2,2,2,2,2,11,11,11
-menuLblLo:  .byte <mL0,<mL1,<mL2,<mL3,<mL4,<mL5,<mL6,<mL7,<mL8,<mL9,<mL10,<mL11
-menuLblHi:  .byte >mL0,>mL1,>mL2,>mL3,>mL4,>mL5,>mL6,>mL7,>mL8,>mL9,>mL10,>mL11
-menuVarLo:  .byte <fbLock,<latchStyle,<spaceMode,<syncTempo,<syncStart,<syncRhythm,<syncDrums,<syncVoice,<syncWheel,<btnTask,<[btnTask+1],<[btnTask+2]
-menuVarHi:  .byte >fbLock,>latchStyle,>spaceMode,>syncTempo,>syncStart,>syncRhythm,>syncDrums,>syncVoice,>syncWheel,>btnTask,>[btnTask+1],>[btnTask+2]
-menuValLo:  .byte <mV0,<mV1,<mV2,<mV3,<mV4,<mV5,<mV6,<mV7,<mV8,<mTasks,<mTasks,<mTasks
-menuValHi:  .byte >mV0,>mV1,>mV2,>mV3,>mV4,>mV5,>mV6,>mV7,>mV8,>mTasks,>mTasks,>mTasks
-menuHookLo: .byte <FatBassMenu,<LatchStyleHook,<SpaceHook,<TempoHook,0,0,0,0,<WheelHook,<BtnHook,<BtnHook,<BtnHook
-menuHookHi: .byte >FatBassMenu,>LatchStyleHook,>SpaceHook,>TempoHook,0,0,0,0,>WheelHook,>BtnHook,>BtnHook,>BtnHook
+menuRowY:   .byte 3,6,7,8,11,12,13,14,15,16,17,18,19
+menuCount:  .byte 3,3,NUM_ACTS,12,3,2,2,2,2,2,NUM_ACTS,NUM_ACTS,NUM_ACTS
+menuLblLo:  .byte <mL0,<mL1,<mL2,<mLR,<mL3,<mL4,<mL5,<mL6,<mL7,<mL8,<mL9,<mL10,<mL11
+menuLblHi:  .byte >mL0,>mL1,>mL2,>mLR,>mL3,>mL4,>mL5,>mL6,>mL7,>mL8,>mL9,>mL10,>mL11
+menuVarLo:  .byte <fbLock,<latchStyle,<spaceAct,<bendRange,<syncTempo,<syncStart,<syncRhythm,<syncDrums,<syncVoice,<syncWheel,<btnTask,<[btnTask+1],<[btnTask+2]
+menuVarHi:  .byte >fbLock,>latchStyle,>spaceAct,>bendRange,>syncTempo,>syncStart,>syncRhythm,>syncDrums,>syncVoice,>syncWheel,>btnTask,>[btnTask+1],>[btnTask+2]
+menuValLo:  .byte <mV0,<mV1,<mActs,<mRange,<mV3,<mV4,<mV5,<mV6,<mV7,<mV8,<mActs,<mActs,<mActs
+menuValHi:  .byte >mV0,>mV1,>mActs,>mRange,>mV3,>mV4,>mV5,>mV6,>mV7,>mV8,>mActs,>mActs,>mActs
+menuHookLo: .byte <FatBassMenu,<LatchStyleHook,<SpaceHook,0,<TempoHook,0,0,0,0,<WheelHook,0,0,0
+menuHookHi: .byte >FatBassMenu,>LatchStyleHook,>SpaceHook,0,>TempoHook,0,0,0,0,>WheelHook,0,0,0
 mL0:     .byte "FAT BASS ........... ",0
 mV0:     .word mV0_0,mV0_1,mV0_2
 mV0_0: .byte "AS SOUND        ",0
@@ -282,9 +259,20 @@ mV1_0: .byte "SMART           ",0
 mV1_1: .byte "HOLD            ",0
 mV1_2: .byte "ADD             ",0
 mL2:     .byte "SPACE .............. ",0
-mV2:     .word mV2_0,mV2_1
-mV2_0: .byte "MUTES           ",0
-mV2_1: .byte "BENDS           ",0
+mLR:     .byte "BEND RANGE ......... ",0
+mRange:  .word mR1,mR2,mR3,mR4,mR5,mR6,mR7,mR8,mR9,mR10,mR11,mR12
+mR1:     .byte "1 SEMITONE      ",0
+mR2:     .byte "2 SEMITONES     ",0
+mR3:     .byte "3 SEMITONES     ",0
+mR4:     .byte "4 SEMITONES     ",0
+mR5:     .byte "5 SEMITONES     ",0
+mR6:     .byte "6 SEMITONES     ",0
+mR7:     .byte "7 SEMITONES     ",0
+mR8:     .byte "8 SEMITONES     ",0
+mR9:     .byte "9 SEMITONES     ",0
+mR10:    .byte "10 SEMITONES    ",0
+mR11:    .byte "11 SEMITONES    ",0
+mR12:    .byte "12 SEMITONES    ",0
 mL3:     .byte "TEMPO FROM ......... ",0
 mV3:     .word mV3_0,mV3_1,mV3_2
 mV3_0: .byte "KEYTAR          ",0
@@ -313,15 +301,21 @@ mV8_1: .byte "OFF             ",0
 mL9:     .byte "VIBRATO BUTTON ..... ",0
 mL10:    .byte "PORTAMENTO BUTTON .. ",0
 mL11:    .byte "SUSTAIN BUTTON ..... ",0
-mTasks:     .word mT0,mT1,mT2,mT3,mT4,mT5,mT6,mT7,mT8,mT9,mT10
-mT0:     .byte "VIBRATO         ",0
-mT1:     .byte "GLIDE           ",0
-mT2:     .byte "SUSTAIN         ",0
-mT3:     .byte "MUTE            ",0
-mT4:     .byte "BEND DOWN       ",0
-mT5:     .byte "OCTAVE UP       ",0
-mT6:     .byte "NEW CHORD       ",0
-mT7:     .byte "TAP TEMPO       ",0
-mT8:     .byte "BEAT ON/OFF     ",0
-mT9:     .byte "NEXT SOUND      ",0
-mT10:    .byte "NOTHING         ",0
+; the actions (SPACE, the keytar's buttons), in A_ order
+mActs:      .word mA0,mA1,mA2,mA3,mA4,mA5,mA6,mA7,mA8,mA9,mA10,mA11,mA12,mA13,mA14,mA15
+mA0:     .byte "MUTE            ",0
+mA1:     .byte "BEND DOWN       ",0
+mA2:     .byte "BEND UP         ",0
+mA3:     .byte "VIBRATO         ",0
+mA4:     .byte "TREMOLO         ",0
+mA5:     .byte "ARP             ",0
+mA6:     .byte "STUTTER         ",0
+mA7:     .byte "VINYL STOP      ",0
+mA8:     .byte "GLIDE           ",0
+mA9:     .byte "SUSTAIN         ",0
+mA10:    .byte "OCTAVE UP       ",0
+mA11:    .byte "NEW CHORD       ",0
+mA12:    .byte "TAP TEMPO       ",0
+mA13:    .byte "BEAT ON/OFF     ",0
+mA14:    .byte "NEXT SOUND      ",0
+mA15:    .byte "NOTHING         ",0

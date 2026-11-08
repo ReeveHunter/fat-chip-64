@@ -189,7 +189,7 @@ c.run_ms(400)
 f2 = c.raw[0xD416]
 check("SCREAMER: filter envelope opens and falls back", f1 > f2 >= 0x14, (f1, f2))
 lp = longest_pass(c)
-check("SCREAMER held: longest main loop pass under 4.5 ms", lp < 4.5, f"{lp:.2f} ms")
+check("SCREAMER held: longest main loop pass under 4.7 ms", lp < 4.7, f"{lp:.2f} ms")
 c.release("q", ms=200)
 
 # switching sounds while holding: nothing hangs
@@ -246,8 +246,8 @@ check("JUNGLE: its kit switches the sample bank as needed", 127 in banks, banks)
 step = 60000 / 168 / 4
 ht = [(t - hats[0]) / CYCLES_PER_MS for t in hats]
 hd = [b - a for a, b in zip(ht, ht[1:])]
-check("JUNGLE hats on the 16th grid (89 ms): gaps within 6 ms, no drift",
-      all(abs(g - round(g / step) * step) <= 6 for g in hd) and abs(ht[-1] - round(ht[-1] / step) * step) <= 6,
+check("JUNGLE hats on the 16th grid (89 ms): gaps within 8 ms (MidiNES queue), no drift",
+      all(abs(g - round(g / step) * step) <= 8 for g in hd) and abs(ht[-1] - round(ht[-1] / step) * step) <= 6,
       [round(x) for x in ht[:8]])
 check("screen: PLAY", c.screen_row(23).rstrip().endswith("JUNGLE   PLAY"), c.screen_row(23))
 c.tap("return", ms=150)

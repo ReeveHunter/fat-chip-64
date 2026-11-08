@@ -170,6 +170,31 @@ SendTempo:
 .x:
 	rts
 
+; t1:t0 = stepMs, stretched by VINYL STOP (x 1 + vinyl / 256: half speed at
+; the bottom, with the pitch an octave down)
+VinylStep:
+	subroutine
+	lda stepMs
+	sta t0
+	lda stepMs+1
+	sta t1
+	lda vinylLvl
+	beq .x
+	ldx t0
+	stx mulA
+	ldx t1
+	stx mulA+1
+	jsr Mul16x8
+	lda t0
+	clc
+	adc mulR+1
+	sta t0
+	lda t1
+	adc mulR+2
+	sta t1
+.x:
+	rts
+
 ; stepMs from the speed setting
 StepCalc:
 	subroutine
@@ -243,6 +268,12 @@ ArpModeKey:
 	ldx #0
 .s:
 	stx arpMode
+	lda #0
+	sta arpTemp             ; (A takes over from a held ARP)
+	txa
+	beq ArpModeApply
+	stx arpLast             ; ARP (SPACE / a button) turns this one on
+ArpModeApply:
 	lda #0
 	sta arpRunning          ; restart cleanly in the new mode
 	jsr ArpPan
@@ -371,12 +402,13 @@ ArpTick:
 	lda heldCount
 	beq .stop
 	jsr ArpStep
+	jsr VinylStep           ; (VINYL STOP: longer)
 	lda arpNext
 	clc
-	adc stepMs
+	adc t0
 	sta arpNext
 	lda arpNext+1
-	adc stepMs+1
+	adc t1
 	sta arpNext+1
 	; fell behind (rate change, long redraw)? start the count from now
 	lda nowL
@@ -399,12 +431,13 @@ ArpTick:
 	sta arpIdx
 	jsr ArpStep
 .fromNow:
+	jsr VinylStep
 	lda nowL
 	clc
-	adc stepMs
+	adc t0
 	sta arpNext
 	lda nowH
-	adc stepMs+1
+	adc t1
 	sta arpNext+1
 .x:
 	rts

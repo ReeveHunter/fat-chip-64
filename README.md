@@ -9,7 +9,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 **v0.13:** the menu and keytar sync.
 - **Menu (SHIFT+RETURN in and out):** CRSR DOWN / SHIFT+CRSR DOWN choose a line, CRSR RIGHT or RETURN the next value, SHIFT+CRSR RIGHT the previous one. Notes and the other keys keep working while it's up; the play screen pauses and redraws when it closes. Sections:
   - **SOUND:** FAT BASS — AS SOUND (default) / ALWAYS / NEVER.
-  - **PLAYING:** LATCH STYLE — SMART (default) / HOLD / ADD: what = turns on. SPACE — MUTES / BENDS (as , and .).
+  - **PLAYING:** LATCH STYLE — SMART (default) / HOLD / ADD: what = turns on. SPACE — its action (default **BEND DOWN**; , and . step through them too). BEND RANGE — 1–12 semitones (default 2), for the BEND actions and the keytar's wheel.
   - **DEVICE SYNC** (the keytar on MIDI in, and Synthcart):
     - TEMPO FROM — **KEYTAR** / OWN / SYNTHCART. KEYTAR: the keytar's MIDI clock sets the tempo (averaged over beats; the arp and the Game Boy follow; taps are ignored while it runs; 300 ms without a clock and Fat Chip's own tempo is back). SYNTHCART: taps and the beats' tempos snap to Synthcart's ten NTSC tempos (16–52 Atari frames a beat).
     - START/STOP — **KEYTAR** / OWN: the keytar's Start (or synchro start) starts the beat demo, step 1 on its next beat; Stop stops it. While following, every beat re-locks to the keytar's beat clock.
@@ -17,7 +17,10 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
     - DRUM NOTES — **IGNORE** / PLAY: the keytar's own drum hits on the MidiNES (v0.12 played them always).
     - VOICE BUTTONS — **PICK SOUND** / IGNORE: the keytar's 25 voices pick sounds (0–16 the 17 sounds, 17–24 repeat favourites).
     - WHEEL — **BEND** / OFF: ±2 semitones on the SID, Game Boy and NES (with the SPACE bend on top).
-    - VIBRATO / PORTAMENTO / SUSTAIN BUTTON — each **its own job** by default, or any of: VIBRATO, GLIDE, SUSTAIN, MUTE, BEND DOWN, OCTAVE UP (while held); NEW CHORD, TAP TEMPO, BEAT ON/OFF, NEXT SOUND (on a press); NOTHING. VIBRATO: SID vibrato (0.25 semitone, 5.5 Hz if the sound has none) and the Game Boy's LFO on pitch; GLIDE: SID glide and Game Boy glide; SUSTAIN: like a pedal. The NES doesn't vibrato or glide yet.
+    - VIBRATO / PORTAMENTO / SUSTAIN BUTTON — each **its own action** by default, or any other.
+- **Actions** (SPACE and the three keytar buttons share one list). While held: **MUTE**; **BEND DOWN** / **BEND UP** (to BEND RANGE over about 1 s, back in 0.5 s); **VIBRATO** (SID 0.25 semitone at 5.5 Hz if the sound has none, Game Boy LFO on pitch); **TREMOLO** (NES pulses and the SID's volume; the Game Boy has no tremolo yet); **ARP** (the arp runs in the last mode A picked, off again when let go); **STUTTER** (the notes keep sounding but cut out on random 16ths, never the first of a beat; on the beat demo's grid when it plays); **VINYL STOP** (pitch drops an octave over about 1 s and the beat and arp slow to half speed; let go and they wind back up in 0.5 s); **GLIDE** (SID and Game Boy); **SUSTAIN** (like a pedal); **OCTAVE UP** (incoming notes). On a press: **NEW CHORD**, **TAP TEMPO**, **BEAT ON/OFF**, **NEXT SOUND**; or **NOTHING**. The NES doesn't do vibrato or glide yet.
+- **Bends** are exact now (2^(semitones/12) on the SID, the MidiNES bend maths, the Game Boy's bend range set to 12), up to an octave.
+- **Voice table:** each voice shows the note it really plays (Fat Bass folding, a sound's octave offsets).
 - **; is now faster, : slower** (; is the rightmost).
 - Keytar accents (velocity 80) count as accents.
 
@@ -105,8 +108,8 @@ lowest key (Q) starts at C3.
 | B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Sent to the Game Boy (CC 107/108) |
 | **Sound control** | |
 | M | Mute everything: SID volume 0, Game Boy and NES note-offs (their release tails ring out). Border goes red. Notes come back on unmute |
-| , / . (< >) | What SPACE does: MUTES (default) ↔ BENDS. Shown on the tempo line |
-| SPACE | MUTES: while held, flips the mute (cut the sound, or hear it while muted). BENDS: while held, everything bends down 2 semitones over about 1 s; let go and it comes back over about 0.5 s |
+| , / . (< >) | What SPACE does: steps through the actions (default BEND DOWN; also in the menu). Shown on the tempo line |
+| SPACE | Its action while held (see Actions in v0.13): BEND DOWN by default — everything bends down BEND RANGE (2 semitones) over about 1 s, back over 0.5 s |
 | RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
 | **Setup-ish (for now)** | |
 | SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent |
@@ -193,7 +196,7 @@ voices ±7 cents.
 | `src/arp.asm` | tap tempo, arpeggiator |
 | `src/pads.asm` | Tri, SPARKLE octave (the sounds moved to sounds.asm) |
 | `src/midiin.asm` | MIDI in: receive, parse, MIDI slots, H / J octave |
-| `src/bend.asm` | SPACE modes, SPACE bend |
+| `src/bend.asm`, `tools/gen_bend.py` → `src/bendtab.asm` | bends (actions, wheel, VINYL STOP), SPACE's action keys |
 | `src/sounds.asm`, `tools/gen_sounds.py` → `src/soundtab.asm` | sounds (V), MONO (C), Fat Bass, SID effects, duty steps |
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
 | `src/menu.asm` | the menu (SHIFT+RETURN) |
