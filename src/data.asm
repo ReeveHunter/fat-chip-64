@@ -100,8 +100,9 @@ txtLOff:    .byte "OFF  ",0
 txtLHold:   .byte "HOLD ",0
 txtTempo:   .byte "B     BPM   M MUTE      <> SPACE",0
 ; SPACE's action on the tempo line (7 characters)
-spcTxtLo:   .byte <tS0,<tS1,<tS2,<tS3,<tS4,<tS5,<tS6,<tS7,<tS8,<tS9,<tS10,<tS11,<tS12,<tS13,<tS14,<tS15
-spcTxtHi:   .byte >tS0,>tS1,>tS2,>tS3,>tS4,>tS5,>tS6,>tS7,>tS8,>tS9,>tS10,>tS11,>tS12,>tS13,>tS14,>tS15
+spcTxtLo:   .byte <tS0,<tS1,<tS2,<tS3,<tS4,<tS5,<tS6,<tS7,<tS8,<tS9,<tS10,<tSR,<tS11,<tS12,<tS13,<tS14,<tS15
+spcTxtHi:   .byte >tS0,>tS1,>tS2,>tS3,>tS4,>tS5,>tS6,>tS7,>tS8,>tS9,>tS10,>tSR,>tS11,>tS12,>tS13,>tS14,>tS15
+tSR:        .byte "REPEAT ",0
 tS0:        .byte "MUTE   ",0
 tS1:        .byte "BEND DN",0
 tS2:        .byte "BEND UP",0

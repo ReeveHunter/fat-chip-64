@@ -5,7 +5,7 @@
 ; usual (notes play; V, F keys, = ... too: the values here follow).
 ; The play screen pauses while the menu is up and redraws when it closes.
 
-MENU_ITEMS  equ 13
+MENU_ITEMS  equ 17
 MENU_VALCOL equ 23
 
 
@@ -19,12 +19,12 @@ MenuOpen:
 	PRINT 0, 0, mTitle
 	lda #0
 	sta t2
-	PRINT 2, 0, mHdrSound
-	PRINT 5, 0, mHdrPlay
-	PRINT 10, 0, mHdrSync
-	PRINT 21, 0, mHelp1
-	PRINT 22, 0, mHelp2
-	PRINT 23, 0, mHelp3
+	PRINT 1, 0, mHdrSound
+	PRINT 7, 0, mHdrPlay
+	PRINT 11, 0, mHdrSync
+	PRINT 22, 0, mHelp1
+	PRINT 23, 0, mHelp2
+	PRINT 24, 0, mHelp3
 	ldx #0
 .i:
 	stx exK
@@ -238,16 +238,54 @@ mHdrSync:   .byte "DEVICE SYNC: KEYTAR (MIDI IN), SYNTHCART",0
 mHelp1:     .byte "CRSR DOWN / SHIFT+CRSR DOWN: CHOOSE",0
 mHelp2:     .byte "CRSR RIGHT OR RETURN: NEXT VALUE",0
 mHelp3:     .byte "SHIFT+CRSR RIGHT: PREVIOUS VALUE",0
-menuRowY:   .byte 3,6,7,8,11,12,13,14,15,16,17,18,19
-menuCount:  .byte 3,3,NUM_ACTS,12,3,2,2,2,2,2,NUM_ACTS,NUM_ACTS,NUM_ACTS
-menuLblLo:  .byte <mL0,<mL1,<mL2,<mLR,<mL3,<mL4,<mL5,<mL6,<mL7,<mL8,<mL9,<mL10,<mL11
-menuLblHi:  .byte >mL0,>mL1,>mL2,>mLR,>mL3,>mL4,>mL5,>mL6,>mL7,>mL8,>mL9,>mL10,>mL11
-menuVarLo:  .byte <fbLock,<latchStyle,<spaceAct,<bendRange,<syncTempo,<syncStart,<syncRhythm,<syncDrums,<syncVoice,<syncWheel,<btnTask,<[btnTask+1],<[btnTask+2]
-menuVarHi:  .byte >fbLock,>latchStyle,>spaceAct,>bendRange,>syncTempo,>syncStart,>syncRhythm,>syncDrums,>syncVoice,>syncWheel,>btnTask,>[btnTask+1],>[btnTask+2]
-menuValLo:  .byte <mV0,<mV1,<mActs,<mRange,<mV3,<mV4,<mV5,<mV6,<mV7,<mV8,<mActs,<mActs,<mActs
-menuValHi:  .byte >mV0,>mV1,>mActs,>mRange,>mV3,>mV4,>mV5,>mV6,>mV7,>mV8,>mActs,>mActs,>mActs
-menuHookLo: .byte <FatBassMenu,<LatchStyleHook,<SpaceHook,0,<TempoHook,0,0,0,0,<WheelHook,0,0,0
-menuHookHi: .byte >FatBassMenu,>LatchStyleHook,>SpaceHook,0,>TempoHook,0,0,0,0,>WheelHook,0,0,0
+menuRowY:   .byte 2,3,4,5,6, 8,9,10, 12,13,14,15,16,17,18,19,20
+menuCount:  .byte 3,3,14,8,6, 3,NUM_ACTS,12, 3,2,2,2,2,2,NUM_ACTS,NUM_ACTS,NUM_ACTS
+menuLblLo:  .byte <mL0,<mLP,<mLT,<mLN,<mLV,<mL1,<mL2,<mLR,<mL3,<mL4,<mL5,<mL6,<mL7,<mL8,<mL9,<mL10,<mL11
+menuLblHi:  .byte >mL0,>mLP,>mLT,>mLN,>mLV,>mL1,>mL2,>mLR,>mL3,>mL4,>mL5,>mL6,>mL7,>mL8,>mL9,>mL10,>mL11
+menuVarLo:  .byte <fbLock,<rpLock,<rpTime,<rpCount,<rpLevel,<latchStyle,<spaceAct,<bendRange,<syncTempo,<syncStart,<syncRhythm,<syncDrums,<syncVoice,<syncWheel,<btnTask,<[btnTask+1],<[btnTask+2]
+menuVarHi:  .byte >fbLock,>rpLock,>rpTime,>rpCount,>rpLevel,>latchStyle,>spaceAct,>bendRange,>syncTempo,>syncStart,>syncRhythm,>syncDrums,>syncVoice,>syncWheel,>btnTask,>[btnTask+1],>[btnTask+2]
+menuValLo:  .byte <mV0,<mVR,<mRT,<mRN,<mRV,<mV1,<mActs,<mRange,<mV3,<mV4,<mV5,<mV6,<mV7,<mV8,<mActs,<mActs,<mActs
+menuValHi:  .byte >mV0,>mVR,>mRT,>mRN,>mRV,>mV1,>mActs,>mRange,>mV3,>mV4,>mV5,>mV6,>mV7,>mV8,>mActs,>mActs,>mActs
+menuHookLo: .byte <FatBassMenu,<RepeatLockSet,0,0,0,<LatchStyleHook,<SpaceHook,0,<TempoHook,0,0,0,0,<WheelHook,0,0,0
+menuHookHi: .byte >FatBassMenu,>RepeatLockSet,0,0,0,>LatchStyleHook,>SpaceHook,0,>TempoHook,0,0,0,0,>WheelHook,0,0,0
+mLP:     .byte "REPEAT ............. ",0
+mVR:     .word mV0_0,mVR1,mVR2
+mVR1:    .byte "ON              ",0
+mVR2:    .byte "OFF             ",0
+mLT:     .byte "REPEAT TIME ........ ",0
+mRT:     .word mRT0,mRT1,mRT2,mRT3,mRT4,mRT5,mRT6,mRT7,mRT8,mRT9,mRT10,mRT11,mRT12,mRT13
+mRT0:    .byte "1/4             ",0
+mRT1:    .byte "1/8 DOTTED      ",0
+mRT2:    .byte "1/8             ",0
+mRT3:    .byte "1/8 TRIPLET     ",0
+mRT4:    .byte "1/16            ",0
+mRT5:    .byte "FREE 80 MS      ",0
+mRT6:    .byte "FREE 100 MS     ",0
+mRT7:    .byte "FREE 125 MS     ",0
+mRT8:    .byte "FREE 150 MS     ",0
+mRT9:    .byte "FREE 200 MS     ",0
+mRT10:   .byte "FREE 250 MS     ",0
+mRT11:   .byte "FREE 300 MS     ",0
+mRT12:   .byte "FREE 400 MS     ",0
+mRT13:   .byte "FREE 500 MS     ",0
+mLN:     .byte "REPEATS ............ ",0
+mRN:     .word mRN1,mRN2,mRN3,mRN4,mRN5,mRN6,mRN7,mRN8
+mRN1:    .byte "1               ",0
+mRN2:    .byte "2               ",0
+mRN3:    .byte "3               ",0
+mRN4:    .byte "4               ",0
+mRN5:    .byte "5               ",0
+mRN6:    .byte "6               ",0
+mRN7:    .byte "7               ",0
+mRN8:    .byte "8               ",0
+mLV:     .byte "REPEAT LEVEL ....... ",0
+mRV:     .word mRV0,mRV1,mRV2,mRV3,mRV4,mRV5
+mRV0:    .byte "FULL            ",0
+mRV1:    .byte "90 PERCENT      ",0
+mRV2:    .byte "80 PERCENT      ",0
+mRV3:    .byte "70 PERCENT      ",0
+mRV4:    .byte "60 PERCENT      ",0
+mRV5:    .byte "50 PERCENT      ",0
 mL0:     .byte "FAT BASS ........... ",0
 mV0:     .word mV0_0,mV0_1,mV0_2
 mV0_0: .byte "AS SOUND        ",0
@@ -302,7 +340,7 @@ mL9:     .byte "VIBRATO BUTTON ..... ",0
 mL10:    .byte "PORTAMENTO BUTTON .. ",0
 mL11:    .byte "SUSTAIN BUTTON ..... ",0
 ; the actions (SPACE, the keytar's buttons), in A_ order
-mActs:      .word mA0,mA1,mA2,mA3,mA4,mA5,mA6,mA7,mA8,mA9,mA10,mA11,mA12,mA13,mA14,mA15
+mActs:      .word mA0,mA1,mA2,mA3,mA4,mA5,mA6,mA7,mA8,mA9,mA10,mAR,mA11,mA12,mA13,mA14,mA15
 mA0:     .byte "MUTE            ",0
 mA1:     .byte "BEND DOWN       ",0
 mA2:     .byte "BEND UP         ",0
@@ -314,6 +352,7 @@ mA7:     .byte "VINYL STOP      ",0
 mA8:     .byte "GLIDE           ",0
 mA9:     .byte "SUSTAIN         ",0
 mA10:    .byte "OCTAVE UP       ",0
+mAR:     .byte "REPEAT          ",0
 mA11:    .byte "NEW CHORD       ",0
 mA12:    .byte "TAP TEMPO       ",0
 mA13:    .byte "BEAT ON/OFF     ",0

@@ -125,13 +125,14 @@ A_VINYL     equ 7
 A_GLIDE     equ 8
 A_SUS       equ 9
 A_OCTUP     equ 10
-A_HELD      equ 11
-A_NEWCHORD  equ 11
-A_TAP       equ 12
-A_BEAT      equ 13
-A_SOUND     equ 14
-A_NOTHING   equ 15
-NUM_ACTS    equ 16
+A_REPEAT    equ 11
+A_HELD      equ 12
+A_NEWCHORD  equ 12
+A_TAP       equ 13
+A_BEAT      equ 14
+A_SOUND     equ 15
+A_NOTHING   equ 16
+NUM_ACTS    equ 17
 BEND_DOWN_MS equ 4            ; bendLvl 0-255: +1 per 4 ms down (about 1 s)
 BEND_TICK   equ 20            ; ms between bend updates to the Game Boy / NES
 Q_BACKLOG   equ 8             ; messages waiting: a device skips voice changes
@@ -449,6 +450,30 @@ stutCut     ds 1               ; STUTTER: cut now
 stutAtL     ds 1               ; ... next 16th
 stutAtH     ds 1
 stutStep    ds 1
+; v0.13 REPEAT (repeat.asm)
+repeatOn    ds 1               ; the sound's / menu's REPEAT
+rpLock      ds 1               ; menu: 0 AS SOUND, 1 ON, 2 OFF
+rpTime      ds 1               ; REPEAT TIME (0-4 synced, 5-13 free ms)
+rpCount     ds 1               ; REPEATS - 1
+rpLevel     ds 1               ; REPEAT LEVEL (0 FULL .. 5 50 %)
+rpBusy      ds 1               ; something pending (RepeatTick works)
+rpKey       ds 1
+rpHi        ds 1
+rpK         ds 1
+rpVelNow    ds 1
+rpY         ds 1
+rpVoiceX    ds 1
+mtVel       ds 1               ; MidiTo's note-on velocity (VELOCITY, echoes quieter)
+vEcho       ds NUM_VOICES      ; an echo voice now
+rpOffOn     ds NUM_VOICES      ; its echo stops at rpOff
+rpOffL      ds NUM_VOICES
+rpOffH      ds NUM_VOICES
+rpOn        ds 16              ; echo slots: pending?
+rpAtL       ds 16              ;  when
+rpAtH       ds 16
+rpNote      ds 16
+rpVel       ds 16
+rpNum       ds 16              ;  which echo of its note (1, 2, ...)
 muteVis     ds 1               ; the mute you see (M, MUTE): border, screen
 wheelMag    ds 1               ; the wheel: 0-255 (255 = 2 semitones)
 wheelUp     ds 1               ;  1 = up

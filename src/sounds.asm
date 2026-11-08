@@ -118,6 +118,7 @@ SoundVars:
 	sta fEnv
 	sta dutyIdx
 	sta dutyMs
+	jsr RepeatFromSound
 	jmp FxVars
 
 ; fatBass from the sound, unless the menu locks it (ALWAYS / NEVER)

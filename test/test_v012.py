@@ -102,12 +102,12 @@ check("all off", notes_on(c.midi()) == {}, notes_on(c.midi()))
 
 # ---------------------------------------------------------------- sounds
 names = []
-for i in range(17):
+for i in range(19):
     c.run_ms(300)
     names.append(c.screen_row(1)[2:18].rstrip())
     c.tap("v", ms=20)
 c.run_ms(200)
-check("V steps through 17 sounds and back to FAT", len(set(names)) == 17 and c.screen_row(1).startswith("V FAT "), names)
+check("V steps through 19 sounds and back to FAT", len(set(names)) == 19 and c.screen_row(1).startswith("V FAT "), names)
 c.press("lshift", ms=12)
 c.tap("v", ms=150)
 c.release("lshift", ms=12)

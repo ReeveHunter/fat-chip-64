@@ -41,6 +41,21 @@ SpaceSet:
 ; Main loop, every pass.
 BendTick:
 	subroutine
+	; nothing bending, nothing to undo: just keep the clock (quick pass)
+	lda bendLvl
+	ora vinylLvl
+	ora wheelMag
+	ora bendMag
+	ora bendSent
+	ora bendSidMag
+	ora actCnt+A_BENDDN
+	ora actCnt+A_BENDUP
+	ora actCnt+A_VINYL
+	bne .work
+	lda ticks
+	sta bendLast
+	rts
+.work:
 	jsr GetTicks
 	lda nowL
 	sec

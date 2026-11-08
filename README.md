@@ -8,7 +8,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 
 **v0.13:** the menu and keytar sync.
 - **Menu (SHIFT+RETURN in and out):** CRSR DOWN / SHIFT+CRSR DOWN choose a line, CRSR RIGHT or RETURN the next value, SHIFT+CRSR RIGHT the previous one. Notes and the other keys keep working while it's up; the play screen pauses and redraws when it closes. Sections:
-  - **SOUND:** FAT BASS — AS SOUND (default) / ALWAYS / NEVER.
+  - **SOUND:** FAT BASS — AS SOUND (default) / ALWAYS / NEVER. REPEAT — AS SOUND / ON / OFF; REPEAT TIME — 1/4, 1/8 DOTTED, 1/8, 1/8 TRIPLET, 1/16, or FREE 80–500 ms; REPEATS — 1–8; REPEAT LEVEL — FULL, 90 … 50 PERCENT (each sound loads its own values when chosen).
   - **PLAYING:** LATCH STYLE — SMART (default) / HOLD / ADD: what = turns on. SPACE — its action (default **BEND DOWN**; , and . step through them too). BEND RANGE — 1–12 semitones (default 2), for the BEND actions and the keytar's wheel.
   - **DEVICE SYNC** (the keytar on MIDI in, and Synthcart):
     - TEMPO FROM — **KEYTAR** / OWN / SYNTHCART. KEYTAR: the keytar's MIDI clock sets the tempo (averaged over beats; the arp and the Game Boy follow; taps are ignored while it runs; 300 ms without a clock and Fat Chip's own tempo is back). SYNTHCART: taps and the beats' tempos snap to Synthcart's ten NTSC tempos (16–52 Atari frames a beat).
@@ -19,6 +19,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
     - WHEEL — **BEND** / OFF: ±2 semitones on the SID, Game Boy and NES (with the SPACE bend on top).
     - VIBRATO / PORTAMENTO / SUSTAIN BUTTON — each **its own action** by default, or any other.
 - **Actions** (SPACE and the three keytar buttons share one list). While held: **MUTE**; **BEND DOWN** / **BEND UP** (to BEND RANGE over about 1 s, back in 0.5 s); **VIBRATO** (SID 0.25 semitone at 5.5 Hz if the sound has none, Game Boy LFO on pitch); **TREMOLO** (NES pulses and the SID's volume; the Game Boy has no tremolo yet); **ARP** (the arp runs in the last mode A picked, off again when let go); **STUTTER** (the notes keep sounding but cut out on random 16ths, never the first of a beat; on the beat demo's grid when it plays); **VINYL STOP** (pitch drops an octave over about 1 s and the beat and arp slow to half speed; let go and they wind back up in 0.5 s); **GLIDE** (SID and Game Boy); **SUSTAIN** (like a pedal); **OCTAVE UP** (incoming notes). On a press: **NEW CHORD**, **TAP TEMPO**, **BEAT ON/OFF**, **NEXT SOUND**; or **NOTHING**. The NES doesn't do vibrato or glide yet.
+- **REPEAT (echoes):** each key you press plays again REPEATS times, every REPEAT TIME, each REPEAT LEVEL as loud as the last (by velocity). The echoes play on two echo voices (Game Boy pulse 2 and NES pulse 2 first), taken out of the chord while REPEAT is on, unless the notes you hold need them (held notes come first). Each echo lasts 3/4 of the gap. The SID doesn't echo. New sounds: **REPEAT LEAD** (mono lead, three 1/8 repeats at full volume) and **ECHO PLUCK** (a pluck with five dotted-1/8 echoes falling to 70 % each). REPEAT is also an action (held: echoes on).
 - **Bends** are exact now (2^(semitones/12) on the SID, the MidiNES bend maths, the Game Boy's bend range set to 12), up to an octave.
 - **Voice table:** each voice shows the note it really plays (Fat Bass folding, a sound's octave offsets).
 - **; is now faster, : slower** (; is the rightmost).
@@ -88,7 +89,7 @@ lowest key (Q) starts at C3.
 | K + a note | Set the key (hold K, press the key's root; the note doesn't play) |
 | L | Major / minor (natural minor) |
 | **Sound** | |
-| V / SHIFT+V | Next / previous sound (17: FAT, PADS, RAW and the Chip Lab demos, see v0.12). Each sets POLY / MONO and Fat Bass |
+| V / SHIFT+V | Next / previous sound (19: FAT, PADS, RAW, the Chip Lab demos, REPEAT LEAD and ECHO PLUCK). Each sets POLY / MONO and Fat Bass |
 | C | POLY ↔ MONO (legato, last key pressed) |
 | | PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES pulses swell and fade (software envelope via CC7), NES triangle just stops. RAW: the classic raw chip sound, FAT's stacking with everything square and instant: SID pulses at 50 / 25 / 12.5%, Game Boy pulses 50 / 25% and the wave channel as a third pulse, NES pulses 50 / 25%, no warble, no filter |
 | **Drums** | |
@@ -200,6 +201,7 @@ voices ±7 cents.
 | `src/sounds.asm`, `tools/gen_sounds.py` → `src/soundtab.asm` | sounds (V), MONO (C), Fat Bass, SID effects, duty steps |
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
 | `src/menu.asm` | the menu (SHIFT+RETURN) |
+| `src/repeat.asm` | REPEAT (echoes) |
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |

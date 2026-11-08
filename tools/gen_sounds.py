@@ -20,6 +20,10 @@ Units:
         lfo = (dest 0 pitch / 1 duty, shape 0-4, rate 0-31, depth 0-31, delay 0-15),
         det = cents (pulse 1 -, pulse 2 +), lvl = pulses 0-15, lvlw = wave 0-15,
         oct = pulses play this many semitones up
+  rep   REPEAT default: (time, repeats, level): time 0 1/4, 1 1/8 dotted,
+        2 1/8, 3 1/8T, 4 1/16, 5-13 FREE 80/100/125/150/200/250/300/400/500
+        ms; repeats 1-8; level 0 FULL, 1 90 %, 2 80 %, 3 70 %, 4 60 %, 5 50 %.
+        Without it REPEAT starts off (1/8 dotted, 3, 70 % if turned on).
   nes   env = None (no envelope, full volume) or (attack s, decay s, sustain 0-1,
         release s); peak = loudest level 0-15; duty 0-3 per pulse;
         trem = (depth 0-15, Hz, square)
@@ -106,6 +110,15 @@ SOUNDS = [
          sid=dict(wave="saw", ad=0x6A, sr=0xEA, det=16, vib=(0.3, 1.2, 0, 1)),
          gb=dict(atk=1, rel=4, duty=(2, 2), wave=WAVE_SAW, lvl=9, lvlw=12, warble=70, wspeed=25, det=14),
          nes=dict(env=(0.3, 0, 1, 1), peak=8, duty=(1, 1))),
+    # ------------------------------------------------ REPEAT (v0.13)
+    dict(name="REPEAT LEAD", mono=1, fb=0, rep=(2, 3, 0),
+         sid=dict(wave="pulse", ad=0x08, sr=0xC6, pw=0x600, det=8, vib=(0.15, 5.5, 0.3, 0)),
+         gb=dict(atk=0, rel=1, duty=(1, 1), wave=WAVE_SQ, lvl=11, lvlw=12, det=5),
+         nes=dict(env=(0, 0, 1, 0.1), peak=11, duty=(1, 1))),
+    dict(name="ECHO PLUCK", mono=0, fb=1, rep=(1, 5, 3),
+         sid=dict(wave="pulse", ad=0x09, sr=0x09, pw=0x400, det=6),
+         gb=dict(atk=0, dec=2, rel=1, duty=(2, 2), wave=WAVE_TRI, lvl=11, det=5),
+         nes=dict(env=(0, 0.4, 0, 0.2), peak=11, duty=(2, 2))),
     dict(name="TREMOLO GATE", mono=0, fb=1,
          sid=dict(wave="pulse", ad=0x3A, sr=0xD9, pw=1600, det=8),
          gb=dict(atk=0, rel=2, duty=(2, 2), wave=WAVE_SQ, lvl=11, det=5),
@@ -145,6 +158,11 @@ def build():
     for s in SOUNDS:
         S, G, N = s["sid"], s["gb"], s["nes"]
         put("sndMono", s["mono"])
+        rp = s.get("rep")
+        put("sndRp", 1 if rp else 0)
+        put("sndRpTime", rp[0] if rp else 1)
+        put("sndRpCount", (rp[1] if rp else 3) - 1)
+        put("sndRpLevel", rp[2] if rp else 3)
         put("sndFat", s["fb"])
         # SID
         put("sndAD", S["ad"])

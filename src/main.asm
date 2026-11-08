@@ -70,6 +70,7 @@ Loop:
 	jsr BeatTick            ; beat demos
 	jsr DrumTick            ; noise hits end
 	jsr StutterTick         ; STUTTER held
+	jsr RepeatTick          ; REPEAT's echoes
 	lda reallocFlag
 	beq .noAlloc
 	lda #0
@@ -207,6 +208,8 @@ InitState:
 	lda #$80                ; drums: the last hits were long ago
 	sta dmcAt+1
 	sta nzAt+1
+	lda #VELOCITY
+	sta mtVel
 	lda #A_VIB              ; the keytar buttons: vibrato, glide, sustain
 	sta btnTask
 	lda #A_GLIDE
@@ -339,6 +342,7 @@ Nmi:
 	include "bend.asm"
 	include "midiin.asm"
 	include "sounds.asm"
+	include "repeat.asm"
 	include "drums.asm"
 	include "sync.asm"
 	include "menu.asm"

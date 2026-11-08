@@ -199,6 +199,7 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 	lda #1
 	sta physKey,x
 	inc physCount
+	jsr RepeatPress         ; REPEAT: its echoes (keeps X)
 	jsr GetTicks
 	jsr ApplySettings       ; (changes waiting for this note)
 	lda newPending          ; N or a setting change: this note starts a new chord

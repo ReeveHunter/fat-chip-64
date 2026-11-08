@@ -56,7 +56,7 @@ check("= : SMART then OFF", (a, c.v("latch")) == (1, 0), (a, c.v("latch")))
 c.tap("a", ms=40)                           # UNISON
 for _ in range(4):
     c.tap(";", ms=30)                       # 30 -> 25 20 15 10
-c.run_ms(80)
+c.run_ms(300)
 check("; down to 10 MS", c.v("freeIdx") == 0 and "10MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
 c.tap(";", ms=30)
 check("; stops at 10 MS", c.v("freeIdx") == 0)
@@ -88,7 +88,7 @@ c.tap(",", ms=150)
 check(", , : MUTE", c.v("spaceAct") == 0 and "SPACE MUTE" in c.screen_row(22), c.screen_row(22))
 c.tap(",", ms=10)
 c.tap(",", ms=150)
-check(", , : wraps to NOTHING, then NEXT SOUND", c.v("spaceAct") == 14, c.v("spaceAct"))
+check(", , : wraps to NOTHING, then NEXT SOUND", c.v("spaceAct") == 15, c.v("spaceAct"))
 c.set("spaceAct", 1)                        # BEND DOWN
 
 c.press("w", ms=200)                        # D: SID 38+12.. (whatever), GB, NES

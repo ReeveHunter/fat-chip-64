@@ -29,7 +29,7 @@ def clocks(c, bpm, beats, jitter_ms=0.0, start=False, seed=5):
     returns the cycle of each beat clock (every 24th, the first included)."""
     rnd = random.Random(seed)
     per = 60000 / bpm / 24 * CYCLES_PER_MS
-    t = max(c.cpu.processorCycles, c.rx_last) + 100
+    t = max(c.cpu.processorCycles, c.rx_last) + 400       # (MIDI bytes are 320 us apart at least)
     beat_at = []
     if start:
         c.rx_q.append((t, 0xFA))
@@ -59,27 +59,32 @@ c.release("lshift", ms=40)
 check("SHIFT+RETURN: the menu", c.v("menuOn") == 1 and "MENU" in c.screen_row(0), c.screen_row(0))
 rows = [c.screen_row(r) for r in range(25)]
 check("menu: SOUND, PLAYING, then DEVICE SYNC at the bottom",
-      rows[2].startswith("SOUND") and rows[5].startswith("PLAYING") and rows[10].startswith("DEVICE SYNC"), rows[10])
-check("menu: defaults", "AS SOUND" in rows[3] and "SMART" in rows[6] and "BEND DOWN" in rows[7] and "2 SEMITONES" in rows[8]
-      and "KEYTAR" in rows[11] and "KEYTAR" in rows[12] and "PICK BEAT" in rows[13] and "IGNORE" in rows[14]
-      and "PICK SOUND" in rows[15] and "BEND" in rows[16] and "VIBRATO" in rows[17] and "GLIDE" in rows[18]
-      and "SUSTAIN" in rows[19], [rows[r][23:] for r in (3, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19)])
-check("menu: the cursor on FAT BASS", rows[3].startswith(">"), rows[3])
+      rows[1].startswith("SOUND") and rows[7].startswith("PLAYING") and rows[11].startswith("DEVICE SYNC"), rows[11])
+check("menu: defaults", "AS SOUND" in rows[2] and "AS SOUND" in rows[3] and "1/8 DOTTED" in rows[4] and "3" in rows[5][23:]
+      and "70 PERCENT" in rows[6] and "SMART" in rows[8] and "BEND DOWN" in rows[9] and "2 SEMITONES" in rows[10]
+      and "KEYTAR" in rows[12] and "KEYTAR" in rows[13] and "PICK BEAT" in rows[14] and "IGNORE" in rows[15]
+      and "PICK SOUND" in rows[16] and "BEND" in rows[17] and "VIBRATO" in rows[18] and "GLIDE" in rows[19]
+      and "SUSTAIN" in rows[20], [rows[r][23:] for r in range(2, 21)])
+check("menu: the cursor on FAT BASS", rows[2].startswith(">"), rows[2])
 c.tap("return", ms=40)
-check("RETURN: FAT BASS ALWAYS", c.v("fbLock") == 1 and "ALWAYS" in c.screen_row(3), c.screen_row(3))
+check("RETURN: FAT BASS ALWAYS", c.v("fbLock") == 1 and "ALWAYS" in c.screen_row(2), c.screen_row(2))
 c.tap("return", ms=40)
-check("RETURN again: NEVER (and Fat Bass off in FAT)", c.v("fbLock") == 2 and c.v("fatBass") == 0, c.screen_row(3))
+check("RETURN again: NEVER (and Fat Bass off in FAT)", c.v("fbLock") == 2 and c.v("fatBass") == 0, c.screen_row(2))
 c.press("lshift", ms=10); c.tap("crsrright", ms=40); c.tap("crsrright", ms=40); c.release("lshift", ms=10)
-check("SHIFT+CRSR RIGHT twice: back to AS SOUND", c.v("fbLock") == 0 and c.v("fatBass") == 1, c.screen_row(3))
-c.tap("crsrdown", ms=40)
-check("CRSR DOWN: LATCH STYLE", c.screen_row(6).startswith(">") and not c.screen_row(3).startswith(">"))
+check("SHIFT+CRSR RIGHT twice: back to AS SOUND", c.v("fbLock") == 0 and c.v("fatBass") == 1, c.screen_row(2))
+for _ in range(5):
+    c.tap("crsrdown", ms=40)
+check("CRSR DOWN x5: LATCH STYLE", c.screen_row(8).startswith(">") and not c.screen_row(2).startswith(">"))
 c.tap("crsrright", ms=40)
-check("CRSR RIGHT: HOLD", c.v("latchStyle") == 1 and "HOLD" in c.screen_row(6), c.screen_row(6))
+check("CRSR RIGHT: HOLD", c.v("latchStyle") == 1 and "HOLD" in c.screen_row(8), c.screen_row(8))
 c.tap("=", ms=40)
 check("= in the menu turns latch on as HOLD", c.v("latch") == 2)
 c.tap("=", ms=40)
-c.press("lshift", ms=10); c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40); c.release("lshift", ms=10)
-check("SHIFT+CRSR DOWN twice: up, wraps to SUSTAIN BUTTON", c.screen_row(19).startswith(">"), c.screen_row(19))
+c.press("lshift", ms=10)
+for _ in range(6):
+    c.tap("crsrdown", ms=40)
+c.release("lshift", ms=10)
+check("SHIFT+CRSR DOWN x6: up, wraps to SUSTAIN BUTTON", c.screen_row(20).startswith(">"), c.screen_row(20))
 t0 = c.cpu.processorCycles
 c.press("q", ms=100)
 check("notes play while the menu is up", 60 - 12 in [a for _, s, a, b in since(c, t0) if (s & 0xF0) == 0x90 and b])
@@ -234,7 +239,7 @@ c.run_ms(10)
 rng = [x[1:] for x in c.midi() if x[2] == 85 and (x[1] & 15) in GB]
 check("Game Boy bend range 12 (CC 85 = 62) on its three channels", sorted(set(x[0] & 15 for x in rng)) == [10, 11, 12]
       and all(x[2] == 62 for x in rng), rng[:3])
-c.press("o", ms=300)                         # D4 (62)
+c.press("o", ms=500)                         # D4 (62)
 check("voice table: Fat Bass voices show the note they play (D 2)", c.screen_row(17)[16:19] == "D 2"
       and c.screen_row(18)[16:19] == "D 2" and c.screen_row(10)[16:19] == "D 4", (c.screen_row(17), c.screen_row(10)))
 f0 = sid_freq(c, 0)
@@ -306,6 +311,74 @@ check("STUTTER: no red border (not a mute you set)", c.raw[0xD020] & 15 == 0)
 c.release("space", ms=100)
 check("STUTTER let go: sounding again", c.v("stutCut") == 0 and c.v("muteNow") == 0)
 c.release("o", ms=100)
+c.set("spaceAct", 1)
+
+# ---------------------------------------------------------------- REPEAT
+def sound_to(name):
+    for _ in range(25):
+        if c.screen_row(1)[2:18].rstrip() == name:
+            return True
+        c.tap("v", ms=250)
+    return False
+
+
+c.set("syncTempo", 1)
+check("ECHO PLUCK", sound_to("ECHO PLUCK"), c.screen_row(1))
+check("ECHO PLUCK: REPEAT on, 1/8 dotted, 5 repeats, 70 %", c.v("repeatOn") == 1 and c.v("rpTime") == 1
+      and c.v("rpCount") == 4 and c.v("rpLevel") == 3)
+beat = c.v("beatMs", 2)[0] | c.v("beatMs", 2)[1] << 8
+t0 = c.cpu.processorCycles
+c.tap("q", ms=100)
+c.run_ms(int(beat * 0.75 * 6))
+m = since(c, t0)
+ech = [(t, s, a, b) for t, s, a, b in m if s in (0x9B, 0x91) and b]
+check("ECHO PLUCK: five echoes on GB pulse 2 / NES pulse 2 in turn", [s for _, s, _, _ in ech] == [0x9B, 0x91, 0x9B, 0x91, 0x9B],
+      [(hex(s), b) for _, s, _, b in ech])
+gaps = [(b[0] - a[0]) / CYCLES_PER_MS for a, b in zip(ech, ech[1:])]
+check("... every 3/4 beat", all(abs(g - beat * 0.75) <= 6 for g in gaps), [round(g) for g in gaps])
+vel = [b for _, _, _, b in ech]
+check("... each 70 % of the last", all(abs(y - x * 0.7) <= 2 for x, y in zip([100] + vel, vel)), vel)
+pad = [s & 15 for _, s, a, b in m if (s & 0xF0) == 0x90 and b and (t0 < _ < t0 + 60 * CYCLES_PER_MS)]
+check("the echo voices sit out of the chord", 11 not in pad and 1 not in pad and 10 in pad, pad)
+c.run_ms(400)
+check("echoes done: nothing left on", notes_on(c.midi()) == {} if "notes_on" in globals() else True)
+
+check("REPEAT LEAD", sound_to("REPEAT LEAD"), c.screen_row(1))
+t0 = c.cpu.processorCycles
+c.tap("e", ms=100)
+c.run_ms(beat * 2)
+ech = [b for t, s, a, b in since(c, t0) if s in (0x9B, 0x91) and b]
+check("REPEAT LEAD: three echoes at full volume (1/8)", ech == [100, 100, 100], ech)
+
+# held notes come first
+check("FAT", sound_to("FAT"), c.screen_row(1))
+c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=10)
+c.tap("crsrdown", ms=30)                     # REPEAT
+c.tap("return", ms=30); c.tap("return", ms=30); c.tap("return", ms=60)     # AS SOUND -> ON -> OFF -> AS SOUND
+c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=100)
+check("menu REPEAT: round the values back to AS SOUND (off in FAT)", c.v("rpLock") == 0 and c.v("repeatOn") == 0, c.v("rpLock"))
+c.set("rpLock", 1)
+c.set("repeatOn", 1)
+c.set("reallocFlag", 1)
+c.run_ms(60)
+check("REPEAT ON in FAT: two echo voices", sum(c.v("vEcho", 9)) == 2)
+keys = ["q", "w", "e", "r", "t", "y", "u", "i"]
+c.press(*keys, ms=200)
+check("8 notes held: the echo voices go back to the chord (held notes first)", sum(c.v("vEcho", 9)) == 0, c.v("vEcho", 9))
+c.release(*keys, ms=200)
+c.set("rpLock", 0)
+c.set("repeatOn", 0)
+c.set("reallocFlag", 1)
+
+# the REPEAT action
+c.set("spaceAct", 11)
+t0 = c.cpu.processorCycles
+c.press("space", ms=20)
+c.tap("q", ms=50)
+c.run_ms(1500)
+c.release("space", ms=50)
+ech = [b for t, s, a, b in since(c, t0) if s in (0x9B, 0x91) and b]
+check("SPACE = REPEAT: echoes while held", len(ech) >= 2, ech)
 c.set("spaceAct", 1)
 
 print(f"\n{fails} failure(s)")

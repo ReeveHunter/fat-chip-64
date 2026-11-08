@@ -437,8 +437,8 @@ KeytarVoice:
 ;   Jazz Waltz, R'n'R 1/2, Rock-a-Ballad, Hard Rock, Reggae, Bossa Nova,
 ;   Samba, Tango, Country, Bluegrass, March 1/2, Lullaby, Baroque, Fanfare
 styleBeat:  .byte 3,3,0,2,5,3,1,4,4,5,4,4,5,4,3,0,1,0,4,2,4,4,5,0,4
-; the keytar's 25 voices -> sounds (17 so far; the last eight repeat some)
-voiceSound: .byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16, 3,6,7,10,12,13,15,16
+; the keytar's 25 voices -> sounds (19 so far; the last six repeat favourites)
+voiceSound: .byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18, 3,4,6,7,10,11
 
 ; Control change rxD1 = rxD2 on a key channel: the three buttons
 KeytarCC:
@@ -529,7 +529,7 @@ DoAction:
 	rts
 
 heldJump:   .word ActMute-1, ActNone-1, ActNone-1, ActVib-1, ActTrem-1, ActArp-1
-	        .word ActStut-1, ActNone-1, ActGlide-1, ActSus-1, ActOctUp-1
+	        .word ActStut-1, ActNone-1, ActGlide-1, ActSus-1, ActOctUp-1, ActRepeat-1
 pressJump:  .word NewChordKey-1, TapTempo-1, BeatRunKey-1, ActSound-1
 
 ; Panic: every held action ends
@@ -560,6 +560,13 @@ ActionsEnd:
 	sta arpMode
 	jsr ArpModeApply
 .a:
+	ldy #RP_SLOTS-1         ; no echoes waiting
+	lda #0
+.r:
+	sta rpOn,y
+	dey
+	bpl .r
+	jsr RepeatChanged
 	jsr FxButtons
 	jmp MuteChanged
 
@@ -577,6 +584,9 @@ ActVib:
 ActGlide:
 	sta glideBtn
 	jmp FxButtons
+
+ActRepeat:                      ; REPEAT held: echoes on (RepeatActive reads actCnt)
+	jmp RepeatChanged
 
 ActTrem:
 	sta tremBtn             ; (TremTick does it)

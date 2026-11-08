@@ -347,6 +347,7 @@ Allocate:
 	sta allocCount
 .w0:
 	jsr ArpPairSet          ; SPARKLE: keep the arp pair out of the pad
+	jsr RepeatSet           ; REPEAT: the echo voices too
 	; nothing wanted yet
 	ldx #NUM_VOICES-1
 	lda #NO_NOTE
@@ -356,7 +357,7 @@ Allocate:
 	bpl .w
 	lda allocCount
 	bne .go
-	jmp ArpPairNotes
+	jmp AllocDone
 .go:
 	ldx #7
 	lda #0
@@ -434,7 +435,9 @@ Allocate:
 	inx
 	cpx #NUM_VOICES
 	bne .p3
-	jmp ArpPairNotes
+AllocDone:
+	jsr ArpPairNotes
+	jmp EchoKeep
 
 ; SPARKLE's two arp voices: Game Boy pulses, else NES pulses, else SID 1+2.
 ; vSkip keeps them out of the pad.
@@ -540,6 +543,10 @@ ApplyVoices:
 	ldx #0
 .v:
 	stx t0
+	lda vEcho,x             ; echo voices: REPEAT plays them (repeat.asm)
+	beq .pad
+	jmp .next
+.pad:
 	lda #0
 	sta t3                  ; retrigger?
 	lda vArpHit,x           ; an arp step re-attacks its voices
@@ -866,7 +873,7 @@ MidiTo:
 	lda t1
 	ora #$90
 	sta mS
-	lda #VELOCITY
+	lda mtVel
 	sta mD2
 	jsr DevPut
 .done:
@@ -899,7 +906,7 @@ MidiLegato:
 	lda t1
 	ora #$90
 	sta mS
-	lda #VELOCITY
+	lda mtVel
 	sta mD2
 	jmp DevPut
 .noteOff:
