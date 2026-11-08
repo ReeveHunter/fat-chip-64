@@ -66,6 +66,7 @@ Loop:
 	jsr ArpTick             ; every pass, so arp steps land on time
 	jsr NesEnvTick          ; MidiNES envelopes (PADS)
 	jsr BendTick            ; SPACE bend
+	jsr ClockTick           ; the keytar's clock: tempo
 	jsr BeatTick            ; beat demos
 	jsr DrumTick            ; noise hits end
 	lda reallocFlag
@@ -205,6 +206,10 @@ InitState:
 	lda #$80                ; drums: the last hits were long ago
 	sta dmcAt+1
 	sta nzAt+1
+	lda #1                  ; the keytar buttons: vibrato, glide, sustain
+	sta btnTask+1
+	lda #2
+	sta btnTask+2
 	jsr SoundVars           ; FAT's settings
 	lda #OCT_DEFAULT
 	sta octBase
@@ -216,6 +221,10 @@ InitState:
 	sta beatMs
 	lda #>500
 	sta beatMs+1
+	lda #<8000              ; (x 16)
+	sta beat16L
+	lda #>8000
+	sta beat16H
 	lda #ARP_FREE           ; FREE, 30 ms
 	sta arpLen
 	lda #FREE_DEFAULT
@@ -262,18 +271,10 @@ Irq:
 	txa
 	pha
 	lda CIA1_ICR            ; acknowledge
-	lda ACIA_STAT           ; MIDI in: a received byte? (RxByte, inline)
+	lda ACIA_STAT           ; MIDI in: a received byte? (quick check inline)
 	lsr
 	bcc .noRx
-	lda ACIA_RX
-	ldx rxHead
-	sta rxBuf,x
-	inx
-	txa
-	and #63
-	cmp rxTail
-	beq .noRx               ; full: dropped
-	sta rxHead
+	jsr RxGot
 .noRx:
 	ldx wireTail
 	cpx wireHead
@@ -330,6 +331,8 @@ Nmi:
 	include "midiin.asm"
 	include "sounds.asm"
 	include "drums.asm"
+	include "sync.asm"
+	include "menu.asm"
 	include "screen.asm"
 	include "data.asm"
 	include "tables.asm"

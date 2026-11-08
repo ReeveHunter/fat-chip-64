@@ -76,8 +76,8 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(4).rstrip().endswith("CH 11-15") and c.screen_row(5).rstrip().endswith("CH 1-5")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(4), c.screen_row(5)))
-check("screen: header V0.12, sound line, beat line",
-      "V0.12" in c.screen_row(0) and c.screen_row(1).startswith("V FAT ") and "POLY" in c.screen_row(1)
+check("screen: header V0.13, sound line, beat line",
+      "V0.13" in c.screen_row(0) and c.screen_row(1).startswith("V FAT ") and "POLY" in c.screen_row(1)
       and "FAT BASS" in c.screen_row(1) and c.screen_row(23).rstrip().endswith("G ELECTRO  STOP"),
       (c.screen_row(1), c.screen_row(23)))
 t0 = c.cpu.processorCycles
@@ -201,6 +201,7 @@ c.release("q", "t", ms=2500)
 check("sound changes while holding: nothing left on", notes_on(c.midi()) == {}, notes_on(c.midi()))
 
 # ---------------------------------------------------------------- keytar drums (MIDI in ch 16)
+c.set("syncDrums", 1)                        # v0.13: the menu's DRUM NOTES = PLAY (default IGNORE)
 t0 = c.cpu.processorCycles
 c.midi_in(0x9F, 45, 127, ms=20)              # kick accent
 c.midi_in(0x9F, 57, 64, ms=20)               # hat

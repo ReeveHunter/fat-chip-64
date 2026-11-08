@@ -107,14 +107,14 @@ check("N: chord gone, arp stopped", all(v == 255 for v in c.v("vNote", 9)))
 
 # ---------------------------------------------------------------- free speed
 c.tap("s", ms=10)                           # UP again
-c.tap(";", ms=30)                           # picks FREE (30 ms)
+c.tap(":", ms=30)                           # picks FREE (30 ms)
 c.run_ms(60)
 check("; picks FREE", "30MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
 for _ in range(6):
-    c.tap(";", ms=30)                       # 40 50 60 75 90 110
-c.tap(":", ms=30); c.tap(";", ms=30)        # : faster, ; slower: 110 ms
-c.run_ms(80)
-check(": faster / ; slower: 110 MS", "110MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+    c.tap(":", ms=30)                       # 40 50 60 75 90 110
+c.tap(";", ms=30); c.tap(":", ms=30)        # ; faster, : slower (v0.13: ; is the rightmost): 110 ms
+c.run_ms(250)
+check("; faster / : slower: 110 MS", "110MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
 t0 = c.cpu.processorCycles
 c.tap("q", ms=30); c.tap("w", ms=30)
 c.run_ms(1200)

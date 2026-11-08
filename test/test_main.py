@@ -221,7 +221,7 @@ c.release("q", "t", ms=40)
 check("hold: notes pressed together add up", {48, 55} <= sounding(), sounding())
 c.tap("n", ms=20); c.tap("n", ms=60)
 
-c.set("latch", 3); c.set("screenDirty", 1); c.run_ms(80)
+c.set("latch", 3); c.set("screenDirty", 1); c.run_ms(150)
 check("ADD (set directly)", "ADD" in c.screen_row(21), c.screen_row(21))
 for k in ("q", "e", "t"):                   # one at a time, slowly
     c.tap(k, ms=40)

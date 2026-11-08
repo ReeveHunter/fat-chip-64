@@ -55,11 +55,11 @@ check("= : SMART then OFF", (a, c.v("latch")) == (1, 0), (a, c.v("latch")))
 # ---------------------------------------------------------------- fastest arp
 c.tap("a", ms=40)                           # UNISON
 for _ in range(4):
-    c.tap(":", ms=30)                       # 30 -> 25 20 15 10
+    c.tap(";", ms=30)                       # 30 -> 25 20 15 10
 c.run_ms(80)
-check(": down to 10 MS", c.v("freeIdx") == 0 and "10MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
-c.tap(":", ms=30)
-check(": stops at 10 MS", c.v("freeIdx") == 0)
+check("; down to 10 MS", c.v("freeIdx") == 0 and "10MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+c.tap(";", ms=30)
+check("; stops at 10 MS", c.v("freeIdx") == 0)
 t0 = c.cpu.processorCycles
 peak = [0, 0]
 c.press("q", "e", "t", "u")                 # C E G B

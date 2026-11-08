@@ -47,7 +47,7 @@ vn8:        .byte "NES TRIANGLE",0
 
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.12 ",0
+txtHeader:  .byte " FAT CHIP 64                      V0.13 ",0
 txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0

@@ -65,11 +65,14 @@ BendTick:
 	lsr
 	lsr
 	sta bT0                 ; n
+	lda bendBtn             ; the keytar's BEND DOWN button, held
+	bne .down
 	lda spaceDown
 	beq .up
 	lda spaceMode
 	cmp #SPC_BEND
 	bne .up
+.down:
 	; down: +n, to 255
 	lda bendLvl
 	cmp #255
@@ -91,13 +94,49 @@ BendTick:
 	lda #0
 .set:
 	sta bendLvl
-	jsr SidBendAll
 .midi:
-	lda bendLvl
+	; v0.13: the bend everything gets = the wheel (up or down) and the SPACE
+	; bend (down) together: bendMag (0-255 = 2 semitones), bendUp
+	lda wheelUp
+	bne .wu
+	lda wheelMag
+	clc
+	adc bendLvl
+	bcc .wd
+	lda #255
+.wd:
+	ldx #0
+	beq .comb
+.wu:
+	lda wheelMag
+	sec
+	sbc bendLvl
+	ldx #1
+	bcs .comb
+	eor #$FF                ; the SPACE bend is bigger: down
+	adc #1
+	ldx #0
+.comb:
+	sta bendMag
+	stx bendUp
+	cmp bendSidMag
+	bne .sid
+	cpx bendSidUp
+	beq .mid2
+.sid:
+	sta bendSidMag
+	stx bendSidUp
+	jsr SidBendAll
+.mid2:
+	lda bendMag
 	cmp bendSent
+	bne .chg
+	lda bendUp
+	cmp bendSentUp
 	beq .x
+.chg:
 	; not more often than BEND_TICK, unless it's the final centring
-	lda bendLvl
+	lda bendMag
 	beq .send
 	lda nowL
 	sec
@@ -126,8 +165,10 @@ BendTick:
 .ok:
 	lda nowL
 	sta bendSentAt
-	lda bendLvl
+	lda bendMag
 	sta bendSent
+	lda bendUp
+	sta bendSentUp
 	jmp BendMidiAll
 .x:
 	rts
@@ -146,7 +187,7 @@ SidBendAll:
 ; Keeps Y.
 SidFreqOut:
 	subroutine
-	lda bendLvl
+	lda bendMag
 	bne .bend
 	lda sidBaseLo,y
 	sta bT2
@@ -158,7 +199,9 @@ SidFreqOut:
 	lsr
 	lsr
 	sta bT0                 ; lvl / 8
-	lda bendLvl
+	ldx bendUp
+	bne .upK                ; up: x (1 + lvl / 8 / 256), 2 semitones at 255
+	lda bendMag
 	lsr
 	lsr
 	lsr
@@ -184,6 +227,26 @@ SidFreqOut:
 	sta bT2
 	lda bT3
 	sbc mulR+2
+	sta bT3
+	jmp .w
+.upK:
+	lda bT0
+	sta mulB
+	lda #0
+	sta mulB+1
+	lda sidBaseLo,y
+	sta mulA
+	sta bT2
+	lda sidBaseHi,y
+	sta mulA+1
+	sta bT3
+	jsr Mul16
+	lda bT2
+	clc
+	adc mulR+1
+	sta bT2
+	lda bT3
+	adc mulR+2
 	sta bT3
 .w:
 	lda vibAmt,y            ; vibrato (sounds.asm)
@@ -229,7 +292,7 @@ GbBendVoice:
 	and #15
 	ora #$E0
 	sta mS
-	lda bendLvl
+	lda bendMag
 	sta bT3
 	lda #0
 	sta bT2                 ; bT2:bT3 = lvl (hi:lo)
@@ -239,7 +302,7 @@ GbBendVoice:
 	rol bT2
 	dex
 	bne .sh                 ; x 32
-	jsr BendFromDrop
+	jsr BendFromAmt
 	jmp GbPut
 
 ; MidiNES voice t0, sounding note A (vOut style, NO_NOTE = centre): the bend
@@ -257,22 +320,29 @@ NesBendVoice:
 	lda #0
 	sta bT2
 	sta bT3                 ; no drop
-	lda bendLvl
-	beq .send
+	lda bendMag
+	beq .send0
 	lda bT1
 	cmp #NO_NOTE
-	beq .send
+	bne .note
+.send0:
+	jmp .send
+.note:
 	jsr MidiNoteValue       ; (bass voices an octave down)
 	sta bT1
 	ldx t0
 	lda vIdx,x
 	cmp #2
 	beq .tri
+	lda bendUp
+	bne .calc               ; (going up can't wrap at the bottom)
 	lda bT1
 	cmp #TRI_FLOOR+14       ; pulse: lowest note an octave above the
 	bcc .send               ;  triangle's, and 2 semitones of room
 	bcs .calc
 .tri:
+	lda bendUp
+	bne .calc
 	lda bT1
 	cmp #TRI_FLOOR+2
 	bcc .send
@@ -282,7 +352,16 @@ NesBendVoice:
 	sta mulA
 	lda triPbHi,x
 	sta mulA+1
-	lda bendLvl
+	lda bendMag
+	ldx bendUp
+	beq .m
+	lsr                     ; up: 7/8 of it (the timer's maths isn't symmetric)
+	lsr
+	lsr
+	eor #$FF
+	sec
+	adc bendMag
+.m:
 	sta mulB
 	lda #0
 	sta mulB+1
@@ -305,8 +384,30 @@ NesBendVoice:
 	and #$FC                ; MidiNES bends move in steps of 4
 	sta bT3
 .send:
-	jsr BendFromDrop
+	jsr BendFromAmt
 	jmp NesPut
+
+; bT2:bT3 = amount (hi:lo): down (8192 - it) or up (8192 + it, at most 16383)
+BendFromAmt:
+	subroutine
+	lda bendUp
+	bne .up
+	jmp BendFromDrop
+.up:
+	lda bT3
+	clc
+	adc #0
+	sta bT3
+	lda bT2
+	adc #$20
+	cmp #$40
+	bcc .ok
+	lda #$FF
+	sta bT3
+	lda #$3F
+.ok:
+	sta bT2
+	jmp BendOut
 
 ; bT2:bT3 = drop (hi:lo) -> mD1 / mD2 = 8192 - drop as a 14-bit bend
 ; (bottom of the range if the drop is bigger than that)
@@ -323,6 +424,7 @@ BendFromDrop:
 	sta bT3
 .ok:
 	sta bT2
+BendOut:
 	lda bT3
 	and #$7F
 	sta mD1

@@ -19,12 +19,24 @@
 
 ; IRQ / main loop (interrupts off): take a received byte if there is one.
 ; Uses A, X.
+; v0.13: clocks ($F8) aren't stored: counted here, every 24th (a beat) stamped
+; with the time; a Start ($FA) makes the next clock a beat.
 RxByte:
 	subroutine
 	lda ACIA_STAT
 	lsr                     ; RDRF -> carry
 	bcc .x
+RxGot:
 	lda ACIA_RX
+	cmp #$F8
+	beq .clk
+	cmp #$FA
+	bne .buf
+	ldx #23                 ; Start: the next clock is beat 1
+	stx clkPhase
+	ldx clkBeat
+	stx clkStartBeat
+.buf:
 	ldx rxHead
 	sta rxBuf,x
 	inx
@@ -34,6 +46,23 @@ RxByte:
 	beq .x                  ; full: dropped
 	sta rxHead
 .x:
+	rts
+.clk:
+	inc clkCount
+	ldx clkPhase
+	inx
+	cpx #24
+	bcc .ph
+	lda ticks
+	sta clkAtL
+	lda ticks+1
+	sta clkAtH
+	lda subTick
+	sta clkAtS
+	inc clkBeat
+	ldx #0
+.ph:
+	stx clkPhase
 	rts
 
 ; Main loop, every pass: parse what came in.
@@ -54,7 +83,7 @@ MidiInService:
 	tya
 	bpl .data
 	cmp #$F8
-	bcs .next               ; realtime (clock, active sensing...): skip
+	bcs .rt                 ; realtime (clocks are counted by RxByte)
 	cmp #$F0
 	bcc .status
 	lda #0                  ; system: no running status until the next one
@@ -76,7 +105,19 @@ MidiInService:
 	bne .next
 	lda #0
 	sta rxCnt
-	beq .next
+	jsr MidiInMsg
+	jmp .next
+.rt:
+	cmp #$FA
+	bne .rt2
+	jsr KeytarStart
+	jmp .next
+.rt2:
+	cmp #$FC
+	bne .rt3
+	jsr KeytarStop
+.rt3:
+	jmp .next
 .second:
 	sta rxD2
 	lda #0
@@ -89,21 +130,39 @@ MidiInMsg:
 	subroutine
 	lda rxStatus
 	and #15
-	cmp #DRUM_CH_IN         ; channel 16: the keytar's rhythm -> MidiNES drums
+	cmp #DRUM_CH_IN         ; channel 16: the keytar's rhythm
 	bne .notes
 	lda rxStatus
 	and #$F0
+	cmp #$C0
+	bne .dr
+	jmp KeytarStyle         ; its style buttons
+.dr:
 	cmp #$90
 	bne .x
 	lda rxD2
 	beq .x
+	lda syncDrums           ; its drum notes: on the MidiNES if the menu says PLAY
+	beq .x
 	jmp KeytarDrum
 .notes:
 	cmp #MIDI_IN_CHANS
-	bcs .x                  ; channels 12-16: the keytar's accompaniment
+	bcs .x                  ; channels 12-15: the keytar's accompaniment
 	sta t3
 	lda rxStatus
 	and #$F0
+	cmp #$B0
+	bne .pc
+	jmp KeytarCC            ; its vibrato / portamento / sustain buttons
+.pc:
+	cmp #$C0
+	bne .pb
+	jmp KeytarVoice         ; its voice buttons
+.pb:
+	cmp #$E0
+	bne .nt
+	jmp KeytarWheel
+.nt:
 	cmp #$80
 	beq .off
 	cmp #$90

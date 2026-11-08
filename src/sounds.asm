@@ -36,6 +36,16 @@ SoundKey:
 	bpl .s
 	ldx #NUM_SOUNDS-1
 .s:
+	jmp SoundSetX
+
+; X = sound (the keytar's voice buttons)
+SoundSet:
+	txa
+	pha
+	jsr SoundRelease
+	pla
+	tax
+SoundSetX:
 	stx soundMode
 	jsr SoundVars
 	jsr SoundApply          ; ...and come back with the new one
@@ -91,8 +101,7 @@ SoundVars:
 	ldx soundMode
 	lda sndMono,x
 	sta monoMode
-	lda sndFat,x
-	sta fatBass
+	jsr FatBassSet
 	lda nesEnv,x
 	sta nesEnvOn
 	lda nesAtk,x
@@ -109,16 +118,150 @@ SoundVars:
 	sta fEnv
 	sta dutyIdx
 	sta dutyMs
+	jmp FxVars
+
+; fatBass from the sound, unless the menu locks it (ALWAYS / NEVER)
+FatBassSet:
+	subroutine
+	ldx soundMode
+	lda sndFat,x
+	ldy fbLock
+	beq .s
+	lda #1
+	cpy #1
+	beq .s
+	lda #0
+.s:
+	sta fatBass
+	rts
+
+; Menu: Fat Bass lock changed
+FatBassMenu:
+	jsr SoundRelease
+	jsr FatBassSet
+	jmp Dirty
+
+; The vibrato and glide FxTick uses: the sound's, or the keytar buttons'
+; while held (a sound without vibrato gets 0.25 semitone at 5.5 Hz, no
+; delay; one without glide gets 1/16 of the way per 4 ms)
+FxVars:
+	subroutine
+	ldx soundMode
+	lda sndVib,x
+	sta vibDepth
+	lda sndVibRL,x
+	sta vibRL
+	lda sndVibRH,x
+	sta vibRH
+	lda sndVibDel,x
+	sta vibDel
+	lda sndVibSpr,x
+	sta vibSpr
+	lda vibBtn
+	beq .g
+	lda #0
+	sta vibDel
+	lda vibDepth
+	bne .g
+	lda #61
+	sta vibDepth
+	lda #<1442
+	sta vibRL
+	lda #>1442
+	sta vibRH
+.g:
+	lda sndGlide,x
+	bne .gs
+	lda glideBtn
+	beq .gs
+	lda #4
+.gs:
+	sta glideK
 	lda sndFDep,x           ; anything for FxTick to do?
 	ora sndFEnv,x
 	ora sndPwm,x
-	ora sndVib,x
-	ora sndGlide,x
+	ora vibDepth
+	ora glideK
 	ora sndSeq,x
 	beq .b
 	lda #1
 .b:
 	sta fxBusy
+	rts
+
+; A keytar button changed vibrato / glide: the SID's (FxVars) and the Game
+; Boy's (its LFO and glide CCs while held; the sound's back when let go)
+FxButtons:
+	subroutine
+	jsr FxVars
+	lda vibDepth            ; no vibrato now: the SID back on pitch
+	bne .v
+	sta vibAmt
+	sta vibAmt+1
+	sta vibAmt+2
+	jsr SidBendAll
+.v:
+	lda devOn+DEV_GB
+	bne .gb
+	rts
+.gb:
+	lda #0
+	sta t3
+.ch:
+	lda gbBase
+	clc
+	adc t3
+	and #15
+	ora #$B0
+	sta mS
+	ldx soundMode
+	; glide (CC 5)
+	ldy t3
+	lda gbGl1,x
+	cpy #0
+	beq .g1
+	lda gbGl2,x
+	cpy #1
+	beq .g1
+	lda gbGlW,x
+.g1:
+	ldy glideBtn
+	beq .g2
+	cmp #32
+	bcs .g2
+	lda #32                 ; glide 4 of 15
+.g2:
+	tay
+	lda #5
+	jsr SoundGbPut
+	ldy t3
+	cpy #2
+	beq .next               ; (the wave channel has no LFO here)
+	lda vibBtn
+	beq .lfoSound
+	lda #78                 ; LFO to pitch, triangle, rate 22, no delay, depth 6
+	ldy #0
+	jsr SoundGbPut
+	lda #77
+	ldy #0
+	jsr SoundGbPut
+	lda #76
+	ldy #91
+	jsr SoundGbPut
+	lda #79
+	ldy #0
+	jsr SoundGbPut
+	lda #1
+	ldy #24
+	jsr SoundGbPut
+	jmp .next
+.lfoSound:
+	jsr SoundGbLfo
+.next:
+	inc t3
+	lda t3
+	cmp #3
+	bne .ch
 	rts
 
 SoundApply:
@@ -245,21 +388,7 @@ SoundGb:
 	tay
 	lda #94
 	jsr .put
-	lda #76
-	ldy gbLRate,x
-	jsr .put
-	lda #77
-	ldy gbLShape,x
-	jsr .put
-	lda #78
-	ldy gbLDest,x
-	jsr .put
-	lda #79
-	ldy gbLDelay,x
-	jsr .put
-	lda #1
-	ldy gbLDepth,x
-	jsr .put
+	jsr SoundGbLfo
 	inc t3
 	jmp .ch
 .wave:
@@ -282,14 +411,35 @@ SoundGb:
 	sty t0
 	ldx t0
 	jmp GbGlobal
-; A = CC, Y = value, on channel mS (keeps X)
 .put:
+	jmp SoundGbPut
+
+; A = CC, Y = value, on channel mS (keeps X)
+SoundGbPut:
 	sta mD1
 	sty mD2
 	stx t2
 	jsr GbPut
 	ldx t2
 	rts
+
+; the sound's LFO on channel mS (X = soundMode; keeps X)
+SoundGbLfo:
+	lda #76
+	ldy gbLRate,x
+	jsr SoundGbPut
+	lda #77
+	ldy gbLShape,x
+	jsr SoundGbPut
+	lda #78
+	ldy gbLDest,x
+	jsr SoundGbPut
+	lda #79
+	ldy gbLDelay,x
+	jsr SoundGbPut
+	lda #1
+	ldy gbLDepth,x
+	jmp SoundGbPut
 
 ; Legato (CC 68) on the three note channels: on in MONO, so a new note on a
 ; sounding voice changes pitch without a new attack
@@ -549,15 +699,24 @@ SidFx:
 	sta SID+3,x
 .noP:
 	; ---- pitch: glide and vibrato, every sounding voice
-	ldx soundMode
-	lda sndVib,x
-	ora sndGlide,x
+	lda vibDepth
+	ora glideK
 	bne .pitch
 	rts
 .pitch:
-	lda sndVib,x
+	lda vibDepth
 	beq .noVp
-	ADVANCE vPhL, sndVibRL, sndVibRH
+	ldy fxN
+.va:
+	lda vPhL
+	clc
+	adc vibRL
+	sta vPhL
+	lda vPhH
+	adc vibRH
+	sta vPhH
+	dey
+	bne .va
 	jsr VibLfo              ; vibNow: the in-step amount (if not spread)
 .noVp:
 	ldy #0
@@ -584,16 +743,14 @@ sidVoice:   .byte 0,3,6         ; SID voice -> pool voice
 ; SID voice envY: sidBase moves 1/2^k of the way to sidTgt, fxN times
 GlideStep:
 	subroutine
-	ldx soundMode
-	lda sndGlide,x
+	lda glideK
 	bne .on
 	rts
 .on:
 	lda fxN
 	sta bT1
 .again:
-	ldx soundMode
-	lda sndGlide,x
+	lda glideK
 	sta t1
 	ldy envY
 	lda sidTgtLo,y
@@ -653,8 +810,7 @@ VibAt:
 	eor #$FF
 	adc #1
 .pos:
-	ldx soundMode
-	ldy sndVib,x
+	ldy vibDepth
 	jsr Mul8
 	asl mt16
 	rol mt16+1              ; / 128
@@ -671,7 +827,7 @@ VibAt:
 ; once per call: the shared vibrato (voices in step)
 VibLfo:
 	subroutine
-	lda sndVibSpr,x
+	lda vibSpr
 	bne .x
 	lda vPhH
 	jmp VibAt
@@ -684,11 +840,10 @@ VibStep:
 	ldy envY
 	lda #0
 	sta vibAmt,y
-	ldx soundMode
-	lda sndVib,x
+	lda vibDepth
 	beq .x
 	lda vibT,y
-	cmp sndVibDel,x
+	cmp vibDel
 	bcs .on
 	adc fxN                 ; (carry clear)
 	bcc .t
@@ -697,7 +852,7 @@ VibStep:
 	sta vibT,y
 	rts
 .on:
-	lda sndVibSpr,x
+	lda vibSpr
 	beq .same
 	lda vPhH                ; spread: each voice its own phase
 	clc

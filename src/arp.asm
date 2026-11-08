@@ -32,6 +32,10 @@ GetTicks:
 ; ------------------------------------------------------------ tempo
 TapTempo:
 	subroutine
+	jsr FollowActive        ; the keytar's clock sets the tempo: taps do nothing
+	beq .tap
+	rts
+.tap:
 	jsr GetTicks
 	lda nowL
 	sec
@@ -104,9 +108,8 @@ TapTempo:
 	sta beatMs
 	lda dvdH
 	sta beatMs+1
-	jsr TempoFromBeat
+	jsr TempoChosen         ; (Synthcart: snapped)
 	jsr SendTempo
-	jsr StepCalc
 	lda #1
 	sta screenDirty
 .x:

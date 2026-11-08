@@ -174,7 +174,7 @@ Suspect:
 ;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
 ;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
 ;   M              mute everything        SPACE  per its mode
-;   =              latch: OFF <-> SMART (HOLD / ADD: menu later)
+;   =              latch: off <-> on, in the menu's LATCH STYLE
 ;   N              new chord: the next note starts one (twice: clear now)
 ;   Z / X          notes mode (POLY, CHORD, EXT) / extensions (7 9 11 13)
 ;   K + note / L   key root / major-minor
@@ -269,6 +269,10 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 	inc shiftDown
 	rts
 .nsh:
+	ldx menuOn              ; the menu takes the cursor keys and RETURN
+	beq KeyCmdPlay
+	jmp MenuKey
+KeyCmdPlay:                     ; (A = a command key: its usual job)
 	cmp #K_F1
 	bcc .table
 	cmp #K_F7+1
@@ -321,13 +325,22 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 
 ; key -> handler (KeyDown)
 cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,K_H,K_J,K_C,K_G,K_RETURN,0
-cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpSlower,<ArpFaster,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<MonoKey,<BeatKey,<BeatRunKey
-cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpSlower,>ArpFaster,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>MonoKey,>BeatKey,>BeatRunKey
+cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpFaster,<ArpSlower,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<MonoKey,<BeatKey,<ReturnKey
+cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpFaster,>ArpSlower,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>MonoKey,>BeatKey,>ReturnKey
 
 CtrlDown:
 	lda #1
 	sta ctrlDown
 	rts
+
+; RETURN: beat demo start / stop; SHIFT+RETURN: the menu
+ReturnKey:
+	subroutine
+	lda shiftDown
+	beq .run
+	jmp MenuOpen
+.run:
+	jmp BeatRunKey
 
 MuteKey:
 	lda sidMute             ; (now mutes everything)
@@ -436,13 +449,14 @@ ApplySettings:
 	sta effMinor
 	rts
 
+; = : latch off <-> on, in the menu's LATCH STYLE (SMART / HOLD / ADD)
 LatchKey:
 	subroutine
-	ldx latch
-	inx
-	cpx #2                  ; OFF / SMART for now (HOLD, ADD: a menu later)
-	bcc .l1
 	ldx #0
+	lda latch
+	bne .l1
+	ldx latchStyle          ; (0-2: SMART, HOLD, ADD)
+	inx
 .l1:
 	stx latch
 	lda #0
@@ -509,6 +523,7 @@ NoteUp:                         ; A = note index
 	dec physCount
 .n:
 	lda latch
+	ora sustainOn           ; (the keytar's sustain button, held)
 	bne .x                  ; latched: keeps sounding
 	lda #0
 	sta noteHeld,x

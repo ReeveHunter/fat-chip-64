@@ -6,6 +6,21 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.13:** the menu and keytar sync.
+- **Menu (SHIFT+RETURN in and out):** CRSR DOWN / SHIFT+CRSR DOWN choose a line, CRSR RIGHT or RETURN the next value, SHIFT+CRSR RIGHT the previous one. Notes and the other keys keep working while it's up; the play screen pauses and redraws when it closes. Sections:
+  - **SOUND:** FAT BASS — AS SOUND (default) / ALWAYS / NEVER.
+  - **PLAYING:** LATCH STYLE — SMART (default) / HOLD / ADD: what = turns on. SPACE — MUTES / BENDS (as , and .).
+  - **DEVICE SYNC** (the keytar on MIDI in, and Synthcart):
+    - TEMPO FROM — **KEYTAR** / OWN / SYNTHCART. KEYTAR: the keytar's MIDI clock sets the tempo (averaged over beats; the arp and the Game Boy follow; taps are ignored while it runs; 300 ms without a clock and Fat Chip's own tempo is back). SYNTHCART: taps and the beats' tempos snap to Synthcart's ten NTSC tempos (16–52 Atari frames a beat).
+    - START/STOP — **KEYTAR** / OWN: the keytar's Start (or synchro start) starts the beat demo, step 1 on its next beat; Stop stops it. While following, every beat re-locks to the keytar's beat clock.
+    - RHYTHM BUTTONS — **PICK BEAT** / IGNORE: the keytar's 25 styles pick the six beats by feel (e.g. Hard Rock → ROCK, Jazz Waltz → 6/8).
+    - DRUM NOTES — **IGNORE** / PLAY: the keytar's own drum hits on the MidiNES (v0.12 played them always).
+    - VOICE BUTTONS — **PICK SOUND** / IGNORE: the keytar's 25 voices pick sounds (0–16 the 17 sounds, 17–24 repeat favourites).
+    - WHEEL — **BEND** / OFF: ±2 semitones on the SID, Game Boy and NES (with the SPACE bend on top).
+    - VIBRATO / PORTAMENTO / SUSTAIN BUTTON — each **its own job** by default, or any of: VIBRATO, GLIDE, SUSTAIN, MUTE, BEND DOWN, OCTAVE UP (while held); NEW CHORD, TAP TEMPO, BEAT ON/OFF, NEXT SOUND (on a press); NOTHING. VIBRATO: SID vibrato (0.25 semitone, 5.5 Hz if the sound has none) and the Game Boy's LFO on pitch; GLIDE: SID glide and Game Boy glide; SUSTAIN: like a pedal. The NES doesn't vibrato or glide yet.
+- **; is now faster, : slower** (; is the rightmost).
+- Keytar accents (velocity 80) count as accents.
+
 **v0.12:** sounds, MONO, drums.
 - **Channels:** the MidiNES is on channels **1–5** (its power-on default) and the Game Boy on **11–15**. Fat Chip 64 moves the Game Boy there itself at startup (Fat Chip GB v0.08's CC 113), so nothing needs setting by hand after power-on. CTRL+F3 / F5 still move either block.
 - **Sounds (V, SHIFT+V back):** FAT, PADS, RAW plus 14 demo versions of the Chip Lab sounds: DUTY LEAD, WHISTLE, SCREAMER, WARBLE PAD, DUTY SHIMMER PAD, WARM SID PAD, BREATHING PAD, ELECTRIC PIANO, COMBO ORGAN, VIBRAPHONE, GLIDE BASS, WAVE BASS, SEASICK CHORUS, TREMOLO GATE. Row 1 shows the sound, POLY / MONO and FAT BASS. Changing sound while keys are held plays them again with the new sound.
@@ -76,15 +91,16 @@ lowest key (Q) starts at C3.
 | **Drums** | |
 | G | Next beat demo (and the drum kit the keytar uses): ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK, 6/8; sets its tempo |
 | RETURN | Beat demo start / stop |
+| SHIFT+RETURN | The menu (v0.13) |
 | (MIDI in ch 16) | The keytar's rhythm plays the MidiNES drums |
 | **Latch** | |
-| = | OFF ↔ SMART. SMART: notes pressed within half a second of the last (or while another key is down) build the chord; after a pause the next note starts a new one. (HOLD and ADD are in the code for the setup menu later: HOLD, a fresh press after letting go of everything starts a new chord; ADD, every press adds a note, pressing a latched note takes it out) |
+| = | Latch off ↔ on, in the menu's LATCH STYLE: SMART (default: notes pressed within half a second of the last, or while another key is down, build the chord; after a pause the next note starts a new one), HOLD (a fresh press after letting go of everything starts a new chord) or ADD (every press adds a note; pressing a latched note takes it out) |
 | N | New chord: the current one keeps sounding and the next note starts a new one (screen: N NEXT). Press N twice to clear now |
 | **Arp** | |
 | A | OFF → UNISON (all nine voices step together) → SPARKLE (two voices arpeggiate over the chord as a pad) |
 | S | Pattern: UP, DOWN, UPDOWN, RANDOM, PLAYED (the order you pressed or built the chord) |
 | D | Speed: FREE (default, 30 ms), 1/4, 1/8, 1/8T, 1/16, 1/32 of the tempo |
-| ; / : | FREE speed slower / faster (10–1000 ms per step); either one also picks FREE |
+| ; / : | FREE speed faster / slower (10–1000 ms per step); either one also picks FREE |
 | F | SPARKLE arp octave: +0, +1 (default), +2 |
 | B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Sent to the Game Boy (CC 107/108) |
 | **Sound control** | |
@@ -180,6 +196,9 @@ voices ±7 cents.
 | `src/bend.asm` | SPACE modes, SPACE bend |
 | `src/sounds.asm`, `tools/gen_sounds.py` → `src/soundtab.asm` | sounds (V), MONO (C), Fat Bass, SID effects, duty steps |
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
+| `src/menu.asm` | the menu (SHIFT+RETURN) |
+| `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
+| `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
 | `test/test_gb_channels.py` | end to end: CC 113 moves Fat Chip GB to 11–15, chord and MONO legato arrive |
 | `src/nesenv.asm`, `src/nestables.asm` | MidiNES envelopes (PADS): CC7 envelope on the pulses, triangle release drop |

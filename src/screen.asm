@@ -124,6 +124,11 @@ ScreenInit:
 	rts
 
 ScreenDrawAll:
+	jsr ScreenStatic
+	jmp ScreenDynamic
+
+; the labels that never change
+ScreenStatic:
 	subroutine
 	lda #$80
 	sta t2
@@ -138,6 +143,10 @@ ScreenDrawAll:
 	PRINT 19, 0, txtArp
 	PRINT 22, 0, txtTempo
 	PRINT 24, 0, txtModeLn
+	rts
+
+ScreenDynamic:
+	subroutine
 	jsr ScrDevices
 	jsr ScrDev2
 	ldx #0
@@ -160,6 +169,10 @@ ScreenDrawAll:
 ; held notes, octave + latch, arp line, counters), each about 4 ms or less.
 ScreenStep:
 	subroutine
+	lda menuOn              ; (the menu is on screen)
+	beq .play
+	rts
+.play:
 	lda scrStage
 	bne .run
 	lda screenDirty

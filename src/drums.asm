@@ -319,9 +319,9 @@ KeytarDrum:
 .hit:
 	lda keytarKind,x
 	pha
-	ldx #2
+	ldx #2                  ; 80 = the SHS-10's accent (measured), 64 hit, 56 ghost
 	lda rxD2
-	cmp #100
+	cmp #72
 	bcs .l
 	dex
 	cmp #61
@@ -345,12 +345,17 @@ BeatKey:
 	bcc .s
 	ldx #0
 .s:
-	stx beatSel
+	txa
+; A = beat: chosen (G, or the keytar's rhythm buttons)
+BeatChoose:
+	sta beatSel
+	tax
 	lda beatStep
 	cmp beatLen,x
 	bcc .t
 	lda #0
 	sta beatStep
+	sta beatSub
 .t:
 	lda beatBpm,x
 	jsr SetBpm
@@ -360,12 +365,25 @@ BeatKey:
 BeatRunKey:
 	subroutine
 	lda beatRun
-	eor #1
+	beq BeatBegin
+	lda #0
 	sta beatRun
-	beq .stop
+	jsr NoiseOff
+	jmp Dirty
+
+; the beat starts now, from step 1
+BeatBegin:
+	subroutine
+	lda #1
+	sta beatRun
 	lda #0
 	sta beatStep
+	sta beatSub
 	sta beatFrac
+	sta beatWait
+	ldx beatSel             ; at the beat's own tempo (unless the keytar's)
+	lda beatBpm,x
+	jsr SetBpm              ; (first: it takes a moment)
 	jsr GetTicks
 	lda nowL
 	sta beatBaseL
@@ -373,17 +391,16 @@ BeatRunKey:
 	lda nowH
 	sta beatBaseH
 	sta beatAtH
-	ldx beatSel             ; at the beat's own tempo
-	lda beatBpm,x
-	jsr SetBpm
-	jmp Dirty
-.stop:
-	jsr NoiseOff
 	jmp Dirty
 
-; A = BPM: tempo, beat length, the Game Boy's tempo, synced arp speeds
+; A = BPM, the beat's own: the tempo, unless the keytar's clock sets it
+; (Synthcart: snapped to its nearest)
 SetBpm:
 	subroutine
+	sta t3
+	jsr FollowActive
+	bne .x
+	lda t3
 	sta bpm
 	lsr
 	clc
@@ -392,7 +409,7 @@ SetBpm:
 	lda #>60000
 	adc #0
 	sta dvdH
-	lda bpm
+	lda t3
 	sta dvsL
 	lda #0
 	sta dvsH
@@ -401,10 +418,11 @@ SetBpm:
 	sta beatMs
 	lda dvdH
 	sta beatMs+1
+	jsr TempoChosen
 	jsr SendTempo
-	jsr StepCalc
 	lda #1
 	sta screenDirty
+.x:
 	rts
 
 ; main loop: play a step when it's due
@@ -412,8 +430,20 @@ BeatTick:
 	subroutine
 	lda beatRun
 	bne .on
+	sta beatClkNew          ; (stopped: no beat clock left waiting)
 	rts
 .on:
+	jsr BeatFollow
+.wait:
+	lda beatWait
+	beq .due0
+	jsr FollowActive        ; the clock stopped: carry on by ourselves
+	beq .free
+	rts
+.free:
+	lda #0
+	sta beatWait
+.due0:
 	jsr GetTicks
 	lda nowL
 	sec
@@ -424,17 +454,11 @@ BeatTick:
 	rts
 .due:
 	jsr BeatPlay
-	; step length in 1/16 ms = beat x 16 / steps per beat
-	lda beatMs
+	; step length in 1/16 ms = beat / steps per beat
+	lda beat16L
 	sta dvdL
-	lda beatMs+1
+	lda beat16H
 	sta dvdH
-	ldx #4
-.x16:
-	asl dvdL
-	rol dvdH
-	dex
-	bne .x16
 	ldx beatSel
 	lda beatSpb,x
 	sta dvsL
@@ -490,6 +514,13 @@ BeatTick:
 	lda #0
 	sta beatStep
 .n:
+	inc beatSub
+	lda beatSub
+	cmp beatSpb,x
+	bcc .sw
+	lda #0
+	sta beatSub
+.sw:
 	lda beatBaseL
 	sta beatAtL
 	lda beatBaseH
@@ -524,6 +555,112 @@ BeatTick:
 	sta beatAtL
 	bcc .x
 	inc beatAtH
+.x:
+	rts
+
+; BeatTick, first: a keytar beat clock came in
+BeatFollow:
+	subroutine
+	; following the keytar: the beat runs on by itself, and each of its beat
+	; clocks corrects it. k = steps of this beat already played:
+	;   0          the clock is ahead of us: this beat starts now
+	;   1 .. spb/2  we're in step: the rest of the beat counts from the clock
+	;   more        the clock is early: skip to the next beat, starting now
+	; (After a keytar Start, step 1 waits for the first clock: beatWait.)
+	lda beatWait
+	beq .flag
+	lda beatClkNum          ; after a Start: the beat clock that followed it (or
+	sec                     ;  a later one, if the Start was seen late)
+	sbc beatWaitBeat
+	bmi .no
+	lda #0
+	sta beatClkNew
+	jmp .anchor
+.flag:
+	lda beatClkNew
+	bne .new
+.no:
+	rts
+.new:
+	lda #0
+	sta beatClkNew
+	jsr FollowActive
+	beq .no
+	ldx beatSel
+	lda beatSub
+	bne .k
+.anc:
+	jmp .anchor
+.k:
+	lda beatSpb,x
+	lsr
+	cmp beatSub
+	bcc .skip
+	; rebase: the next step = clock + k steps
+	lda beatClkL
+	sta t0
+	lda beatClkH
+	sta t1
+	lda #0
+	sta beatFrac
+	ldy beatSub
+.rb:
+	lda step16L
+	clc
+	adc beatFrac
+	sta beatFrac
+	lda step16H
+	adc #0
+	sta t2
+	lda beatFrac
+	lsr t2
+	ror
+	lsr t2
+	ror
+	lsr t2
+	ror
+	lsr t2
+	ror                     ; whole ms of (frac + step)
+	clc
+	adc t0
+	sta t0
+	lda t1
+	adc t2
+	sta t1
+	lda beatFrac
+	and #15
+	sta beatFrac
+	dey
+	bne .rb
+	lda t0
+	sta beatBaseL
+	sta beatAtL
+	lda t1
+	sta beatBaseH
+	sta beatAtH
+	rts
+.skip:
+	lda beatSpb,x           ; jump to the next beat
+	sec
+	sbc beatSub
+	clc
+	adc beatStep
+	cmp beatLen,x
+	bcc .st
+	sbc beatLen,x
+.st:
+	sta beatStep
+.anchor:
+	lda #0
+	sta beatSub
+	sta beatFrac
+	sta beatWait
+	lda beatClkL
+	sta beatBaseL
+	sta beatAtL
+	lda beatClkH
+	sta beatBaseH
+	sta beatAtH
 .x:
 	rts
 

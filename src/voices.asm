@@ -734,8 +734,7 @@ VoiceSet:
 	sta sidTgtHi,y
 	; jump straight there, unless the sound glides and the voice was already
 	; playing (then FxTick slides sidBase to the target)
-	ldx soundMode
-	lda sndGlide,x
+	lda glideK
 	beq .jump
 	ldx t0
 	lda vNote,x
@@ -847,9 +846,9 @@ MidiTo:
 	lda vDev,x
 	cmp #DEV_NES
 	bne .noBend
-	lda bendLvl
+	lda bendMag
 	beq .noBend
-	lda mtTarget            ; SPACE bend: this note's bend first
+	lda mtTarget            ; SPACE bend / wheel: this note's bend first
 	jsr NesBendVoice
 .noBend:
 	ldx t0
@@ -1050,6 +1049,12 @@ Panic:
 	jsr NoiseOff
 	lda #0
 	sta bendLvl             ; the bend ends: SID now, MIDI centred next pass
+	sta bendMag
+	sta bendUp
+	sta wheelMag
+	sta bendBtn
+	sta bendSidMag
+	sta bendSidUp
 	jsr SidBendAll
 	lda #$FF
 	sta bendSent

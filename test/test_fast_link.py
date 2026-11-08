@@ -24,7 +24,7 @@ for pads in (False, True):
         c.tap("v", ms=40)
     c.tap("a", ms=30)
     for _ in range(4):
-        c.tap(":", ms=30)
+        c.tap(";", ms=30)
     c.tap(".", ms=30)                       # SPACE bends
     c.press("q", "e", "t", "u", ms=800)
     c.press("space", ms=1200)

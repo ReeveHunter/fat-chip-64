@@ -94,8 +94,8 @@ K_X         equ $99
 K_K         equ $9A
 K_L         equ $9B
 K_V         equ $9C
-K_COLON     equ $9D           ; : arp faster
-K_SEMI      equ $9E           ; ; arp slower
+K_COLON     equ $9D           ; : arp slower
+K_SEMI      equ $9E           ; ; arp faster (the rightmost)
 K_COMMA     equ $9F           ; , (<) SPACE mode back
 K_PERIOD    equ $A0           ; . (>) SPACE mode on
 K_C         equ $A1           ; C: POLY / MONO
@@ -398,3 +398,59 @@ nzVol       ds 1               ; noise level last sent (CC7 / 8)
 nzLen       ds 1
 bA          ds 1               ; BeatPlay: the step's two bytes
 bB          ds 1
+; v0.13 menu (menu.asm) and device sync (sync.asm)
+menuOn      ds 1               ; 1 = the menu is on screen
+menuRow     ds 1               ; the setting the cursor is on
+latchStyle  ds 1               ; = turns latch on in this style (SMART / HOLD / ADD)
+fbLock      ds 1               ; Fat Bass: 0 as the sound says, 1 always, 2 never
+syncTempo   ds 1               ; 0 KEYTAR, 1 OWN, 2 SYNTHCART
+syncStart   ds 1               ; 0 KEYTAR, 1 OWN
+syncRhythm  ds 1               ; 0 PICK BEAT, 1 IGNORE
+syncDrums   ds 1               ; 0 IGNORE, 1 PLAY
+syncVoice   ds 1               ; 0 PICK SOUND, 1 IGNORE
+syncWheel   ds 1               ; 0 BEND, 1 OFF
+btnTask     ds 3               ; the keytar's vibrato / portamento / sustain buttons' tasks
+btnHeld     ds 3
+vibBtn      ds 1               ; held: vibrato
+glideBtn    ds 1               ; held: glide
+sustainOn   ds 1               ; held: sustain
+bendBtn     ds 1               ; held: bend down (like SPACE in BENDS)
+wheelMag    ds 1               ; the wheel: 0-255 (255 = 2 semitones)
+wheelUp     ds 1               ;  1 = up
+bendMag     ds 1               ; the bend everything gets: wheel and SPACE together
+bendUp      ds 1
+bendSentUp  ds 1
+bendSidMag  ds 1               ; ... as the SID last had it
+bendSidUp   ds 1
+clkCount    ds 1               ; IRQ: clocks received
+clkCountSeen ds 1
+clkSeenL    ds 1               ; ms of the last clock seen
+clkSeenH    ds 1
+clkPhase    ds 1               ; IRQ: clock 0-23 in the beat
+clkBeat     ds 1               ; IRQ: beat clocks received
+clkBeatSeen ds 1
+clkAtL      ds 1               ; IRQ: the last beat clock's ticks
+clkAtH      ds 1
+clkAtS      ds 1               ;  and subTick
+clkLastQL   ds 1               ; the beat clock before, in 1/4 ms
+clkLastQH   ds 1
+clkSkip     ds 1               ; 1 = the next beat clock only restarts the measurement
+clkHave     ds 1               ; 0 nothing, 1 a beat clock's time, 2 clk16 measured too
+clk16L      ds 1               ; the keytar's beat, averaged, 1/16 ms
+clk16H      ds 1
+beat16L     ds 1               ; the beat in 1/16 ms (beat demos step from it)
+beat16H     ds 1
+beatClkL    ds 1               ; ms of the last keytar beat clock
+beatClkH    ds 1
+beatClkNew  ds 1
+beatWait    ds 1               ; following: the next step waits for a beat clock
+beatSub     ds 1               ; step within the beat
+clkStartBeat ds 1              ; IRQ: clkBeat when a Start came
+beatWaitBeat ds 1              ; after a Start, step 1 waits for this beat clock
+beatClkNum  ds 1               ; clkBeat of the last beat clock
+vibDepth    ds 1               ; FxVars: the vibrato and glide FxTick uses
+vibRL       ds 1
+vibRH       ds 1
+vibDel      ds 1
+vibSpr      ds 1
+glideK      ds 1
