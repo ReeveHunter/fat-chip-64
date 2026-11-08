@@ -47,8 +47,8 @@ check("NES startup: CC7=127 on channels 6-10",
       [x for x in nes if x[1] == 7][:5] == [(0xB0 | ch, 7, 127) for ch in NES])
 check("NES startup: CC16=127 on the pulses", [x for x in nes if x[1] == 16] == [(0xB5, 16, 127), (0xB6, 16, 127)])
 check("screen header", c.screen_row(0).startswith(" FAT CHIP 64"))
-check("screen shows channels", c.screen_row(4).rstrip().endswith("CH 1-5") and c.screen_row(5).rstrip().endswith("CH 6-10"),
-      c.screen_row(5))
+check("screen shows channels", c.screen_row(5).startswith("GAME BOY 1-5 ") and c.screen_row(6).startswith("MIDINES  6-10"),
+      (c.screen_row(5), c.screen_row(6)))
 
 # ---------------------------------------------------------------- pacing
 def gaps(msgs, chans):
@@ -71,9 +71,10 @@ sids = [c.sid(v) for v in range(3)]
 check("one note: all three SID voices gated", all(ctl == SID_ON for _, ctl in sids), sids)
 f = [fr for fr, _ in sids]
 check("one note: SID voices detuned apart", f[1] > f[0] > f[2], f)
-check("voice table shows C3", "C 3" in c.screen_row(10) and "C 2" in c.screen_row(17), c.screen_row(17))
+check("chip lines show C3 (SID) and the bass C2 (NES triangle)",
+      c.screen_row(4)[16:].split()[:3] == ["C", "3", "C"] and "C 2" in c.screen_row(6)[28:], (c.screen_row(4), c.screen_row(6)))
 c.run_ms(40)
-check("held row", "C 3" in c.screen_row(20), c.screen_row(20))
+check("held row", "C 3" in c.screen_row(15), c.screen_row(15))
 
 c.release("q", ms=60)
 on = notes_on(c.midi())
@@ -101,7 +102,7 @@ def shifted(key, mod="lshift"):
 t0 = c.cpu.processorCycles
 shifted("f3")                               # Game Boy off
 c.run_ms(80)                                # (the screen catches up)
-check("SHIFT+F3: Game Boy off on screen", "OFF" in c.screen_row(4))
+check("SHIFT+F3: Game Boy off on screen", c.screen_row(5)[9:14] == "OFF  ", c.screen_row(5))
 off = [x for x in c.midi(since=t0) if (x[1] & 15) in GB]
 check("Game Boy off: panic CC and all-notes-off sent", (0xB0, 111, 0) in [x[1:] for x in off]
       and sorted(x[1] & 15 for x in off if x[2] == 123) == [0, 1, 2], off)
@@ -117,14 +118,14 @@ check("SHIFT+F3 again: Game Boy startup resent", len(gb_new) > 1 and gb_new[0][1
 
 shifted("f1")
 c.run_ms(150)
-check("SID off: volume 0 (no hum)", c.raw[0xD418] & 15 == 0 and "OFF" in c.screen_row(3))
+check("SID off: volume 0 (no hum)", c.raw[0xD418] & 15 == 0 and c.screen_row(4)[9:12] == "OFF")
 shifted("f1")
 check("SID on: volume back", c.raw[0xD418] & 15 == 15)
 c.press("q", ms=60)
 t0 = c.cpu.processorCycles
 c.tap("m", ms=60)
 check("M: mute: SID volume 0, red border, MUTE ON", c.raw[0xD418] & 15 == 0 and c.raw[0xD020] == 2
-      and "MUTE ON" in c.screen_row(22), c.screen_row(22))
+      and c.screen_row(12)[35:39] == "MUTE", c.screen_row(12))
 check("M: the Game Boy and NES get note-offs (nothing sounds)", notes_on(c.midi()) == {}, notes_on(c.midi()))
 c.release("q", ms=40)
 c.press("w", ms=60)
@@ -148,7 +149,7 @@ check("all off", notes_on(c.midi()) == {})
 
 shifted("f5", "ctrl")
 c.run_ms(60)                                # (a redraw may be mid-way)
-check("CTRL+F5: NES on 7-11", c.v("nesBase") == 6 and "CH 7-11" in c.screen_row(5), c.screen_row(5))
+check("CTRL+F5: NES on 7-11", c.v("nesBase") == 6 and c.screen_row(6)[9:14] == "7-11 ", c.screen_row(6))
 for _ in range(6):                          # 8-12, 9-13, 10-14, 11-15, 12-16, wrap to 1-5
     shifted("f5", "ctrl")
 c.run_ms(80)                                # let the screen catch up
@@ -170,11 +171,15 @@ def tap_note(key, f):
     return on
 
 
-check("F1: Q plays C4", tap_note("q", "f1").get(0) == 60)
-check("F5: Q plays C2", tap_note("q", "f5").get(0) == 36)
-check("F7: Q plays C1, Fat Bass folds the bass up to C2", tap_note("q", "f7") == {0: 24, 1: 24, 2: 36, 5: 24, 6: 24, 7: 36})
-c.tap("f3", ms=60)
-check("F3: back to C3, on screen", "C 3" in c.screen_row(21) and c.v("octBase") == 48, c.screen_row(21))
+check("F1: an octave up, Q plays C4", tap_note("q", "f1").get(0) == 60)
+check("F3: down, C3", tap_note("q", "f3").get(0) == 48)
+check("F3: C2", tap_note("q", "f3").get(0) == 36)
+check("F3: C1, Fat Bass folds the bass up to C2", tap_note("q", "f3") == {0: 24, 1: 24, 2: 36, 5: 24, 6: 24, 7: 36})
+c.tap("f3", ms=30)
+c.tap("f3", ms=30)
+check("F3 stops at C0", c.v("octBase") == 12, c.v("octBase"))
+c.tap("f1", ms=30); c.tap("f1", ms=30); c.tap("f1", ms=150)
+check("F1 x3: back to C3, on screen", c.screen_row(13)[16:26] == "OCTAVE C 3" and c.v("octBase") == 48, c.screen_row(13))
 c.press("q", ms=60)
 c.tap("f1", ms=60)
 on = notes_on(c.midi())
@@ -182,7 +187,12 @@ check("octave change while holding: the note moves, no hung old note",
       on.get(0) == 60 and on.get(1) == 60 and on.get(2) == 36 and on.get(7) == 36, on)
 c.release("q", ms=60)
 check("released after an octave change: all off", notes_on(c.midi()) == {})
-c.tap("f3", ms=30)
+for _ in range(4):
+    c.tap("f1", ms=30)
+check("F1 stops at C6", c.v("octBase") == 84, c.v("octBase"))
+for _ in range(3):
+    c.tap("f3", ms=30)
+check("F3 x3: C3 again", c.v("octBase") == 48)
 
 # ---------------------------------------------------------------- latch
 def sounding():
@@ -190,7 +200,7 @@ def sounding():
 
 
 c.tap("=", ms=60)
-check("= : latch SMART", "SMART" in c.screen_row(21), c.screen_row(21))
+check("= : latch SMART", c.screen_row(9)[27:38] == "LATCH SMART", c.screen_row(9))
 c.press("q", "t", ms=40); c.release("q", "t", ms=40)
 check("smart: chord keeps sounding after release", {48, 55} <= sounding())
 c.run_ms(200)
@@ -201,18 +211,21 @@ c.tap("e", ms=40)                           # after a pause: new chord
 check("smart: after a pause the next note starts a new chord", sounding() <= {52, 40} and 52 in sounding(), sounding())
 c.tap("w", ms=40)
 check("smart: ...and builds on quickly", {50, 52} <= sounding() and 57 not in sounding(), sounding())
-c.tap("n", ms=60)
-check("N: chord keeps sounding, N NEXT on screen", {50, 52} <= sounding() and "N NEXT" in c.screen_row(21), c.screen_row(21))
-c.tap("u", ms=60)                           # within the window, but N said new
-check("after N the next note starts a new chord", sounding() <= {59, 35} and 59 in sounding(), sounding())
-c.tap("n", ms=20); c.tap("n", ms=150)
-check("N twice: clear now", sounding() == set() and "N NEW" in c.screen_row(21))
-
 c.tap("=", ms=150)
-check("= again: back to OFF (latch style SMART)", c.v("latch") == 0 and "OFF" in c.screen_row(21)[25:], c.screen_row(21))
+check("= with a chord latched: NEXT, the chord keeps sounding", {50, 52} <= sounding() and c.screen_row(9)[27:38] == "LATCH NEXT ",
+      c.screen_row(9))
+c.tap("u", ms=150)                          # within the window, but NEXT said new
+check("after NEXT the next note starts a new chord, latch back to SMART", sounding() <= {59, 35} and 59 in sounding()
+      and c.screen_row(9)[33:38] == "SMART", (sounding(), c.screen_row(9)))
+c.tap("=", ms=20); c.tap("=", ms=150)
+check("= twice: NEXT, then latch off: silent", sounding() == set() and c.v("latch") == 0
+      and c.screen_row(9)[27:38] == "LATCH OFF  ", c.screen_row(9))
+c.tap("=", ms=40)
+c.tap("=", ms=150)
+check("= on, = with nothing sounding: straight off", c.v("latch") == 0 and c.v("newPending") == 0)
 # HOLD and ADD stay in the code for a menu later: set them directly
 c.set("latch", 2); c.set("screenDirty", 1); c.run_ms(150)
-check("HOLD (set directly)", "HOLD" in c.screen_row(21), c.screen_row(21))
+check("HOLD (set directly)", c.screen_row(9)[33:38] == "HOLD ", c.screen_row(9))
 c.press("q", "t", ms=60)
 c.release("q", "t", ms=60)
 check("hold: chord keeps sounding after release", {48, 55} <= sounding())
@@ -221,10 +234,11 @@ check("hold: a fresh press starts a new chord", sounding() <= {52, 40}, sounding
 c.press("q", ms=40); c.press("t", ms=40)
 c.release("q", "t", ms=40)
 check("hold: notes pressed together add up", {48, 55} <= sounding(), sounding())
-c.tap("n", ms=20); c.tap("n", ms=60)
+c.tap("=", ms=20); c.tap("=", ms=60)
+check("hold: = = latch off, silent", c.v("latch") == 0 and sounding() == set())
 
 c.set("latch", 3); c.set("screenDirty", 1); c.run_ms(150)
-check("ADD (set directly)", "ADD" in c.screen_row(21), c.screen_row(21))
+check("ADD (set directly)", c.screen_row(9)[33:38] == "ADD  ", c.screen_row(9))
 for k in ("q", "e", "t"):                   # one at a time, slowly
     c.tap(k, ms=40)
     c.run_ms(700)
@@ -233,20 +247,21 @@ c.tap("e", ms=40)
 check("add: pressing a latched note takes it out", 52 not in sounding() and {48, 55} <= sounding(), sounding())
 c.tap("y", ms=40)
 check("add: and adding goes on", 57 in sounding())
-c.tap("n", ms=40)
-check("add: N waits for the next note", {48, 55, 57} <= sounding())
+c.tap("=", ms=40)
+check("add: NEXT waits for the next note", {48, 55, 57} <= sounding())
 c.tap("q", ms=60)
-check("add: after N, the next key starts again", sounding() <= {48, 36} and 48 in sounding(), sounding())
-c.tap("n", ms=20); c.tap("n", ms=60)
-check("add: N twice clears", sounding() == set())
+check("add: after NEXT, the next key starts again", sounding() <= {48, 36} and 48 in sounding(), sounding())
+c.tap("=", ms=20); c.tap("=", ms=60)
+check("add: = = clears", sounding() == set() and c.v("latch") == 0)
 
+c.set("latch", 3)
 c.press("w", ms=60)                         # held while latch goes off
-c.tap("=", ms=60)                           # ADD -> OFF (past the end of OFF / SMART)
+c.tap("=", ms=30); c.tap("=", ms=60)        # NEXT, then off
 on = notes_on(c.midi())
 check("latch off: only the key still down sounds", set(on.values()) <= {50, 38} and on, on)
 c.release("w", ms=60)
 check("latch off: release stops it", notes_on(c.midi()) == {})
-check("latch OFF on screen", "OFF" in c.screen_row(21)[25:], c.screen_row(21))
+check("latch OFF on screen", c.screen_row(9)[33:38] == "OFF  ", c.screen_row(9))
 
 # ---------------------------------------------------------------- phantom keys
 c.press("q", "2", ms=40)
@@ -287,9 +302,10 @@ check("SHIFT+F7 panic: Game Boy panic CC and per-channel all-notes-off",
       and sorted(s & 15 for _, s, a, _ in after if a == 123 and (s & 15) in GB) == [0, 1, 2])
 check("panic: nothing left sounding", notes_on(c.midi()) == {} and all(c.sid(v)[1] & 1 == 0 for v in range(3)))
 c.release("q", "w", ms=40)
-c.tap("f7", ms=40)
-check("plain F7 is an octave key, not panic", c.v("octBase") == 24)
-c.tap("f3", ms=40)
+c.tap("f7", ms=100)
+check("plain F7 is the visualizer, not panic", c.v("vizOn") == 1 and "VISUALIZER" in c.screen_row(0), c.screen_row(0))
+c.tap("f7", ms=150)
+check("F7 again: the play screen", c.v("vizOn") == 0 and c.screen_row(4).startswith("SID"), c.screen_row(4))
 
 # ---------------------------------------------------------------- RESTORE
 c.run_ms(500)
@@ -366,7 +382,6 @@ for i in range(100):                        # the old v0.1 burst: no pacing woul
     fast += [(tt + i * 1000, 0x95), (tt + i * 1000 + 327, 60), (tt + i * 1000 + 654, 100)]
 check("(model sanity: unpaced 1 ms traffic does lose bytes)", forward(fast)[1] > 0)
 check("no byte ever written while the ACIA was busy", True)
-check("messages counter on screen", "MESSAGES" in c.screen_row(23) and c.screen_row(23)[10:15].isdigit(), c.screen_row(23))
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

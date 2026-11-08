@@ -30,6 +30,11 @@ DrumHit:
 	sta drumKind
 	stx drumLvl
 	sty drumTom
+	cmp #DK_KICK
+	bne .nk
+	lda #1
+	sta vizKick             ; (the visualizer's border flash)
+.nk:
 	lda devOn+DEV_NES
 	bne .on
 	rts
@@ -357,11 +362,15 @@ BeatChoose:
 	sta beatStep
 	sta beatSub
 .t:
+	lda beatTempo           ; BEAT TEMPO DEFAULT: the beat's own tempo
+	bne .d
+	sta beatFresh
 	lda beatBpm,x
 	jsr SetBpm
+.d:
 	jmp Dirty
 
-; RETURN: start / stop
+; F5: start / stop
 BeatRunKey:
 	subroutine
 	lda beatRun
@@ -381,9 +390,15 @@ BeatBegin:
 	sta beatSub
 	sta beatFrac
 	sta beatWait
-	ldx beatSel             ; at the beat's own tempo (unless the keytar's)
+	lda beatFresh           ; BEAT TEMPO DEFAULT, and no tempo set since the
+	beq .t                  ;  beat was chosen (power on): the beat's own
+	lda beatTempo
+	bne .t
+	sta beatFresh
+	ldx beatSel
 	lda beatBpm,x
 	jsr SetBpm              ; (first: it takes a moment)
+.t:
 	jsr GetTicks
 	lda nowL
 	sta beatBaseL
@@ -684,6 +699,19 @@ BeatFollow:
 ; there is) and one noise sound (cymbal, open hat, closed hat)
 BeatPlay:
 	subroutine
+	lda actCnt+A_FILL       ; BEAT FILL held: snare and toms instead
+	beq .pat
+	ldy fillK
+	lda fillA,y
+	sta bA
+	lda #0
+	sta bB
+	iny
+	tya
+	and #15
+	sta fillK
+	jmp .play
+.pat:
 	ldx beatSel
 	lda beatLo,x
 	sta ptr
@@ -697,6 +725,25 @@ BeatPlay:
 	iny
 	lda (ptr),y
 	sta bB
+	lda fillEnd             ; a fill just ended: crash and kick
+	beq .play
+	lda bA
+	ora #3
+	sta bA
+	lda bB
+	ora #$30
+	sta bB
+	lda fillEnd
+	cmp #2
+	bne .fe
+	lda #0                  ; the fill started the beat: it stops now
+	sta beatRun
+	sta fillSolo
+	jsr Dirty
+.fe:
+	lda #0
+	sta fillEnd
+.play:
 	lda bA
 	and #3
 	beq .s
@@ -775,3 +822,33 @@ BeatPlay:
 	jmp DrumHit
 .x:
 	rts
+
+; BEAT FILL: one bar of snare and toms, round again while held
+fillA:      .byte $0C,$04,$08,$08, $10,$10,$20,$20, $0C,$08,$20,$20, $30,$30,$08,$0C
+
+; BEAT FILL held (A = 1) / let go (0): with no beat playing, the fill starts
+; it, and it stops after the crash
+ActFill:
+	subroutine
+	cmp #0
+	beq .rel
+	lda #0
+	sta fillK
+	sta fillEnd
+	lda beatRun
+	bne .x
+	lda #1
+	sta fillSolo
+	jmp BeatBegin
+.rel:
+	lda beatRun
+	beq .x
+	lda #1
+	ldy fillSolo
+	beq .e
+	lda #2
+.e:
+	sta fillEnd
+.x:
+	rts
+

@@ -9,7 +9,8 @@
 ; 3/4 of the time between echoes. The SID doesn't echo.
 ;
 ; REPEAT on / off: the sound's default, the menu's REPEAT (AS SOUND / ON /
-; OFF), or the REPEAT action held (SPACE or a keytar button).
+; OFF; ON uses the ADVANCED SOUND values), or the REPEAT action held (SPACE
+; or a keytar button).
 ; REPEAT TIME: 1/4, 1/8 dotted, 1/8, 1/8T, 1/16 of the tempo, or FREE
 ; 80-500 ms. REPEATS: 1-8. REPEAT LEVEL: FULL, 90, 80, 70, 60, 50 %.
 
@@ -398,9 +399,24 @@ RepeatChanged:
 	sta rpBusy
 	rts
 
-; REPEAT from the sound (unless the menu locks it)
+; REPEAT from the sound; the menu's REPEAT ON: the ADVANCED SOUND values
 RepeatFromSound:
 	subroutine
+	ldx soundMode
+	lda rpLock
+	cmp #1
+	beq .user
+	lda sndRp,x             ; a sound without REPEAT: REPEAT held uses these too
+	bne .snd
+.user:
+	lda uRpTime
+	sta rpTime
+	lda uRpCount
+	sta rpCount
+	lda uRpLevel
+	sta rpLevel
+	jmp RepeatLockSet
+.snd:
 	ldx soundMode
 	lda sndRpTime,x
 	sta rpTime

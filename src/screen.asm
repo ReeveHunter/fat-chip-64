@@ -1,10 +1,16 @@
 ; Fat Chip 64 - screen
 ;
-;  row 0   FAT CHIP 64 header
-;  rows 2-7  devices (F1/F3/F5), channels, panic, overlap warning
-;  rows 9-18 voice table: which chip voice plays which note
-;  row 20  held notes, row 21 octave + latch, row 22 RESTORE test counters,
-;  row 23 messages sent, row 24 mode
+;  row 0      header
+;  row 2      sound, POLY / MONO, Fat Bass
+;  rows 4-6   SID, Game Boy, MidiNES: on / off or channels, the three notes
+;             each plays (row 7: a channel overlap warning)
+;  row 9      key, notes mode, latch
+;  row 10     arp
+;  row 12     tempo, beat, mute
+;  row 13     SPACE's action, octave (the lowest key)
+;  row 15     held notes
+;  row 16     MIDI in
+;  row 24     F keys
 
 ; Print the 0-terminated ASCII string at (ptr) to screen row Y, column X.
 ; Letters become screen codes; bit 7 of t2 reverses.
@@ -135,44 +141,52 @@ ScreenStatic:
 	PRINT 0, 0, txtHeader
 	lda #0
 	sta t2
-	PRINT 2, 0, txtDevices
-	PRINT 6, 0, txtPanic
-	PRINT 9, 0, txtVoices
-	PRINT 21, 0, txtOctave
-	PRINT 8, 0, txtMidiIn
-	PRINT 19, 0, txtArp
-	PRINT 22, 0, txtTempo
-	PRINT 24, 0, txtModeLn
+	PRINT 2, 0, txtSoundLn
+	PRINT 4, 0, txtSid
+	PRINT 5, 0, txtGb
+	PRINT 6, 0, txtNes
+	PRINT 9, 0, txtKeyLn
+	PRINT 10, 0, txtArp
+	PRINT 12, 0, txtTempo
+	PRINT 13, 0, txtSpaceLn
+	PRINT 15, 0, txtHeld
+	PRINT 16, 0, txtMidiIn
+	PRINT 24, 0, txtHelp
 	rts
 
 ScreenDynamic:
 	subroutine
-	jsr ScrDevices
-	jsr ScrDev2
-	ldx #0
-.v:
-	stx t3
-	jsr ScrVoiceRow
-	ldx t3
+	ldx #1
+.s:
+	stx scrStage
+	jsr .one
+	ldx scrStage
 	inx
-	cpx #NUM_VOICES
-	bne .v
-	jsr ScrBottom
-	jsr ScrOct
-	jsr ScrArpLine
-	jsr ScrCounters
-	jsr ScrModeLine
-	jmp ScrSoundLine
+	cpx #SCR_STAGES+1
+	bne .s
+	lda #0
+	sta scrStage
+	rts
+.one:
+	lda stageLo-1,x
+	sta ptr
+	lda stageHi-1,x
+	sta ptr+1
+	jmp (ptr)
 
-; Redraw in small steps, one per main loop pass (every 4 ms), so a redraw
-; never holds up the keyboard or the arp: 15 stages (devices, voice rows,
-; held notes, octave + latch, arp line, counters), each about 4 ms or less.
+; Redraw in small steps, one per main loop pass, so a redraw never holds up
+; the keyboard or the arp: 10 stages, each a line or two. (The visualizer has
+; its own steps; nothing is drawn while the menu is up.)
 ScreenStep:
 	subroutine
 	lda menuOn              ; (the menu is on screen)
 	beq .play
 	rts
 .play:
+	lda vizOn
+	beq .scr
+	jmp VizStep
+.scr:
 	lda scrStage
 	bne .run
 	lda screenDirty
@@ -182,23 +196,12 @@ ScreenStep:
 	lda #1
 	sta scrStage
 .run:
-	cmp #3
-	bcc .table
-	cmp #12
-	bcs .table
-	sec                     ; stages 3-11: voice rows
-	sbc #3
-	tax
-	jsr ScrVoiceRow
-	jmp .next
-.table:
 	tax
 	lda stageLo-1,x
 	sta ptr
 	lda stageHi-1,x
 	sta ptr+1
 	jsr .call
-.next:
 	inc scrStage
 	lda scrStage
 	cmp #SCR_STAGES+1
@@ -210,90 +213,119 @@ ScreenStep:
 .call:
 	jmp (ptr)
 
-SCR_STAGES equ 17
-; stages 1, 2, (3-11 voice rows), 12-17
-stageLo:	.byte <ScrDevices,<ScrDev2,0,0,0,0,0,0,0,0,0,<ScrBottom,<ScrOct,<ScrArpLine,<ScrCounters,<ScrModeLine,<ScrSoundLine
-stageHi:	.byte >ScrDevices,>ScrDev2,0,0,0,0,0,0,0,0,0,>ScrBottom,>ScrOct,>ScrArpLine,>ScrCounters,>ScrModeLine,>ScrSoundLine
+SCR_STAGES equ 10
+stageLo:	.byte <ScrSound,<ScrSid,<ScrGb,<ScrNes,<ScrKey,<ScrArpLine,<ScrTempo,<ScrSpace,<ScrHeld,<ScrMidiIn
+stageHi:	.byte >ScrSound,>ScrSid,>ScrGb,>ScrNes,>ScrKey,>ScrArpLine,>ScrTempo,>ScrSpace,>ScrHeld,>ScrMidiIn
 
-ScrDevices:
+; ---- row 2: sound, POLY / MONO, Fat Bass
+ScrSound:
 	subroutine
 	lda #0
 	sta t2
-	; ---- device lines
-	PRINT 3, 0, txtSid
-	ldx #DEV_SID
-	ldy #3
-	jsr OnOff
-	PRINT 4, 0, txtGb
-	ldx #DEV_GB
-	ldy #4
-	jsr OnOff
-	ldy #4
-	lda gbBase
-	jsr Channels
-	rts
+	ldx soundMode
+	lda sndNameLo,x
+	sta ptr
+	lda sndNameHi,x
+	sta ptr+1
+	ldx #6
+	ldy #2
+	jsr PrintAt
+	lda #<txtPoly
+	ldy #>txtPoly
+	ldx monoMode
+	beq .pm
+	lda #<txtMono
+	ldy #>txtMono
+.pm:
+	sta ptr
+	sty ptr+1
+	ldx #24
+	ldy #2
+	jsr PrintAt
+	lda #<txtNoBass
+	ldy #>txtNoBass
+	ldx fatBass
+	beq .fb
+	lda #<txtFatBass
+	ldy #>txtFatBass
+.fb:
+	sta ptr
+	sty ptr+1
+	ldx #30
+	ldy #2
+	jmp PrintAt
 
-ScrDev2:
-	subroutine
-	lda #0
-	sta t2
-	PRINT 5, 0, txtNes
-	ldx #DEV_NES
-	ldy #5
-	jsr OnOff
-	ldy #5
-	lda nesBase
-	jsr Channels
-	; overlap warning: both on and |gbBase - nesBase| < 5
-	PRINT 7, 0, txtBlank
-	lda devOn+DEV_GB
-	and devOn+DEV_NES
-	beq .vt
-	lda gbBase
-	sec
-	sbc nesBase
-	bcs .pos
-	eor #$FF
-	adc #1
-.pos:
-	cmp #5
-	bcs .vt
-	PRINT 7, 0, txtOverlap
-.vt:
-	rts
-
-; voice table row for voice X
-ScrVoiceRow:
+; ---- rows 4-6: a chip, its on / off or channels, the notes its three
+; voices play (voices X, X+3, X+6)
+ScrSid:
+	ldx #0
+	beq ScrChip
+ScrGb:
+	ldx #1
+	bne ScrChip
+ScrNes:
+	jsr ScrOverlap
+	ldx #2
+ScrChip:
 	subroutine
 	stx t3
 	txa
 	clc
-	adc #10
+	adc #4
+	sta exV                 ; the row
 	tay
 	ldx #0
-	lda #0
-	sta t2
 	jsr ScreenAddr
+	; on / off, channels
 	ldx t3
-	lda vNameLo,x
+	lda devOn,x
+	bne .on
+	lda #<txtOff
+	ldy #>txtOff
+	bne .pt
+.on:
+	cpx #0
+	bne .ch
+	lda #<txtOn
+	ldy #>txtOn
+.pt:
 	sta ptr
-	lda vNameHi,x
-	sta ptr+1
-	ldy #0
-.n:
-	lda (ptr),y
-	beq .note
-	cmp #64
-	bcc .nl
-	sbc #64
-.nl:
-	sta (ptr2),y
-	iny
-	bne .n
-.note:
-	; the note the voice really plays: Fat Bass folds the bass voices, a
+	sty ptr+1
+	ldx #9
+	ldy exV
+	jsr PrintAt
+	jmp .notes
+.ch:
+	lda gbBase              ; "11-15"
+	cpx #1
+	beq .cb
+	lda nesBase
+.cb:
+	pha
+	clc
+	adc #1
+	ldx #9
+	jsr PutNum
+	lda #'-
+	jsr PutChar
+	inx
+	pla
+	clc
+	adc #5
+	jsr PutNum
+	lda #32
+	jsr PutChar
+	inx
+	jsr PutChar
+.notes:
+	; the note each voice really plays: Fat Bass folds the bass voices, a
 	; sound can put the Game Boy pulses or the SID an octave off
-	ldx t3
+	lda #16
+	sta exI                 ; column
+	lda t3
+	sta exD                 ; voice
+.v:
+	ldx exD
 	lda vNote,x
 	cmp #NO_NOTE
 	beq .pn
@@ -310,12 +342,26 @@ ScrVoiceRow:
 	clc
 	adc #12
 .pn:
-	ldx #16
+	pha
+	ldy exV
+	ldx #0
+	jsr ScreenAddr
+	pla
+	ldx exI
 	jsr PutNote
-	; off-device voices are drawn dark
+	lda exI
+	clc
+	adc #6
+	sta exI
+	lda exD
+	clc
+	adc #3
+	sta exD
+	cmp #NUM_VOICES
+	bcc .v
+	; an off chip is drawn dark
 	ldx t3
-	ldy vDev,x
-	lda devOn,y
+	lda devOn,x
 	beq .dark
 	lda #13
 	bne .col
@@ -323,28 +369,250 @@ ScrVoiceRow:
 	lda #11
 .col:
 	sta t1
-	; colour RAM row = screen row + $D400
-	lda ptr2
-	sta ptr
+	ldy exV
+	ldx #0
+	jsr ScreenAddr
 	lda ptr2+1
 	clc
 	adc #>(COLRAM-SCREEN)
-	sta ptr+1
-	ldy #19
+	sta ptr2+1
+	ldy #39
 	lda t1
 .cc:
-	sta (ptr),y
+	sta (ptr2),y
 	dey
 	bpl .cc
 	rts
 
-ScrBottom:
+; row 7: both MIDI chips on and their channel blocks overlap
+ScrOverlap:
 	subroutine
 	lda #0
 	sta t2
-	; ---- held notes
-	PRINT 20, 0, txtHeld
-	ldy #20
+	PRINT 7, 0, txtBlank
+	lda devOn+DEV_GB
+	and devOn+DEV_NES
+	beq .x
+	lda gbBase
+	sec
+	sbc nesBase
+	bcs .pos
+	eor #$FF
+	adc #1
+.pos:
+	cmp #5
+	bcs .x
+	PRINT 7, 0, txtOverlap
+.x:
+	rts
+
+; ---- row 9: key, notes mode, latch (NEXT: the next key starts a new chord)
+ScrKey:
+	subroutine
+	lda #0
+	sta t2
+	ldy #9
+	ldx #0
+	jsr ScreenAddr
+	lda keyRoot
+	asl
+	sta t0
+	tay
+	ldx #4
+	lda noteNames,y
+	jsr PutChar             ; (uses Y)
+	inx
+	ldy t0
+	lda noteNames+1,y
+	jsr PutChar
+	lda #<txtMajor
+	ldy #>txtMajor
+	ldx keyMinor
+	beq .mj
+	lda #<txtMinor
+	ldy #>txtMinor
+.mj:
+	sta ptr
+	sty ptr+1
+	ldx #7
+	ldy #9
+	jsr PrintAt
+	ldx playMode
+	cpx #MODE_EXT
+	bne .m1
+	lda spice
+	clc
+	adc #2
+	tax
+.m1:
+	lda modeTxtLo,x
+	sta ptr
+	lda modeTxtHi,x
+	sta ptr+1
+	ldx #14
+	ldy #9
+	jsr PrintAt
+	ldy latch
+	lda newPending
+	beq .l
+	tya
+	beq .l
+	ldy #4                  ; NEXT
+.l:
+	lda txtLatchLo,y
+	sta ptr
+	lda txtLatchHi,y
+	sta ptr+1
+	ldx #33
+	ldy #9
+	jmp PrintAt
+
+; ---- row 10: arp mode, pattern, speed, SPARKLE octave
+ScrArpLine:
+	subroutine
+	lda #0
+	sta t2
+	ldx arpMode
+	lda arpModeLo,x
+	sta ptr
+	lda arpModeHi,x
+	sta ptr+1
+	ldx #4
+	ldy #10
+	jsr PrintAt
+	ldx arpPat
+	lda patTxtLo,x
+	sta ptr
+	lda patTxtHi,x
+	sta ptr+1
+	ldx #12
+	ldy #10
+	jsr PrintAt
+	ldx arpLen
+	cpx #ARP_FREE
+	beq .free
+	lda lenTxtLo,x
+	sta ptr
+	lda lenTxtHi,x
+	sta ptr+1
+	ldx #19
+	ldy #10
+	jsr PrintAt
+	jmp .oct
+.free:
+	ldy #10
+	ldx #0
+	jsr ScreenAddr
+	ldy freeIdx
+	lda freeLo,y
+	sta t0
+	lda freeHi,y
+	sta t1
+	ldx #24                 ; clear the field first (1000MS .. 10MS)
+	lda #32
+.clr:
+	jsr PutChar
+	dex
+	cpx #19
+	bcs .clr
+	ldx #19
+	jsr PutDecZ
+	lda #'M
+	jsr PutChar
+	inx
+	lda #'S
+	jsr PutChar
+.oct:
+	ldy arpOct
+	lda octTxtLo,y
+	sta ptr
+	lda octTxtHi,y
+	sta ptr+1
+	ldx #26
+	ldy #10
+	jmp PrintAt
+
+; ---- row 12: tempo, beat (PLAY / STOP), mute
+ScrTempo:
+	subroutine
+	lda #0
+	sta t2
+	ldy #12
+	ldx #0
+	jsr ScreenAddr
+	ldx #6
+	lda #32
+	jsr PutChar
+	inx
+	jsr PutChar
+	inx
+	jsr PutChar
+	lda bpm
+	sta t0
+	lda #0
+	sta t1
+	ldx #6
+	jsr PutDecZ
+	ldx beatSel
+	lda beatNameLo,x
+	sta ptr
+	lda beatNameHi,x
+	sta ptr+1
+	ldx #20
+	ldy #12
+	jsr PrintAt
+	lda #<txtStop
+	ldy #>txtStop
+	ldx beatRun
+	beq .br
+	lda #<txtPlay
+	ldy #>txtPlay
+.br:
+	sta ptr
+	sty ptr+1
+	ldx #29
+	ldy #12
+	jsr PrintAt
+	lda #<txtNoMute
+	ldy #>txtNoMute
+	ldx sidMute
+	beq .mo
+	lda #<txtMute
+	ldy #>txtMute
+.mo:
+	sta ptr
+	sty ptr+1
+	ldx #35
+	ldy #12
+	jmp PrintAt
+
+; ---- row 13: SPACE's action, octave (the lowest key's note)
+ScrSpace:
+	subroutine
+	lda #0
+	sta t2
+	ldx spaceAct
+	lda spcTxtLo,x
+	sta ptr
+	lda spcTxtHi,x
+	sta ptr+1
+	ldx #6
+	ldy #13
+	jsr PrintAt
+	ldy #13
+	ldx #0
+	jsr ScreenAddr
+	ldx #23
+	lda octBase
+	jmp PutMidiNote
+
+; ---- row 15: held notes
+ScrHeld:
+	subroutine
+	lda #0
+	sta t2
+	PRINT 15, 0, txtHeld
+	ldy #15
 	ldx #0
 	jsr ScreenAddr
 	ldx #6
@@ -362,40 +630,12 @@ ScrBottom:
 .hd:
 	rts
 
-ScrOct:
+; ---- row 16: MIDI in octave (H / J), last note received
+ScrMidiIn:
 	subroutine
 	lda #0
 	sta t2
-	; ---- octave, latch
-	ldy #21
-	ldx #0
-	jsr ScreenAddr
-	ldx #13
-	lda octBase
-	jsr PutMidiNote
-	ldy latch
-	lda txtLatchLo,y
-	sta ptr
-	lda txtLatchHi,y
-	sta ptr+1
-	ldx #27
-	ldy #21
-	jsr PrintAt
-	lda #<txtNNew
-	ldy #>txtNNew
-	ldx newPending
-	beq .np
-	lda #<txtNNext
-	ldy #>txtNNext
-.np:
-	sta ptr
-	sty ptr+1
-	ldx #34
-	ldy #21
-	jsr PrintAt
-.rs:
-	; ---- MIDI in: octave (H / J), last note received
-	ldy #8
+	ldy #16
 	ldx #0
 	jsr ScreenAddr
 	lda #'+
@@ -403,7 +643,7 @@ ScrOct:
 	bpl .po
 	lda #'-
 .po:
-	ldx #17
+	ldx #13
 	jsr PutChar
 	lda midiOct
 	bpl .pd
@@ -418,7 +658,7 @@ ScrOct:
 	lda lastInNote
 	cmp #NO_NOTE
 	bne .last
-	PRINT 8, 26, txtNoIn
+	PRINT 16, 26, txtNoIn
 	rts
 .last:
 	ldx #26
@@ -436,240 +676,7 @@ ScrOct:
 	jsr PutChar
 	inx
 	lda lastInNote
-	jsr PutMidiNote
-	rts
-
-ScrArpLine:
-	subroutine
-	lda #0
-	sta t2
-	; ---- arp: mode, pattern, speed, tempo
-	ldx arpMode
-	lda arpModeLo,x
-	sta ptr
-	lda arpModeHi,x
-	sta ptr+1
-	ldx #6
-	ldy #19
-	jsr PrintAt
-	ldx arpPat
-	lda patTxtLo,x
-	sta ptr
-	lda patTxtHi,x
-	sta ptr+1
-	ldx #16
-	ldy #19
-	jsr PrintAt
-	ldx arpLen
-	cpx #ARP_FREE
-	beq .free
-	lda lenTxtLo,x
-	sta ptr
-	lda lenTxtHi,x
-	sta ptr+1
-	ldx #25
-	ldy #19
-	jsr PrintAt
-	jmp .bpm
-.free:
-	ldy #19
-	ldx #0
-	jsr ScreenAddr
-	ldy freeIdx
-	lda freeLo,y
-	sta t0
-	lda freeHi,y
-	sta t1
-	ldx #30                 ; clear the field first (1000MS .. 10MS)
-	lda #32
-.clr:
-	jsr PutChar
-	dex
-	cpx #25
-	bcs .clr
-	ldx #25
-	jsr PutDecZ
-	lda #'M
-	jsr PutChar
-	inx
-	lda #'S
-	jsr PutChar
-.bpm:
-	ldy arpOct
-	lda octTxtLo,y
-	sta ptr
-	lda octTxtHi,y
-	sta ptr+1
-	ldx #34
-	ldy #19
-	jmp PrintAt
-
-ScrCounters:
-	subroutine
-	lda #0
-	sta t2
-	; ---- tempo, mute
-	ldy #22
-	ldx #0
-	jsr ScreenAddr
-	ldx #2
-	lda #32
-	jsr PutChar
-	inx
-	jsr PutChar
-	inx
-	jsr PutChar
-	lda bpm
-	sta t0
-	lda #0
-	sta t1
-	ldx #2
-	jsr PutDecZ
-	lda #<txtOff
-	ldy #>txtOff
-	ldx sidMute
-	beq .mo
-	lda #<txtOn
-	ldy #>txtOn
-.mo:
-	sta ptr
-	sty ptr+1
-	ldx #19
-	ldy #22
-	jsr PrintAt
-	ldx spaceAct            ; what SPACE does
-	lda spcTxtLo,x
-	sta ptr
-	lda spcTxtHi,x
-	sta ptr+1
-	ldx #33
-	ldy #22
-	jsr PrintAt
-	rts
-
-; ---- mode line: notes mode, key, sound; MIDI out counter
-ScrModeLine:
-	subroutine
-	lda #0
-	sta t2
-	ldx playMode
-	cpx #MODE_EXT
-	bne .m1
-	lda spice
-	clc
-	adc #2
-	tax
-.m1:
-	lda modeTxtLo,x
-	sta ptr
-	lda modeTxtHi,x
-	sta ptr+1
-	ldx #2
-	ldy #24
-	jsr PrintAt
-	ldy #24
-	ldx #0
-	jsr ScreenAddr
-	lda keyRoot
-	asl
-	sta t0
-	tay
-	ldx #19
-	lda noteNames,y
-	jsr PutChar             ; (uses Y)
-	inx
-	ldy t0
-	lda noteNames+1,y
-	jsr PutChar
-	lda #<txtMajor
-	ldy #>txtMajor
-	ldx keyMinor
-	beq .mj
-	lda #<txtMinor
-	ldy #>txtMinor
-.mj:
-	sta ptr
-	sty ptr+1
-	ldx #22
-	ldy #24
-	jsr PrintAt
-	; ---- messages sent
-	PRINT 23, 0, txtSent
-	ldy #23
-	ldx #0
-	jsr ScreenAddr
-	sei
-	lda statSent
-	sta t0
-	lda statSent+1
-	sta t1
-	cli
-	ldx #10
-	jsr PutDec16
-	rts
-
-; ---- sound line (row 1) and the beat demo (row 23, right)
-ScrSoundLine:
-	subroutine
-	lda #0
-	sta t2
-	; ---- row 1: sound, POLY / MONO, Fat Bass
-	PRINT 1, 0, txtSoundLn
-	ldx soundMode
-	lda sndNameLo,x
-	sta ptr
-	lda sndNameHi,x
-	sta ptr+1
-	ldx #2
-	ldy #1
-	jsr PrintAt
-	lda #<txtPoly
-	ldy #>txtPoly
-	ldx monoMode
-	beq .pm
-	lda #<txtMono
-	ldy #>txtMono
-.pm:
-	sta ptr
-	sty ptr+1
-	ldx #22
-	ldy #1
-	jsr PrintAt
-	lda #<txtNoBass
-	ldy #>txtNoBass
-	ldx fatBass
-	beq .fb
-	lda #<txtFatBass
-	ldy #>txtFatBass
-.fb:
-	sta ptr
-	sty ptr+1
-	ldx #28
-	ldy #1
-	jsr PrintAt
-	; ---- row 23, right: beat demo
-	PRINT 23, 25, txtBeatLn
-	ldx beatSel
-	lda beatNameLo,x
-	sta ptr
-	lda beatNameHi,x
-	sta ptr+1
-	ldx #27
-	ldy #23
-	jsr PrintAt
-	lda #<txtStop
-	ldy #>txtStop
-	ldx beatRun
-	beq .br
-	lda #<txtPlay
-	ldy #>txtPlay
-.br:
-	sta ptr
-	sty ptr+1
-	ldx #36
-	ldy #23
-	jsr PrintAt
-	rts
+	jmp PutMidiNote
 
 ; 16-bit number in t1:t0 at column X of row ptr2, five digits
 PutDec16:
@@ -755,57 +762,6 @@ PutDecZ:
 
 decLo:	.byte <10000,<1000,<100,<10,<1
 decHi:	.byte >10000,>1000,>100,>10,>1
-
-; "ON " / "OFF" for device X at row Y, column 12
-OnOff:
-	subroutine
-	lda devOn,x
-	beq .off
-	lda #<txtOn
-	sta ptr
-	lda #>txtOn
-	sta ptr+1
-	jmp .p
-.off:
-	lda #<txtOff
-	sta ptr
-	lda #>txtOff
-	sta ptr+1
-.p:
-	ldx #12
-	jmp PrintAt
-
-; "CH a-b" for base channel A (0-15) at row Y, column 17
-Channels:
-	subroutine
-	pha
-	ldx #0
-	jsr ScreenAddr
-	ldx #17
-	lda #'C
-	jsr PutChar
-	inx
-	lda #'H
-	jsr PutChar
-	inx
-	lda #32
-	jsr PutChar
-	inx
-	pla
-	pha
-	clc
-	adc #1
-	jsr PutNum
-	lda #'-
-	jsr PutChar
-	inx
-	pla
-	clc
-	adc #5
-	jsr PutNum
-	lda #32
-	jsr PutChar
-	rts
 
 ; Note index A (or NO_NOTE) at column X of row ptr2: "C#3", "--"
 PutNote:

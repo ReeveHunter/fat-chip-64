@@ -57,7 +57,7 @@ c.tap("a", ms=40)                           # UNISON
 for _ in range(4):
     c.tap(";", ms=30)                       # 30 -> 25 20 15 10
 c.run_ms(300)
-check("; down to 10 MS", c.v("freeIdx") == 0 and "10MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+check("; down to 10 MS", c.v("freeIdx") == 0 and "10MS" in c.screen_row(10).replace(" ", ""), c.screen_row(10))
 c.tap(";", ms=30)
 check("; stops at 10 MS", c.v("freeIdx") == 0)
 t0 = c.cpu.processorCycles
@@ -80,15 +80,15 @@ c.tap("a", ms=30); c.tap("a", ms=30)        # arp off
 
 # ---------------------------------------------------------------- SPACE modes
 c.run_ms(150)
-check("SPACE: BEND DOWN by default (v0.13)", "<> SPACE BEND DN" in c.screen_row(22), c.screen_row(22))
+check("SPACE: BEND DOWN by default (v0.13)", c.screen_row(13).startswith("SPACE BEND DN"), c.screen_row(13))
 c.tap(".", ms=150)
-check(". : SPACE BEND UP", c.v("spaceAct") == 2 and "SPACE BEND UP" in c.screen_row(22), c.screen_row(22))
+check(". : SPACE BEND UP", c.v("spaceAct") == 2 and c.screen_row(13).startswith("SPACE BEND UP"), c.screen_row(13))
 c.tap(",", ms=10)
 c.tap(",", ms=150)
-check(", , : MUTE", c.v("spaceAct") == 0 and "SPACE MUTE" in c.screen_row(22), c.screen_row(22))
+check(", , : MUTE", c.v("spaceAct") == 0 and c.screen_row(13).startswith("SPACE MUTE "), c.screen_row(13))
 c.tap(",", ms=10)
 c.tap(",", ms=150)
-check(", , : wraps to NOTHING, then NEXT SOUND", c.v("spaceAct") == 15, c.v("spaceAct"))
+check(", , : wraps to NOTHING, then NEXT SOUND", c.v("spaceAct") == 18, c.v("spaceAct"))
 c.set("spaceAct", 1)                        # BEND DOWN
 
 c.press("w", ms=200)                        # D: SID 38+12.. (whatever), GB, NES

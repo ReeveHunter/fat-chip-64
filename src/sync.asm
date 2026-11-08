@@ -475,8 +475,9 @@ btnCC:      .byte 1, 65, 64     ; vibrato, portamento, sustain (the keytar's ord
 ; ------------------------------------------------------------ actions
 ; What SPACE and the keytar's buttons do (menu: SPACE, ... BUTTON):
 ;   held     MUTE, BEND DOWN, BEND UP, VIBRATO, TREMOLO, ARP, STUTTER,
-;            VINYL STOP, GLIDE, SUSTAIN, OCTAVE UP
-;   a press  NEW CHORD, TAP TEMPO, BEAT ON/OFF, NEXT SOUND; or NOTHING
+;            VINYL STOP, GLIDE, SUSTAIN, OCTAVE UP, REPEAT, FILTER SWEEP,
+;            BEAT FILL, TAPE WOBBLE, WIDE
+;   a press  TAP TEMPO, BEAT ON/OFF, NEXT SOUND; or NOTHING
 ; A held action can be held by several at once; it ends when the last lets go.
 ;
 ; A = action, t3 = 1 pressed / 0 let go
@@ -530,7 +531,8 @@ DoAction:
 
 heldJump:   .word ActMute-1, ActNone-1, ActNone-1, ActVib-1, ActTrem-1, ActArp-1
 	        .word ActStut-1, ActNone-1, ActGlide-1, ActSus-1, ActOctUp-1, ActRepeat-1
-pressJump:  .word NewChordKey-1, TapTempo-1, BeatRunKey-1, ActSound-1
+	        .word ActSweep-1, ActFill-1, ActWobble-1, ActWide-1
+pressJump:  .word TapTempo-1, BeatRunKey-1, ActSound-1
 
 ; Panic: every held action ends
 ActionsEnd:
@@ -553,6 +555,15 @@ ActionsEnd:
 	sta sustainOn
 	sta vinylLvl
 	sta bendLvl
+	sta fillEnd
+	lda fillSolo            ; a fill that started the beat: it stops
+	beq .fs
+	lda #0
+	sta fillSolo
+	sta beatRun
+	jsr NoiseOff
+.fs:
+	jsr WideWobble          ; WIDE, TAPE WOBBLE: the Game Boy back
 	lda arpTemp
 	beq .a
 	lda #0

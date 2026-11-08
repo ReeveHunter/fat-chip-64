@@ -18,7 +18,7 @@ keymap:
 	; col 3: 7 Y G 8 B H U V
 	.byte 10,9,K_G,N_,K_B,K_H,11,K_V
 	; col 4: 9 I J 0 M K O N
-	.byte 13,12,K_J,15,K_M,K_K,14,K_N
+	.byte 13,12,K_J,15,K_M,K_K,14,N_
 	; col 5: + P L - . : @ ,
 	.byte N_,16,K_L,18,K_PERIOD,K_COLON,17,K_COMMA
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
@@ -33,43 +33,30 @@ sidOfs:     .byte 0,7,14
 vDev:       .byte DEV_SID,DEV_GB,DEV_NES, DEV_SID,DEV_GB,DEV_NES, DEV_SID,DEV_GB,DEV_NES
 vIdx:       .byte 0,0,0, 1,1,1, 2,2,2      ; SID voice / channel offset from the base
 vBass:      .byte 0,0,0, 0,0,0, 0,1,1      ; GB wave and NES triangle: bass, octave down
-vNameLo:    .byte <vn0,<vn1,<vn2,<vn3,<vn4,<vn5,<vn6,<vn7,<vn8
-vNameHi:    .byte >vn0,>vn1,>vn2,>vn3,>vn4,>vn5,>vn6,>vn7,>vn8
-vn0:        .byte "SID 1",0
-vn1:        .byte "GB PULSE 1",0
-vn2:        .byte "NES PULSE 1",0
-vn3:        .byte "SID 2",0
-vn4:        .byte "GB PULSE 2",0
-vn5:        .byte "NES PULSE 2",0
-vn6:        .byte "SID 3",0
-vn7:        .byte "GB WAVE",0
-vn8:        .byte "NES TRIANGLE",0
-
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64                      V0.13 ",0
-txtDevices: .byte "DEVICES       SHIFT+F1/F3/F5: ON/OFF",0
+txtHeader:  .byte " FAT CHIP 64  V0.14        RETURN: MENU ",0
+txtSoundLn: .byte "SOUND",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
 txtNes:     .byte "MIDINES",0
-txtOn:      .byte "ON ",0
-txtOff:     .byte "OFF",0
-txtMuted:   .byte "MUTED (M)",0
-txtBlank9:  .byte "         ",0
-txtPanic:   .byte "SHIFT+F7 PANIC   CTRL+F3/F5 CHANNELS",0
+txtOn:      .byte "ON   ",0
+txtOff:     .byte "OFF  ",0
 txtOverlap: .byte "!! GAME BOY AND NES CHANNELS OVERLAP !!",0
 txtBlank:   .byte "                                       ",0
-txtVoices:  .byte "VOICES",0
-txtHeld:    .byte "HELD                                   ",0
-txtOctave:  .byte "F1-F7 OCTAVE       = LATCH",0
-txtNNew:    .byte "N NEW ",0
-txtNNext:   .byte "N NEXT",0
-txtLatchLo: .byte <txtLOff,<txtLSmart,<txtLHold,<txtLAdd
-txtLatchHi: .byte >txtLOff,>txtLSmart,>txtLHold,>txtLAdd
+txtKeyLn:   .byte "KEY                        LATCH",0
+txtHeld:    .byte "HELD                                    ",0
+txtTempo:   .byte "TEMPO     BPM  BEAT",0
+txtSpaceLn: .byte "SPACE           OCTAVE",0
+txtMute:    .byte "MUTE",0
+txtNoMute:  .byte "    ",0
+txtHelp:    .byte "F1/F3 OCTAVE   F5 BEAT   F7 VISUALIZER",0
+txtLatchLo: .byte <txtLOff,<txtLSmart,<txtLHold,<txtLAdd,<txtLNext
+txtLatchHi: .byte >txtLOff,>txtLSmart,>txtLHold,>txtLAdd,>txtLNext
+txtLNext:   .byte "NEXT ",0
 txtLSmart:  .byte "SMART",0
 txtLAdd:    .byte "ADD  ",0
-txtArp:     .byte "A ARP         S        D        F",0
-txtMs:      .byte "MS  ",0
+txtArp:     .byte "ARP",0
 arpModeLo:  .byte <tAOff,<tAUni,<tASpk
 arpModeHi:  .byte >tAOff,>tAUni,>tASpk
 tAOff:      .byte "OFF    ",0
@@ -95,14 +82,12 @@ patHi:      .byte >PatUp,>PatDown,>PatUpDown,>PatRandom,>PatUp
 ; FREE speeds (ms per step), ; slower / : faster
 freeLo:     .byte <10,<15,<20,<25,<30,<40,<50,<60,<75,<90,<110,<135,<160,<200,<250,<300,<400,<500,<700,<1000
 freeHi:     .byte >10,>15,>20,>25,>30,>40,>50,>60,>75,>90,>110,>135,>160,>200,>250,>300,>400,>500,>700,>1000
-txtMidiIn:  .byte "MIDI IN  H/J OCT     LAST",0
+txtMidiIn:  .byte "MIDI IN  OCT         LAST",0
 txtLOff:    .byte "OFF  ",0
 txtLHold:   .byte "HOLD ",0
-txtTempo:   .byte "B     BPM   M MUTE      <> SPACE",0
-; SPACE's action on the tempo line (7 characters)
-spcTxtLo:   .byte <tS0,<tS1,<tS2,<tS3,<tS4,<tS5,<tS6,<tS7,<tS8,<tS9,<tS10,<tSR,<tS11,<tS12,<tS13,<tS14,<tS15
-spcTxtHi:   .byte >tS0,>tS1,>tS2,>tS3,>tS4,>tS5,>tS6,>tS7,>tS8,>tS9,>tS10,>tSR,>tS11,>tS12,>tS13,>tS14,>tS15
-tSR:        .byte "REPEAT ",0
+; SPACE's action (7 characters), in A_ order
+spcTxtLo:   .byte <tS0,<tS1,<tS2,<tS3,<tS4,<tS5,<tS6,<tS7,<tS8,<tS9,<tS10,<tS11,<tS12,<tS13,<tS14,<tS15,<tS16,<tS17,<tS18,<tS19
+spcTxtHi:   .byte >tS0,>tS1,>tS2,>tS3,>tS4,>tS5,>tS6,>tS7,>tS8,>tS9,>tS10,>tS11,>tS12,>tS13,>tS14,>tS15,>tS16,>tS17,>tS18,>tS19
 tS0:        .byte "MUTE   ",0
 tS1:        .byte "BEND DN",0
 tS2:        .byte "BEND UP",0
@@ -114,12 +99,15 @@ tS7:        .byte "VINYL  ",0
 tS8:        .byte "GLIDE  ",0
 tS9:        .byte "SUSTAIN",0
 tS10:       .byte "OCT UP ",0
-tS11:       .byte "NEW CHD",0
-tS12:       .byte "TAP    ",0
-tS13:       .byte "BEAT   ",0
-tS14:       .byte "SOUND  ",0
-tS15:       .byte "NOTHING",0
-txtModeLn:  .byte "Z            K KEY",0
+tS11:       .byte "REPEAT ",0
+tS12:       .byte "SWEEP  ",0
+tS13:       .byte "FILL   ",0
+tS14:       .byte "WOBBLE ",0
+tS15:       .byte "WIDE   ",0
+tS16:       .byte "TAP    ",0
+tS17:       .byte "BEAT   ",0
+tS18:       .byte "SOUND  ",0
+tS19:       .byte "NOTHING",0
 modeTxtLo:  .byte <tMPoly,<tMChord,<tMEx7,<tMEx9,<tMEx11,<tMEx13
 modeTxtHi:  .byte >tMPoly,>tMChord,>tMEx7,>tMEx9,>tMEx11,>tMEx13
 tMPoly:     .byte "POLY      ",0
@@ -130,12 +118,10 @@ tMEx11:     .byte "EXT 11TH  ",0
 tMEx13:     .byte "EXT 13TH  ",0
 txtMajor:   .byte "MAJOR",0
 txtMinor:   .byte "MINOR",0
-txtSoundLn: .byte "V                   C       ",0
 txtPoly:    .byte "POLY",0
 txtMono:    .byte "MONO",0
 txtFatBass: .byte "FAT BASS",0
 txtNoBass:  .byte "        ",0
-txtBeatLn:  .byte "G",0
 txtPlay:    .byte "PLAY",0
 txtStop:    .byte "STOP",0
 octTxtLo:   .byte <tO0,<tO1,<tO2
@@ -143,7 +129,6 @@ octTxtHi:   .byte >tO0,>tO1,>tO2
 tO0:        .byte "+0 OCT",0
 tO1:        .byte "+1 OCT",0
 tO2:        .byte "+2 OCT",0
-txtSent:    .byte "MIDI OUT:       MESSAGES",0
 txtNoIn:    .byte "         ",0
 
 ; scale steps, three octaves (Expand)

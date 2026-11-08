@@ -26,8 +26,8 @@ def gaps(ev):
 
 c = C64()
 c.run_ms(150)
-check("arp line on screen, FREE 30 MS by default", c.screen_row(19).startswith("A ARP OFF") and "30MS" in c.screen_row(19).replace(" ", "")
-      and "+1 OCT" in c.screen_row(19) and "120BPM" in c.screen_row(22).replace(" ", ""), c.screen_row(22))
+check("arp line on screen, FREE 30 MS by default", c.screen_row(10).startswith("ARP OFF") and "30MS" in c.screen_row(10).replace(" ", "")
+      and "+1 OCT" in c.screen_row(10) and "120BPM" in c.screen_row(12).replace(" ", ""), c.screen_row(12))
 check("Game Boy gets the tempo at startup (120 BPM = CC107 30, CC108 0)",
       [(a, b) for _, s, a, b in c.midi() if s == 0xB0 and a in (107, 108)] == [(107, 30), (108, 0)])
 
@@ -41,8 +41,8 @@ for _ in range(5):
     c.press("b", ms=300)
     c.release("b", ms=300)                  # 600 ms apart = 100 BPM
 c.run_ms(60)
-check("tap tempo: 100 BPM", c.v("bpm") == 100 and "100BPM" in c.screen_row(22).replace(" ", ""),
-      (c.v("bpm"), c.screen_row(22)))
+check("tap tempo: 100 BPM", c.v("bpm") == 100 and "100BPM" in c.screen_row(12).replace(" ", ""),
+      (c.v("bpm"), c.screen_row(12)))
 tm = [(a, b) for _, s, a, b in c.midi(since=t0) if s == 0xB0 and a in (107, 108)]
 check("tap tempo goes to the Game Boy (100 x 32 = 3200: CC107 25, CC108 0)", tm[-2:] == [(107, 25), (108, 0)], tm[-2:])
 c.run_ms(2500)
@@ -51,10 +51,10 @@ check("one tap after a long gap doesn't change the tempo", c.v("bpm") == 100)
 
 # ---------------------------------------------------------------- unison arp
 c.tap("a", ms=60)
-check("A: UNISON", c.v("arpMode") == 1 and "UNISON" in c.screen_row(19), c.screen_row(19))
+check("A: UNISON", c.v("arpMode") == 1 and "UNISON" in c.screen_row(10), c.screen_row(10))
 c.tap("d", ms=30)                           # FREE -> 1/4
 c.tap("d", ms=150)                          # 1/8
-check("D steps the speed: 1/8", c.v("arpLen") == 1 and "1/8 " in c.screen_row(19), c.screen_row(19))
+check("D steps the speed: 1/8", c.v("arpLen") == 1 and "1/8 " in c.screen_row(10), c.screen_row(10))
 t0 = c.cpu.processorCycles
 c.press("q", "e", "t", ms=1700)             # C E G held
 ev = ons(c, 0, t0)
@@ -78,7 +78,7 @@ t0 = c.cpu.processorCycles
 c.tap("s", ms=20)                           # DOWN: from the top at the next step
 c.run_ms(1000)
 notes = [n for _, n in ons(c, 0, t0)]
-check("S: DOWN goes G E C", "DOWN" in c.screen_row(19) and notes[:3] == [55, 52, 48], notes)
+check("S: DOWN goes G E C", "DOWN" in c.screen_row(10) and notes[:3] == [55, 52, 48], notes)
 c.tap("s", ms=10)                           # UP-DOWN
 t0 = c.cpu.processorCycles
 c.run_ms(2200)
@@ -94,7 +94,7 @@ c.release("q", "e", "t", ms=60)
 check("release: arp stops, nothing left on", all(v == 255 for v in c.v("vNote", 9)), c.v("vNote", 9))
 
 c.tap("s", ms=40)                           # AS PLAYED
-check("S: PLAYED", "PLAYED" in c.screen_row(19), c.screen_row(19))
+check("S: PLAYED", "PLAYED" in c.screen_row(10), c.screen_row(10))
 c.set("latch", 3)                           # ADD (menu-only for now)
 t0 = c.cpu.processorCycles
 for k in ("t", "q", "y", "e"):              # G C A E, one at a time
@@ -102,31 +102,31 @@ for k in ("t", "q", "y", "e"):              # G C A E, one at a time
 c.run_ms(2600)
 notes = [n for _, n in ons(c, 0, t0)][-8:]
 check("PLAYED + ADD latch: the order you built it (G C A E)", notes[:4] in ([55, 48, 57, 52], [48, 57, 52, 55], [57, 52, 55, 48], [52, 55, 48, 57]), notes)
-c.tap("n", ms=20); c.tap("n", ms=60)
-check("N: chord gone, arp stopped", all(v == 255 for v in c.v("vNote", 9)))
+c.tap("=", ms=20); c.tap("=", ms=60); c.set("latch", 3)
+check("= =: chord gone, arp stopped", all(v == 255 for v in c.v("vNote", 9)))
 
 # ---------------------------------------------------------------- free speed
 c.tap("s", ms=10)                           # UP again
 c.tap(":", ms=30)                           # picks FREE (30 ms)
 c.run_ms(60)
-check("; picks FREE", "30MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+check("; picks FREE", "30MS" in c.screen_row(10).replace(" ", ""), c.screen_row(10))
 for _ in range(6):
     c.tap(":", ms=30)                       # 40 50 60 75 90 110
 c.tap(";", ms=30); c.tap(":", ms=30)        # ; faster, : slower (v0.13: ; is the rightmost): 110 ms
 c.run_ms(250)
-check("; faster / : slower: 110 MS", "110MS" in c.screen_row(19).replace(" ", ""), c.screen_row(19))
+check("; faster / : slower: 110 MS", "110MS" in c.screen_row(10).replace(" ", ""), c.screen_row(10))
 t0 = c.cpu.processorCycles
 c.tap("q", ms=30); c.tap("w", ms=30)
 c.run_ms(1200)
 g = gaps(ons(c, 0, t0))
 check("FREE 110 ms steps (on the wire: Game Boy queue jitter of a few ms)",
       g and abs(sum(g[2:]) / len(g[2:]) - 110) < 2 and all(abs(x - 110) <= 9 for x in g[2:]), g)
-c.tap("n", ms=20); c.tap("n", ms=40)
+c.tap("=", ms=20); c.tap("=", ms=40); c.set("latch", 3)
 
 # ---------------------------------------------------------------- sparkle
 t0 = c.cpu.processorCycles
 c.tap("a", ms=60)
-check("A again: SPARKLE", "SPARKLE" in c.screen_row(19), c.screen_row(19))
+check("A again: SPARKLE", "SPARKLE" in c.screen_row(10), c.screen_row(10))
 pans = [(s & 15, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0 and a == 10]
 check("sparkle pans the Game Boy pulses left / right", pans == [(0, 0), (1, 127)], pans)
 t0 = c.cpu.processorCycles
@@ -152,7 +152,7 @@ check("sparkle: the NES and GB wave hold the pad", on_pad.get(5) in (48, 52, 55)
       and on_pad.get(2) == 36, on_pad)
 nes_ons = len(ons(c, 5, c.cpu.processorCycles - 800 * CYCLES_PER_MS))
 check("sparkle: the pad doesn't re-attack every step", nes_ons == 0, nes_ons)
-c.tap("n", ms=20); c.tap("n", ms=60)
+c.tap("=", ms=20); c.tap("=", ms=60); c.set("latch", 3)
 t0 = c.cpu.processorCycles
 c.tap("a", ms=60)                           # OFF
 pans = [(s & 15, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0 and a == 10]

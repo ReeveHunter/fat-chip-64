@@ -36,6 +36,8 @@ TapTempo:
 	beq .tap
 	rts
 .tap:
+	lda #0
+	sta beatFresh           ; (a tempo of your own: a beat starting keeps it)
 	jsr GetTicks
 	lda nowL
 	sec

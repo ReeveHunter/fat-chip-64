@@ -35,7 +35,7 @@ def sounding(c):
 c = C64()
 c.run_ms(200)
 check("screen: MIDI IN line, octave +0, nothing received yet",
-      c.screen_row(8).startswith("MIDI IN  H/J OCT +0") and "CH" not in c.screen_row(8), c.screen_row(8))
+      c.screen_row(16).startswith("MIDI IN  OCT +0") and "CH" not in c.screen_row(16), c.screen_row(16))
 
 # ---------------------------------------------------------------- one note
 c.midi_in(0x90, 60, 64, ms=140)             # SHS-10: fixed velocity 64, channel 1
@@ -43,8 +43,8 @@ on = notes_on(c.midi())
 check("note-on ch 1: plays like an overlay key (GB pulses, NES, Fat Bass folded to C2)",
       on.get(0) == 60 and on.get(1) == 60 and on.get(5) == 60 and on.get(2) == 36 and on.get(7) == 36, on)
 check("note-on: SID gated", all(c.raw[0xD404 + 7 * v] & 1 for v in range(3)))
-check("screen: last note CH 1 C 4", "LAST CH1 C 4" in c.screen_row(8).replace("  ", " "), c.screen_row(8))
-check("held row shows it", "C 4" in c.screen_row(20), c.screen_row(20))
+check("screen: last note CH 1 C 4", "LAST CH1 C 4" in c.screen_row(16).replace("  ", " "), c.screen_row(16))
+check("held row shows it", "C 4" in c.screen_row(15), c.screen_row(15))
 c.midi_in(0x80, 60, 64, ms=80)
 check("note-off: everything off", notes_on(c.midi()) == {}, notes_on(c.midi()))
 
@@ -65,22 +65,22 @@ check("channels 12-16 (SHS-10 accompaniment, drums) are ignored, nothing passed 
       len(c.midi()) == n0, c.midi()[n0:])
 c.midi_in(0x8B, 60, 0, 0x8F, 36, 0, 0x8E, 48, 0, ms=20)
 c.midi_in(0x9A, 67, 64, ms=120)             # ch 11 plays (and the screen catches up)
-check("channel 11 plays", 67 in sounding(c) and "CH11" in c.screen_row(8), c.screen_row(8))
+check("channel 11 plays", 67 in sounding(c) and "CH11" in c.screen_row(16), c.screen_row(16))
 c.midi_in(0x8A, 67, 0, ms=60)
 
 # ---------------------------------------------------------------- octave
 c.tap("j", ms=80)
-check("J: +1 OCT", c.v("midiOct") == 1 and "OCT +1" in c.screen_row(8), c.screen_row(8))
+check("J: +1 OCT", c.v("midiOct") == 1 and "OCT +1" in c.screen_row(16), c.screen_row(16))
 c.midi_in(0x90, 60, 64, ms=60)
 check("+1: note 60 plays 72", 72 in sounding(c) and notes_on(c.midi()).get(0) == 72, sounding(c))
 c.tap("h", ms=40); c.tap("h", ms=80)        # -1 while the note is held
 c.midi_in(0x80, 60, 0, ms=60)
 check("octave changed mid-note: its note-off still ends it", sounding(c) == set(), sounding(c))
-check("H H: -1 OCT", c.v("midiOct") == 255 and "OCT -1" in c.screen_row(8), c.screen_row(8))
+check("H H: -1 OCT", c.v("midiOct") == 255 and "OCT -1" in c.screen_row(16), c.screen_row(16))
 for _ in range(5):
     c.tap("h", ms=30)
 c.run_ms(60)
-check("H stops at -4", c.v("midiOct") == 256 - 4 and "OCT -4" in c.screen_row(8), c.screen_row(8))
+check("H stops at -4", c.v("midiOct") == 256 - 4 and "OCT -4" in c.screen_row(16), c.screen_row(16))
 c.midi_in(0x90, 41, 64, ms=60)              # 41 - 48: below 0
 check("-4: a note that would go below 0 is ignored", sounding(c) == set())
 c.midi_in(0x80, 41, 0, 0x90, 96, 64, ms=60)
@@ -117,8 +117,7 @@ check("SMART latch: a MIDI chord keeps sounding after release", {60, 64, 67} <= 
 c.run_ms(700)
 c.midi_in(0x90, 62, 64, ms=40); c.midi_in(0x80, 62, 0, ms=60)
 check("SMART latch: after a pause the next MIDI note starts a new chord", 62 in sounding(c) and 60 not in sounding(c), sounding(c))
-c.tap("n", ms=20); c.tap("n", ms=60)
-c.tap("=", ms=60)                           # OFF
+c.tap("=", ms=20); c.tap("=", ms=60)       # NEXT, then OFF
 check("latch off", c.v("latch") == 0 and sounding(c) == set())
 c.tap("z", ms=60)                           # SMART CHORD
 c.midi_in(0x90, 57, 64, ms=80)              # A3 in C major: A minor

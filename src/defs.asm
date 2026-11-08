@@ -51,7 +51,9 @@ DEV_GB      equ 1
 DEV_NES     equ 2
 NUM_VOICES  equ 9
 NO_NOTE     equ $FF
-OCT_DEFAULT equ 48             ; lowest overlay key (Q) = MIDI 48 (C3) at start (F3)
+OCT_DEFAULT equ 48             ; lowest overlay key (Q) = MIDI 48 (C3) at start
+OCT_BOTTOM  equ 12             ; F1 / F3: the lowest key goes C0 ..
+OCT_TOP     equ 84             ;  .. C6
 VELOCITY    equ 100
 
 ; Fat Chip GB global CCs (fat-chip-gb/docs/fatchip-protocol.md)
@@ -112,8 +114,8 @@ MIDI_SLOTS  equ 8
 NIDX        equ MIDI_FIRST+MIDI_SLOTS
 MIDI_IN_CHANS equ 11          ; MIDI in plays channels 1-11 (12-16: SHS-10 accompaniment)
 MIDI_OCT_MAX equ 4
-; actions (v0.13): what SPACE and the keytar's three buttons do. The first
-; A_HELD act while held, the rest on a press.
+; actions (v0.13, v0.14): what SPACE and the keytar's three buttons do. The
+; first A_HELD act while held, the rest on a press.
 A_MUTE      equ 0
 A_BENDDN    equ 1
 A_BENDUP    equ 2
@@ -126,13 +128,16 @@ A_GLIDE     equ 8
 A_SUS       equ 9
 A_OCTUP     equ 10
 A_REPEAT    equ 11
-A_HELD      equ 12
-A_NEWCHORD  equ 12
-A_TAP       equ 13
-A_BEAT      equ 14
-A_SOUND     equ 15
-A_NOTHING   equ 16
-NUM_ACTS    equ 17
+A_SWEEP     equ 12
+A_FILL      equ 13
+A_WOBBLE    equ 14
+A_WIDE      equ 15
+A_HELD      equ 16
+A_TAP       equ 16
+A_BEAT      equ 17
+A_SOUND     equ 18
+A_NOTHING   equ 19
+NUM_ACTS    equ 20
 BEND_DOWN_MS equ 4            ; bendLvl 0-255: +1 per 4 ms down (about 1 s)
 BEND_TICK   equ 20            ; ms between bend updates to the Game Boy / NES
 Q_BACKLOG   equ 8             ; messages waiting: a device skips voice changes
@@ -277,7 +282,7 @@ allocList   ds 8
 allocCount  ds 1
 ; v0.06
 kDown       ds 1               ; K held: notes set the key
-newPending  ds 1               ; N: the next note starts a new chord
+newPending  ds 1               ; latch NEXT (=): the next note starts a new chord
 lastPress   ds 2
 moment      ds 1               ; SPACE held
 muteNow     ds 1               ; mute (M) xor momentary (SPACE)
@@ -514,3 +519,45 @@ vibRH       ds 1
 vibDel      ds 1
 vibSpr      ds 1
 glideK      ds 1
+; v0.14 sound switches (menu: AS SOUND / ON / OFF) and the ADVANCED SOUND
+; values ON uses (kept for the session)
+monoLock    ds 1               ; 0 AS SOUND, 1 MONO, 2 POLY
+vibLock     ds 1               ; 0 AS SOUND, 1 ON, 2 OFF
+glideLock   ds 1
+tremLock    ds 1
+detLock     ds 1
+warbLock    ds 1
+uVibDep     ds 1               ; ADVANCED SOUND choices (indexes into the tables in menu.asm)
+uVibRate    ds 1
+uVibDel     ds 1
+uGlide      ds 1
+uTremDep    ds 1
+uTremRate   ds 1
+uTremShape  ds 1
+uDet        ds 1
+uWarb       ds 1
+uRpTime     ds 1
+uRpCount    ds 1
+uRpLevel    ds 1
+detNow      ds 1               ; SID detune in use (voices.asm)
+detSent     ds 1               ; ... the held notes have
+fxT0        ds 1
+beatTempo   ds 1               ; menu BEAT TEMPO: 0 DEFAULT, 1 IGNORE
+beatFresh   ds 1               ; 1 = the beat's own tempo hasn't been set yet (start uses it)
+menuPage    ds 1               ; 0 main, 1 ADVANCED SOUND, 2 DEVICE SYNC
+sweepLvl    ds 1               ; FILTER SWEEP 0-255
+sweepOn     ds 1               ; ... the filter switched on for it (unfiltered sounds)
+fillK       ds 1               ; BEAT FILL: step in the fill
+fillEnd     ds 1               ; ... let go: a crash next step (2: then stop)
+fillSolo    ds 1               ; ... the fill started the beat
+wideWas     ds 1               ; WIDE / TAPE WOBBLE last sent to the Game Boy
+wobWas      ds 1
+; v0.14 visualizer (viz.asm)
+vizOn       ds 1
+vizLvl      ds NUM_VOICES      ; bar height, half rows (0-40)
+vizShown    ds NUM_VOICES      ; height drawn
+vizNote     ds NUM_VOICES      ; note it last saw
+vizKick     ds 1               ; a kick: the border flashes
+vizBorder   ds 1
+vizV        ds 1
+vizStep     ds 1

@@ -39,7 +39,7 @@ def since(c, t0):
 def sound(c, name):
     """V (or SHIFT+V) until the sound line shows `name`."""
     for _ in range(20):
-        if c.screen_row(1)[2:18].rstrip() == name:
+        if c.screen_row(2)[6:22].rstrip() == name:
             return True
         c.tap("v", ms=300)
     return False
@@ -74,12 +74,12 @@ nes7 = [(s & 15, b) for _, s, a, b in m if (s & 0xF0) == 0xB0 and a == 7 and (s 
 check("startup: MidiNES set up on channels 1-5", [ch for ch, _ in nes7[:5]] == [0, 1, 2, 3, 4], nes7)
 check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127) in [x[1:] for x in m])
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
-      c.screen_row(4).rstrip().endswith("CH 11-15") and c.screen_row(5).rstrip().endswith("CH 1-5")
-      and "OVERLAP" not in c.screen_row(7), (c.screen_row(4), c.screen_row(5)))
-check("screen: header V0.13, sound line, beat line",
-      "V0.13" in c.screen_row(0) and c.screen_row(1).startswith("V FAT ") and "POLY" in c.screen_row(1)
-      and "FAT BASS" in c.screen_row(1) and c.screen_row(23).rstrip().endswith("G ELECTRO  STOP"),
-      (c.screen_row(1), c.screen_row(23)))
+      c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
+      and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
+check("screen: header V0.14, sound line, tempo / beat line",
+      "V0.14" in c.screen_row(0) and c.screen_row(2).startswith("SOUND FAT ") and "POLY" in c.screen_row(2)
+      and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  BEAT ELECTRO  STOP",
+      (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles
 c.press("ctrl", ms=12)
 c.tap("f3", ms=40)
@@ -104,19 +104,19 @@ check("all off", notes_on(c.midi()) == {}, notes_on(c.midi()))
 names = []
 for i in range(19):
     c.run_ms(300)
-    names.append(c.screen_row(1)[2:18].rstrip())
+    names.append(c.screen_row(2)[6:22].rstrip())
     c.tap("v", ms=20)
 c.run_ms(200)
-check("V steps through 19 sounds and back to FAT", len(set(names)) == 19 and c.screen_row(1).startswith("V FAT "), names)
+check("V steps through 19 sounds and back to FAT", len(set(names)) == 19 and c.screen_row(2).startswith("SOUND FAT "), names)
 c.press("lshift", ms=12)
 c.tap("v", ms=150)
 c.release("lshift", ms=12)
-check("SHIFT+V: previous (TREMOLO GATE)", c.screen_row(1)[2:18].rstrip() == "TREMOLO GATE", c.screen_row(1))
+check("SHIFT+V: previous (TREMOLO GATE)", c.screen_row(2)[6:22].rstrip() == "TREMOLO GATE", c.screen_row(2))
 
 # whistle: mono default, no Fat Bass: the wave and triangle play the tune
-check("WHISTLE", sound(c, "WHISTLE"), c.screen_row(1))
-check("WHISTLE: MONO, no Fat Bass", c.v("monoMode") == 1 and c.v("fatBass") == 0 and "MONO" in c.screen_row(1)
-      and "FAT BASS" not in c.screen_row(1), c.screen_row(1))
+check("WHISTLE", sound(c, "WHISTLE"), c.screen_row(2))
+check("WHISTLE: MONO, no Fat Bass", c.v("monoMode") == 1 and c.v("fatBass") == 0 and "MONO" in c.screen_row(2)
+      and "FAT BASS" not in c.screen_row(2), c.screen_row(2))
 t0 = c.cpu.processorCycles
 c.press("q", ms=150)
 on = notes_on(c.midi())
@@ -142,12 +142,12 @@ check("MONO legato, NES: the envelope carries on (no CC7 = 0)", 0 not in nes7, n
 c.release("e", ms=150)
 check("MONO: letting go of E3 goes back to C3", set(notes_on(c.midi()).values()) == {48}, notes_on(c.midi()))
 c.tap("c", ms=150)
-check("C: POLY", c.v("monoMode") == 0 and "POLY" in c.screen_row(1), c.screen_row(1))
+check("C: POLY", c.v("monoMode") == 0 and "POLY" in c.screen_row(2), c.screen_row(2))
 c.release("q", ms=600)
 check("WHISTLE released: all off (after the NES release)", notes_on(c.midi()) == {}, notes_on(c.midi()))
 
 # glide bass: the SID slides
-check("GLIDE BASS", sound(c, "GLIDE BASS"), c.screen_row(1))
+check("GLIDE BASS", sound(c, "GLIDE BASS"), c.screen_row(2))
 c.press("q", ms=120)
 fq = sid_freq(c, 0)
 c.press("t", ms=8)                          # G3 while C3 held
@@ -160,7 +160,7 @@ check("GLIDE BASS: the SID glides up to G3 over tens of ms", path[0] < path[-1] 
 c.release("t", "q", ms=200)
 
 # duty lead: the duty steps on the SID and the NES
-check("DUTY LEAD", sound(c, "DUTY LEAD"), c.screen_row(1))
+check("DUTY LEAD", sound(c, "DUTY LEAD"), c.screen_row(2))
 t0 = c.cpu.processorCycles
 c.press("q", ms=10)
 pw = set()
@@ -173,7 +173,7 @@ check("DUTY LEAD: NES duty steps (CC1)", {0, 32, 64} <= set(duty), duty[:12])
 c.release("q", ms=300)
 
 # electric piano: NES tremolo through CC7
-check("ELECTRIC PIANO", sound(c, "ELECTRIC PIANO"), c.screen_row(1))
+check("ELECTRIC PIANO", sound(c, "ELECTRIC PIANO"), c.screen_row(2))
 c.press("q", ms=1200)
 t0 = c.cpu.processorCycles
 c.run_ms(400)
@@ -182,7 +182,7 @@ check("ELECTRIC PIANO: NES tremolo keeps moving CC7 while held", len(set(lv)) >=
 c.release("q", ms=1500)
 
 # screamer: filter opens on the attack and falls back; the busiest sound stays quick
-check("SCREAMER", sound(c, "SCREAMER"), c.screen_row(1))
+check("SCREAMER", sound(c, "SCREAMER"), c.screen_row(2))
 c.press("q", ms=20)
 f1 = c.raw[0xD416]
 c.run_ms(400)
@@ -193,7 +193,7 @@ check("SCREAMER held: longest main loop pass under 4.7 ms", lp < 4.7, f"{lp:.2f}
 c.release("q", ms=200)
 
 # switching sounds while holding: nothing hangs
-check("BRIGHT? no: WARBLE PAD", sound(c, "WARBLE PAD"), c.screen_row(1))
+check("BRIGHT? no: WARBLE PAD", sound(c, "WARBLE PAD"), c.screen_row(2))
 c.press("q", "t", ms=200)
 c.tap("v", ms=200)
 c.tap("v", ms=200)
@@ -232,15 +232,15 @@ c.midi_in(0x8B, 60, 0, 0x8E, 36, 0, ms=20)
 
 # ---------------------------------------------------------------- beat demos
 c.tap("g", ms=150)
-check("G: JUNGLE, 168 BPM", c.v("beatSel") == 1 and c.v("bpm") == 168 and "JUNGLE" in c.screen_row(23), c.screen_row(23))
+check("G: JUNGLE, 168 BPM", c.v("beatSel") == 1 and c.v("bpm") == 168 and "JUNGLE" in c.screen_row(12), c.screen_row(12))
 t0 = c.cpu.processorCycles
-c.tap("return", ms=10)
+c.tap("f5", ms=10)
 c.run_ms(2 * 4 * 60000 // 168 + 50)          # two bars
 msgs = since(c, t0)
 kicks = [t for t, s, a, b in msgs if s == 0x94 and b and a in (10, 12, 112)]       # B10 / B12 / A112 (bank B: & 127)
 samples = [(t, a) for t, s, a, b in msgs if s == 0x94 and b]
 hats = [t for t, s, a, b in msgs if s == 0x93 and b and 49 <= a <= 51]
-check("RETURN: JUNGLE plays samples and noise hats", len(samples) >= 10 and len(hats) >= 12, (len(samples), len(hats)))
+check("F5: JUNGLE plays samples and noise hats", len(samples) >= 10 and len(hats) >= 12, (len(samples), len(hats)))
 banks = [b for t, s, a, b in msgs if s == 0xB4 and a == 14]
 check("JUNGLE: its kit switches the sample bank as needed", 127 in banks, banks)
 step = 60000 / 168 / 4
@@ -249,9 +249,9 @@ hd = [b - a for a, b in zip(ht, ht[1:])]
 check("JUNGLE hats on the 16th grid (89 ms): gaps within 8 ms (MidiNES queue), no drift",
       all(abs(g - round(g / step) * step) <= 8 for g in hd) and abs(ht[-1] - round(ht[-1] / step) * step) <= 6,
       [round(x) for x in ht[:8]])
-check("screen: PLAY", c.screen_row(23).rstrip().endswith("JUNGLE   PLAY"), c.screen_row(23))
-c.tap("return", ms=150)
-check("RETURN again: stops (screen STOP)", c.v("beatRun") == 0 and "STOP" in c.screen_row(23), c.screen_row(23))
+check("screen: PLAY", c.screen_row(12).rstrip().endswith("JUNGLE   PLAY"), c.screen_row(12))
+c.tap("f5", ms=150)
+check("F5 again: stops (screen STOP)", c.v("beatRun") == 0 and "STOP" in c.screen_row(12), c.screen_row(12))
 t0 = c.cpu.processorCycles
 c.run_ms(400)
 check("stopped: no more drums", [x for x in since(c, t0) if (x[1] & 0xF0) == 0x90 and x[3]] == [])
@@ -260,7 +260,7 @@ check("stopped: no more drums", [x for x in since(c, t0) if (x[1] & 0xF0) == 0x9
 c.tap("g", ms=20); c.tap("g", ms=150)
 check("G G: BOOMBAP, 90 BPM", c.v("beatSel") == 3 and c.v("bpm") == 90, (c.v("beatSel"), c.v("bpm")))
 t0 = c.cpu.processorCycles
-c.tap("return", ms=10)
+c.tap("f5", ms=10)
 c.run_ms(2 * 4 * 60000 // 90 + 50)
 msgs = since(c, t0)
 hits = [(t - t0) / CYCLES_PER_MS for t, s, a, b in msgs if s == 0x94 and b]
@@ -268,10 +268,10 @@ rel = [round(x - hits[0]) for x in hits]
 # bar 1 samples: steps 0 K, 4 S, 7 K (odd: swung), 10 K, 12 S, 15 K (odd); step 166.7 ms, swing 55% = +46 ms
 check("BOOMBAP: odd 16ths swung late (+46 ms), even ones on the grid",
       len(rel) >= 6 and abs(rel[1] - 667) <= 6 and abs(rel[2] - 1213) <= 8 and abs(rel[3] - 1667) <= 6, rel[:6])
-c.tap("return", ms=50)
+c.tap("f5", ms=50)
 
 # panic stops a beat
-c.tap("return", ms=200)
+c.tap("f5", ms=200)
 c.press("lshift", ms=10); c.tap("f7", ms=40); c.release("lshift", ms=10)
 t0 = c.cpu.processorCycles
 c.run_ms(500)

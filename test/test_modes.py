@@ -32,12 +32,12 @@ def chord(*keys, ms=80):
     return h
 
 
-check("mode line: POLY, key C MAJOR; sound line: FAT", c.screen_row(24).startswith("Z POLY") and "KEY C  MAJOR" in c.screen_row(24)
-      and c.screen_row(1).startswith("V FAT "), c.screen_row(1))
+check("key line: key C MAJOR, POLY; sound line: FAT", c.screen_row(9).startswith("KEY C  MAJOR  POLY")
+      and c.screen_row(2).startswith("SOUND FAT "), (c.screen_row(9), c.screen_row(2)))
 check("POLY: one key, one note", chord("w") == [50])
 
 c.tap("z", ms=60)
-check("Z: SMART CHORD", c.v("playMode") == 1 and "SMART CHRD" in c.screen_row(24), c.screen_row(24))
+check("Z: SMART CHORD", c.v("playMode") == 1 and "SMART CHRD" in c.screen_row(9), c.screen_row(9))
 check("C -> C major (C E G)", chord("q") == [48, 52, 55])
 check("D -> D minor (D F A)", chord("w") == [50, 53, 57])
 check("E -> E minor", chord("e") == [52, 55, 59])
@@ -59,27 +59,27 @@ c.release("q", ms=60)
 
 # key: hold K, press a note
 c.press("k", ms=20); c.tap("t", ms=30); c.release("k", ms=60)
-check("K + G: key of G", c.v("keyRoot") == 7 and "KEY G" in c.screen_row(24), c.screen_row(24))
+check("K + G: key of G", c.v("keyRoot") == 7 and c.screen_row(9).startswith("KEY G "), c.screen_row(9))
 check("in G: F# -> F# diminished", chord("5") == [54, 57, 60])
 check("in G: F (outside) -> F major", chord("r") == [53, 57, 60])
 check("K + note doesn't play the note", c.v("heldCount") == 0)
 c.tap("l", ms=60)
-check("L: G MINOR", c.v("keyMinor") == 1 and "MINOR" in c.screen_row(24), c.screen_row(24))
+check("L: G MINOR", c.v("keyMinor") == 1 and "MINOR" in c.screen_row(9), c.screen_row(9))
 check("in G minor: G -> G minor", chord("t") == [55, 58, 62])
 check("in G minor: D -> D minor (natural minor)", chord("w") == [50, 53, 57])
 c.tap("l", ms=30)
 c.press("k", ms=20); c.tap("q", ms=30); c.release("k", ms=60)
 
 c.tap("z", ms=60)
-check("Z: EXT 7TH", c.v("playMode") == 2 and "EXT 7TH" in c.screen_row(24), c.screen_row(24))
+check("Z: EXT 7TH", c.v("playMode") == 2 and "EXT 7TH" in c.screen_row(9), c.screen_row(9))
 check("C -> Cmaj7", chord("q") == [48, 52, 55, 59])
 check("D -> Dm7", chord("w") == [50, 53, 57, 60])
 check("G -> G7", chord("t") == [55, 59, 62, 65])
 c.tap("x", ms=60)
-check("X: EXT 9TH", "EXT 9TH" in c.screen_row(24) and chord("q") == [48, 52, 55, 59, 62])
+check("X: EXT 9TH", "EXT 9TH" in c.screen_row(9) and chord("q") == [48, 52, 55, 59, 62])
 c.tap("x", ms=20); c.tap("x", ms=60)
-check("X X: EXT 13TH: C -> C E G B D F A", "EXT 13TH" in c.screen_row(24)
-      and chord("q") == [48, 52, 55, 59, 62, 65, 69], c.screen_row(24))
+check("X X: EXT 13TH: C -> C E G B D F A", "EXT 13TH" in c.screen_row(9)
+      and chord("q") == [48, 52, 55, 59, 62, 65, 69], c.screen_row(9))
 check("outside the key with 13ths: C# 7 9 11 13", chord("2") == [49, 53, 56, 59, 63, 66, 70])
 check("two 13th chords: at most 8 notes, lowest kept", chord("q", "w") == [48, 50, 52, 53, 55, 57, 59, 60])
 c.tap("x", ms=30)                           # back to 7th
@@ -103,9 +103,9 @@ c.tap("=", ms=30)                           # latch SMART
 c.press("q", "t", ms=60); c.release("q", "t", ms=60)
 check("latched in POLY: C G", held() == [48, 55], held())
 c.tap("z", ms=80)                           # -> SMART CHORD
-check("mode change while latched: the chord stays as it was", held() == [48, 55] and "N NEXT" in c.screen_row(21),
-      (held(), c.screen_row(21)))
-check("...but the screen shows the new mode", "SMART CHRD" in c.screen_row(24))
+check("mode change while latched: the chord stays as it was", held() == [48, 55] and c.screen_row(9)[27:37] == "LATCH NEXT",
+      (held(), c.screen_row(9)))
+check("...but the screen shows the new mode", "SMART CHRD" in c.screen_row(9))
 c.tap("w", ms=80)                           # next press: new chord, new mode (even though quick)
 check("next key: a new chord in the new mode (D minor)", held() == [50, 53, 57], held())
 c.press("k", ms=20); c.tap("t", ms=30); c.release("k", ms=80)
@@ -113,8 +113,7 @@ check("key change while latched: D minor keeps sounding", held() == [50, 53, 57]
 c.tap("w", ms=80)
 check("next key: D in G major = D major", held() == [50, 54, 57], held())
 c.press("k", ms=20); c.tap("q", ms=30); c.release("k", ms=40)
-c.tap("n", ms=20); c.tap("n", ms=20)
-c.tap("=", ms=20); c.tap("=", ms=20); c.tap("=", ms=40)   # SMART -> HOLD -> ADD -> OFF
+c.tap("=", ms=40)                           # (NEXT already, from the key change): latch off
 c.press("q", ms=60)
 c.tap("z", ms=80)                           # latch off: applies at once to held keys
 check("latch off: a mode change applies at once", held() == [48, 52, 55, 59], held())
@@ -132,21 +131,21 @@ up1 = [a for cyc, s, a, b in c.midi(since=t0) if s in (0x90, 0x91) and b]
 c.release("q", ms=60)
 check("SPARKLE: arp an octave up by default", up1 and set(up1) == {60}, up1)
 c.tap("f", ms=60)
-check("F: +2 OCT", "+2 OCT" in c.screen_row(19), c.screen_row(19))
+check("F: +2 OCT", "+2 OCT" in c.screen_row(10), c.screen_row(10))
 t0 = c.cpu.processorCycles
 c.press("q", ms=500)
 up2 = [a for cyc, s, a, b in c.midi(since=t0) if s in (0x90, 0x91) and b]
 c.release("q", ms=60)
 check("+2: two octaves up", set(up2) == {72}, up2)
 c.tap("f", ms=150)
-check("F again: +0", "+0 OCT" in c.screen_row(19))
+check("F again: +0", "+0 OCT" in c.screen_row(10))
 c.tap("f", ms=40)
 c.tap("a", ms=40)                           # arp off
 
 # ---------------------------------------------------------------- PADS sound
 t0 = c.cpu.processorCycles
 c.tap("v", ms=150)
-check("V: PADS on screen", c.screen_row(1).startswith("V PADS "), c.screen_row(1))
+check("V: PADS on screen", c.screen_row(2).startswith("SOUND PADS "), c.screen_row(2))
 check("PADS: SID slow attack, long release, pulse wave", c.raw[0xD405] == 0xA0 and c.raw[0xD406] == 0xFB
       and c.sid(0)[1] & 0xF0 == 0x40, (hex(c.raw[0xD405]), hex(c.raw[0xD406])))
 check("PADS: SID low-pass filter on all voices", c.raw[0xD417] == 0x77 and c.raw[0xD418] == 0x1F, hex(c.raw[0xD418]))
@@ -169,7 +168,7 @@ check("muted in PADS: volume 0, filter mode kept", c.raw[0xD418] == 0x10, hex(c.
 c.tap("m", ms=60)
 t0 = c.cpu.processorCycles
 c.tap("v", ms=150)
-check("V again: RAW on screen", c.screen_row(1).startswith("V RAW "), c.screen_row(1))
+check("V again: RAW on screen", c.screen_row(2).startswith("SOUND RAW "), c.screen_row(2))
 regs = [(c.raw[0xD405 + 7 * v], c.raw[0xD406 + 7 * v], c.raw[0xD403 + 7 * v], c.sid(v)[1] & 0xF0) for v in range(3)]
 check("RAW: SID pulse, instant attack, full sustain, instant release, widths 50/25/12.5%",
       regs == [(0x00, 0xF0, 8, 0x40), (0x00, 0xF0, 4, 0x40), (0x00, 0xF0, 2, 0x40)], regs)
@@ -190,7 +189,7 @@ t0 = c.cpu.processorCycles
 c.press("lshift", ms=12)
 c.tap("v", ms=40)
 c.tap("v", ms=80)
-c.release("lshift", ms=12)
+c.release("lshift", ms=150)
 check("SHIFT+V twice: back to FAT", c.v("soundMode") == 0)
 check("FAT: saw, filter off", c.sid(0)[1] & 0xF0 == 0x20 and c.raw[0xD417] == 0 and c.raw[0xD418] == 0x0F)
 cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]

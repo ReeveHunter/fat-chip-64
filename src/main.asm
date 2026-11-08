@@ -222,6 +222,21 @@ InitState:
 	sta arpLast
 	lda #1                  ; bend range 2 semitones
 	sta bendRange
+	sta beatFresh           ; (the first beat start sets its tempo)
+	; ADVANCED SOUND: what the menu's ON switches use until changed
+	sta uVibDep             ; 1/4 semitone
+	sta uGlide              ; MEDIUM
+	sta uDet                ; FAT
+	sta uWarb               ; MEDIUM
+	sta uRpTime             ; 1/8 dotted
+	lda #2
+	sta uTremDep            ; DEEP
+	sta uTremRate           ; 6 HZ
+	sta uRpCount            ; 3 repeats
+	lda #3
+	sta uRpLevel            ; 70 %
+	lda #4
+	sta uVibRate            ; 6 HZ
 	jsr SoundVars           ; FAT's settings
 	lda #OCT_DEFAULT
 	sta octBase
@@ -347,6 +362,7 @@ Nmi:
 	include "sync.asm"
 	include "menu.asm"
 	include "screen.asm"
+	include "viz.asm"
 	include "data.asm"
 	include "tables.asm"
 	include "nestables.asm"

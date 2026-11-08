@@ -6,8 +6,22 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.14:** keys, menu pages, sound switches, four new actions, a new play screen, a visualizer.
+- **Keys:** RETURN opens the menu, SHIFT+RETURN backs out (RETURN never changes a value). F1 / F3 move the octave up / down (the lowest key C0–C6). F5 starts / stops the beat. F7 is the visualizer. The N key is gone.
+- **Latch NEXT:** with a chord latched, = shows NEXT and the next key you press starts a new chord. Press = again before that and latch goes off (= with nothing sounding turns it straight off). NEW CHORD is gone from the actions.
+- **BEAT TEMPO** (menu, PLAYING): **DEFAULT**: choosing a beat (G or the keytar's rhythm buttons) sets its tempo, and the first start after power-on uses the beat's tempo. After that any tempo you set is kept, even when you stop and start the beat. **IGNORE**: beats never change the tempo. The keytar's clock overrides both.
+- **Sound switches** (menu, SOUND): MONO/POLY (AS SOUND / MONO / POLY), FAT BASS, and AS SOUND / ON / OFF for VIBRATO, GLIDE, TREMOLO, DETUNE, WARBLE (Game Boy) and REPEAT. AS SOUND is the sound's own setting. ON uses the **ADVANCED SOUND** page's values, kept for the session: vibrato depth / rate / delay, glide time, tremolo depth / rate / shape, detune, warble, repeat time / repeats / level. OFF switches the effect off. Held VIBRATO, GLIDE, TREMOLO or REPEAT on a sound that has none of its own also uses those values.
+- **Menu pages:** the main page (SOUND, PLAYING), ADVANCED SOUND and DEVICE SYNC. RETURN (or CRSR RIGHT) on a page's line opens it; SHIFT+RETURN comes back.
+- **New actions** (SPACE and the keytar buttons, held):
+  - **FILTER SWEEP:** a filtered sound's SID filter opens to the top. On an unfiltered sound a resonant low-pass comes in and closes down, then opens and switches off when you let go.
+  - **BEAT FILL:** snare and toms in place of the beat, then a crash and kick when you let go. With no beat playing, the fill plays alone and stops after the crash.
+  - **TAPE WOBBLE:** a slow, deep SID vibrato (each voice drifting its own way), a slow Game Boy pitch wobble and heavy warble.
+  - **WIDE:** about twice the SID and Game Boy detune, with the Game Boy pulses panned hard left and right.
+- **Play screen, redrawn from scratch:** one line per chip (SID, GAME BOY, MIDINES) with on / off or channels and the three notes it plays. The other lines are the sound, key / mode / latch, arp, tempo / beat / mute, SPACE / octave, held notes, MIDI in, and one line of F-key help. The MIDI OUT counter and the panic / device help lines are gone. Ten small redraw steps (3 ms at most each, down from 17 steps of up to 17 ms), so the screen catches up much faster.
+- **Visualizer (F7), a demo:** nine bars, one per voice, grouped SID / GAME BOY / MIDINES. A new note throws its bar to the top, and it settles to a height set by its pitch while the note sounds. The bars breathe with the tremolo and take the colour of their note (C red … B white), with each note's name underneath. Kick drums flash the border in the key's colour. The bottom line shows the sound, the tempo and which beat of the bar is playing. It draws one bar per step, about 13 frames a second, and never delays the keyboard or the arp. The menu opens and closes back to it.
+
 **v0.13:** the menu and keytar sync.
-- **Menu (SHIFT+RETURN in and out):** CRSR DOWN / SHIFT+CRSR DOWN choose a line, CRSR RIGHT or RETURN the next value, SHIFT+CRSR RIGHT the previous one. Notes and the other keys keep working while it's up; the play screen pauses and redraws when it closes. Sections:
+- **Menu (SHIFT+RETURN in and out; v0.14: RETURN in):** CRSR DOWN / SHIFT+CRSR DOWN choose a line, CRSR RIGHT or RETURN the next value, SHIFT+CRSR RIGHT the previous one. Notes and the other keys keep working while it's up; the play screen pauses and redraws when it closes. Sections:
   - **SOUND:** FAT BASS — AS SOUND (default) / ALWAYS / NEVER. REPEAT — AS SOUND / ON / OFF; REPEAT TIME — 1/4, 1/8 DOTTED, 1/8, 1/8 TRIPLET, 1/16, or FREE 80–500 ms; REPEATS — 1–8; REPEAT LEVEL — FULL, 90 … 50 PERCENT (each sound loads its own values when chosen).
   - **PLAYING:** LATCH STYLE — SMART (default) / HOLD / ADD: what = turns on. SPACE — its action (default **BEND DOWN**; , and . step through them too). BEND RANGE — 1–12 semitones (default 2), for the BEND actions and the keytar's wheel.
   - **DEVICE SYNC** (the keytar on MIDI in, and Synthcart):
@@ -82,7 +96,10 @@ lowest key (Q) starts at C3.
 | Key | Does |
 |---|---|
 | Overlay keys | Play notes (through the notes mode) |
-| F1 / F3 / F5 / F7 | Octave: Q = C4 / C3 / C2 / C1 (held notes move with it) |
+| F1 / F3 | Octave up / down (Q from C0 to C6; held notes move with it) |
+| F5 | Beat start / stop |
+| F7 | Visualizer on / off |
+| RETURN | The menu (SHIFT+RETURN backs out) |
 | **Notes mode** | |
 | Z | POLY (smart stacking) → SMART CHORD (each key plays its chord in the key) → EXT (the chord plus 7th, 9th, 11th or 13th) |
 | X | Extensions: 7TH → 9TH → 11TH → 13TH |
@@ -93,13 +110,10 @@ lowest key (Q) starts at C3.
 | C | POLY ↔ MONO (legato, last key pressed) |
 | | PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES pulses swell and fade (software envelope via CC7), NES triangle just stops. RAW: the classic raw chip sound, FAT's stacking with everything square and instant: SID pulses at 50 / 25 / 12.5%, Game Boy pulses 50 / 25% and the wave channel as a third pulse, NES pulses 50 / 25%, no warble, no filter |
 | **Drums** | |
-| G | Next beat demo (and the drum kit the keytar uses): ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK, 6/8; sets its tempo |
-| RETURN | Beat demo start / stop |
-| SHIFT+RETURN | The menu (v0.13) |
+| G | Next beat demo (and the drum kit the keytar uses): ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK, 6/8; sets its tempo (menu BEAT TEMPO DEFAULT) |
 | (MIDI in ch 16) | The keytar's rhythm plays the MidiNES drums |
 | **Latch** | |
-| = | Latch off ↔ on, in the menu's LATCH STYLE: SMART (default: notes pressed within half a second of the last, or while another key is down, build the chord; after a pause the next note starts a new one), HOLD (a fresh press after letting go of everything starts a new chord) or ADD (every press adds a note; pressing a latched note takes it out) |
-| N | New chord: the current one keeps sounding and the next note starts a new one (screen: N NEXT). Press N twice to clear now |
+| = | Latch on, in the menu's LATCH STYLE. Latched with notes sounding: NEXT (the next key starts a new chord); = again: latch off. Styles: SMART (default: notes pressed within half a second of the last, or while another key is down, build the chord; after a pause the next note starts a new one), HOLD (a fresh press after letting go of everything starts a new chord) or ADD (every press adds a note; pressing a latched note takes it out) |
 | **Arp** | |
 | A | OFF → UNISON (all nine voices step together) → SPARKLE (two voices arpeggiate over the chord as a pad) |
 | S | Pattern: UP, DOWN, UPDOWN, RANDOM, PLAYED (the order you pressed or built the chord) |
@@ -109,7 +123,7 @@ lowest key (Q) starts at C3.
 | B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Sent to the Game Boy (CC 107/108) |
 | **Sound control** | |
 | M | Mute everything: SID volume 0, Game Boy and NES note-offs (their release tails ring out). Border goes red. Notes come back on unmute |
-| , / . (< >) | What SPACE does: steps through the actions (default BEND DOWN; also in the menu). Shown on the tempo line |
+| , / . (< >) | What SPACE does: steps through the actions (default BEND DOWN; also in the menu). Shown on the SPACE line |
 | SPACE | Its action while held (see Actions in v0.13): BEND DOWN by default — everything bends down BEND RANGE (2 semitones) over about 1 s, back over 0.5 s |
 | RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
 | **Setup-ish (for now)** | |
@@ -200,7 +214,9 @@ voices ±7 cents.
 | `src/bend.asm`, `tools/gen_bend.py` → `src/bendtab.asm` | bends (actions, wheel, VINYL STOP), SPACE's action keys |
 | `src/sounds.asm`, `tools/gen_sounds.py` → `src/soundtab.asm` | sounds (V), MONO (C), Fat Bass, SID effects, duty steps |
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
-| `src/menu.asm` | the menu (SHIFT+RETURN) |
+| `src/menu.asm` | the menu (RETURN): main, ADVANCED SOUND, DEVICE SYNC pages |
+| `src/viz.asm` | the visualizer (F7) |
+| `test/test_v014.py` | keys, latch NEXT, BEAT TEMPO, sound switches, ADVANCED SOUND, the new actions, play screen, visualizer |
 | `src/repeat.asm` | REPEAT (echoes) |
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
@@ -223,10 +239,11 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.12)
+## Not yet (v0.14)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
-- The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), adjustable parameters, Fat Bass lock, a Fat Bass range per patch, and blending are for later.
+- The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.
+- The NES has no vibrato, glide or detune, so those switches and TAPE WOBBLE / WIDE leave it alone. FILTER SWEEP is SID only.
 - Noise levels go out as CC7 (level × 8); the MidiNES's response to low levels on the noise channel is untested. Kits are picked from Reeve's Sound Sorter types by name only; tom pitch order (A47 / A46 / A43) is a guess.
 
 ## Next

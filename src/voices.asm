@@ -714,8 +714,7 @@ VoiceSet:
 	beq .freq
 	sty t1
 	lda ptr+1
-	ldx soundMode
-	ldy sndDet,x
+	ldy detNow              ; (the sound's, the menu's, WIDE: FxVars)
 	jsr Mul8
 	lsr mt16+1
 	ror mt16

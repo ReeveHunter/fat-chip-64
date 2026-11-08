@@ -98,9 +98,7 @@ SoundRelease:
 ; RAM copies of the sound's settings that the busy code reads
 SoundVars:
 	subroutine
-	ldx soundMode
-	lda sndMono,x
-	sta monoMode
+	jsr MonoSet
 	jsr FatBassSet
 	lda nesEnv,x
 	sta nesEnvOn
@@ -136,18 +134,53 @@ FatBassSet:
 	sta fatBass
 	rts
 
+; monoMode from the sound, unless the menu's MONO/POLY says (MONO / POLY)
+MonoSet:
+	subroutine
+	ldx soundMode
+	lda sndMono,x
+	ldy monoLock
+	beq .s
+	lda #1
+	cpy #1
+	beq .s
+	lda #0
+.s:
+	sta monoMode
+	rts
+
+; Menu: MONO/POLY changed
+MonoMenu:
+	jsr MonoSet
+	jsr GbLegato
+	lda #1
+	sta reallocFlag
+	jmp Dirty
+
 ; Menu: Fat Bass lock changed
 FatBassMenu:
 	jsr SoundRelease
 	jsr FatBassSet
 	jmp Dirty
 
-; The vibrato and glide FxTick uses: the sound's, or the keytar buttons'
-; while held (a sound without vibrato gets 0.25 semitone at 5.5 Hz, no
-; delay; one without glide gets 1/16 of the way per 4 ms)
+; The vibrato, glide and detune the SID uses (FxTick, voices.asm). Each is
+; the menu's choice: AS SOUND (the sound's), ON (the ADVANCED SOUND values),
+; OFF. VIBRATO or GLIDE held turns on what's off (the ADVANCED SOUND values;
+; a held VIBRATO has no delay); TAPE WOBBLE held: a deep slow vibrato, each
+; voice its own phase; WIDE held: the detune about twice as wide.
 FxVars:
 	subroutine
 	ldx soundMode
+	; ---- vibrato
+	ldy vibLock
+	beq .vs
+	cpy #1
+	beq .vu
+	lda #0                  ; OFF
+	sta vibDepth
+	sta vibSpr
+	beq .vb
+.vs:
 	lda sndVib,x
 	sta vibDepth
 	lda sndVibRL,x
@@ -158,40 +191,136 @@ FxVars:
 	sta vibDel
 	lda sndVibSpr,x
 	sta vibSpr
+	jmp .vb
+.vu:
+	jsr VibUser
+.vb:
 	lda vibBtn
-	beq .g
+	beq .vw
+	lda vibDepth
+	bne .vb0
+	jsr VibUser
+.vb0:
 	lda #0
 	sta vibDel
-	lda vibDepth
-	bne .g
-	lda #61
+.vw:
+	lda actCnt+A_WOBBLE
+	beq .g
+	lda #WOB_DEPTH
 	sta vibDepth
-	lda #<1442
+	lda #<WOB_RATE
 	sta vibRL
-	lda #>1442
+	lda #>WOB_RATE
 	sta vibRH
+	lda #0
+	sta vibDel
+	lda #1
+	sta vibSpr
+	; ---- glide
 .g:
-	lda sndGlide,x
-	bne .gs
-	lda glideBtn
+	ldy glideLock
 	beq .gs
-	lda #4
+	cpy #1
+	beq .gu
+	lda #0
+	beq .gb
 .gs:
+	lda sndGlide,x
+	jmp .gb
+.gu:
+	ldy uGlide
+	lda uGlideT,y
+.gb:
+	bne .gk
+	ldy glideBtn
+	beq .gk
+	ldy uGlide
+	lda uGlideT,y
+.gk:
 	sta glideK
-	lda sndFDep,x           ; anything for FxTick to do?
+	; ---- detune
+	ldy detLock
+	beq .ds
+	cpy #1
+	beq .du
+	lda #0
+	beq .dw
+.ds:
+	lda sndDet,x
+	jmp .dw
+.du:
+	ldy uDet
+	lda uDetT,y
+.dw:
+	ldy actCnt+A_WIDE
+	beq .dk
+	asl
+	adc #6
+	cmp #33
+	bcc .dk
+	lda #32
+.dk:
+	sta detNow
+	; ---- anything for FxTick to do?
+	lda sndFDep,x
 	ora sndFEnv,x
 	ora sndPwm,x
 	ora vibDepth
 	ora glideK
 	ora sndSeq,x
+	ora sweepLvl
+	ora actCnt+A_SWEEP
 	beq .b
 	lda #1
 .b:
 	sta fxBusy
 	rts
 
-; A keytar button changed vibrato / glide: the SID's (FxVars) and the Game
-; Boy's (its LFO and glide CCs while held; the sound's back when let go)
+; the ADVANCED SOUND vibrato (keeps X)
+VibUser:
+	ldy uVibDep
+	lda uVibDepT,y
+	sta vibDepth
+	ldy uVibRate
+	lda uVibRateLo,y
+	sta vibRL
+	lda uVibRateHi,y
+	sta vibRH
+	ldy uVibDel
+	lda uVibDelT,y
+	sta vibDel
+	lda #0
+	sta vibSpr
+	rts
+
+WOB_DEPTH   equ 110             ; TAPE WOBBLE: about 0.45 semitone
+WOB_RATE    equ 183             ;  at 0.7 Hz
+
+; ADVANCED SOUND values (the menu's choices index these). SID vibrato depth
+; x 1/4096 of the frequency (61 = 1/4 semitone), rate x 1/262 Hz, delay in
+; 4 ms; glide 1/2^k of the way per 4 ms; tremolo depth of 15, rate x 1/655
+; Hz; SID detune (8 = FAT's, about 7 cents); Game Boy warble.
+uVibDepT:   .byte 30, 61, 91, 122
+uVibRateLo: .byte <524, <786, <1048, <1310, <1572, <1834, <2096
+uVibRateHi: .byte >524, >786, >1048, >1310, >1572, >1834, >2096
+uVibDelT:   .byte 0, 25, 63, 125, 250
+uGlideT:    .byte 3, 4, 5, 6
+uTremDepT:  .byte 4, 7, 10, 15
+uTremRL:    .byte <1311, <2621, <3932, <5243, <6554
+uTremRH:    .byte >1311, >2621, >3932, >5243, >6554
+uDetT:      .byte 4, 8, 12, 16
+uWarbT:     .byte 24, 56, 100
+; ... and the Game Boy's CCs for them (LFO depth CC 1, rate CC 76, delay
+; CC 79, glide CC 5, detune +- from 64 on CC 94)
+gbVibDepT:  .byte 16, 24, 28, 32
+gbVibRateT: .byte 72, 80, 84, 88, 92, 96, 100
+gbVibDelT:  .byte 0, 8, 16, 32, 64
+gbGlideT:   .byte 16, 32, 48, 64
+gbDetT:     .byte 3, 6, 10, 16
+
+; Vibrato, glide or detune changed (a keytar button, SPACE, the menu): the
+; SID's (FxVars; held notes retuned if the detune moved) and the Game Boy's
+; glide and LFO CCs
 FxButtons:
 	subroutine
 	jsr FxVars
@@ -202,6 +331,12 @@ FxButtons:
 	sta vibAmt+2
 	jsr SidBendAll
 .v:
+	lda detNow
+	cmp detSent
+	beq .d
+	sta detSent
+	jsr SidRetune
+.d:
 	lda devOn+DEV_GB
 	bne .gb
 	rts
@@ -216,47 +351,14 @@ FxButtons:
 	ora #$B0
 	sta mS
 	ldx soundMode
-	; glide (CC 5)
 	ldy t3
-	lda gbGl1,x
-	cpy #0
-	beq .g1
-	lda gbGl2,x
-	cpy #1
-	beq .g1
-	lda gbGlW,x
-.g1:
-	ldy glideBtn
-	beq .g2
-	cmp #32
-	bcs .g2
-	lda #32                 ; glide 4 of 15
-.g2:
+	jsr GbGlideVal
 	tay
 	lda #5
 	jsr SoundGbPut
 	ldy t3
 	cpy #2
 	beq .next               ; (the wave channel has no LFO here)
-	lda vibBtn
-	beq .lfoSound
-	lda #78                 ; LFO to pitch, triangle, rate 22, no delay, depth 6
-	ldy #0
-	jsr SoundGbPut
-	lda #77
-	ldy #0
-	jsr SoundGbPut
-	lda #76
-	ldy #91
-	jsr SoundGbPut
-	lda #79
-	ldy #0
-	jsr SoundGbPut
-	lda #1
-	ldy #24
-	jsr SoundGbPut
-	jmp .next
-.lfoSound:
 	jsr SoundGbLfo
 .next:
 	inc t3
@@ -264,6 +366,213 @@ FxButtons:
 	cmp #3
 	bne .ch
 	rts
+
+; Held SID notes play again at the new detune (no new attack)
+SidRetune:
+	subroutine
+	ldx #6
+.v:
+	stx t0
+	lda vNote,x
+	cmp #NO_NOTE
+	beq .n
+	sta vWant,x
+	lda #0
+	sta t3
+	jsr VoiceSet
+.n:
+	lda t0
+	sec
+	sbc #3
+	tax
+	bpl .v
+	rts
+
+; A sound switch or an ADVANCED SOUND value changed (menu)
+SoundLocks:
+	jsr FxButtons
+	jsr RepeatFromSound
+	lda devOn+DEV_GB
+	beq .x
+	jsr GbDetAll
+	jmp WarbleSend
+.x:
+	rts
+
+; WIDE / TAPE WOBBLE held or let go
+ActWide:
+ActWobble:
+	jsr FxButtons
+WideWobble:
+	subroutine
+	lda devOn+DEV_GB
+	beq .x
+	lda actCnt+A_WIDE
+	beq .w
+	lda #1
+.w:
+	cmp wideWas
+	beq .o
+	sta wideWas
+	jsr GbDetAll
+.o:
+	lda actCnt+A_WOBBLE
+	beq .b
+	lda #1
+.b:
+	cmp wobWas
+	beq .x
+	sta wobWas
+	jmp WarbleSend
+.x:
+	rts
+
+; FILTER SWEEP held / let go (SidFx does it)
+ActSweep:
+	jmp FxVars
+
+; Game Boy glide (CC 5) for channel Y (0-2), X = soundMode -> A (keeps X)
+GbGlideVal:
+	subroutine
+	lda glideLock
+	beq .s
+	cmp #1
+	beq .u
+	lda #0
+	beq .b
+.s:
+	lda gbGl1,x
+	cpy #0
+	beq .b
+	lda gbGl2,x
+	cpy #1
+	beq .b
+	lda gbGlW,x
+	jmp .b
+.u:
+	ldy uGlide
+	lda gbGlideT,y
+.b:
+	ldy glideBtn
+	beq .x
+	cmp #0
+	bne .x
+	ldy uGlide
+	lda gbGlideT,y
+.x:
+	rts
+
+; Game Boy detune (CC 94) for pulse Y (0-1), X = soundMode -> A (keeps X).
+; WIDE: about twice as far from the centre (64), and the pulses panned
+; apart (GbDetAll)
+GbDetVal:
+	subroutine
+	sty fxT0
+	lda detLock
+	beq .s
+	cmp #1
+	beq .u
+	lda #0
+	beq .off
+.s:
+	lda gbDetA,x
+	cpy #0
+	beq .abs
+	lda gbDetB,x
+.abs:
+	sec                     ; distance from 64
+	sbc #64
+	bcs .off
+	eor #$FF
+	adc #1
+	jmp .off
+.u:
+	ldy uDet
+	lda gbDetT,y
+.off:
+	ldy actCnt+A_WIDE
+	beq .sg
+	asl
+	adc #4
+	cmp #41
+	bcc .sg
+	lda #40
+.sg:
+	ldy fxT0                ; pulse 1 flat, pulse 2 sharp
+	bne .up
+	eor #$FF
+	sec
+	adc #64                 ; 64 - off
+	rts
+.up:
+	clc
+	adc #64
+	rts
+
+; Game Boy pulses: detune (CC 94) and pan (CC 10: apart while WIDE is held)
+GbDetAll:
+	subroutine
+	lda #0
+	sta t3
+.ch:
+	lda gbBase
+	clc
+	adc t3
+	and #15
+	ora #$B0
+	sta mS
+	ldx soundMode
+	ldy t3
+	jsr GbDetVal
+	tay
+	lda #94
+	jsr SoundGbPut
+	ldy #64
+	lda actCnt+A_WIDE
+	beq .p
+	ldy #0
+	lda t3
+	beq .p
+	ldy #127
+.p:
+	lda #10
+	jsr SoundGbPut
+	inc t3
+	lda t3
+	cmp #2
+	bne .ch
+	rts
+
+; Game Boy warble (global): the sound's, the menu's WARBLE (ON: the ADVANCED
+; SOUND amount; OFF: none); TAPE WOBBLE held: deep and slow
+WarbleSend:
+	subroutine
+	ldx soundMode
+	lda gbWarb,x
+	ldy warbLock
+	beq .w
+	lda #0
+	cpy #2
+	beq .w
+	ldy uWarb
+	lda uWarbT,y
+.w:
+	ldy actCnt+A_WOBBLE
+	beq .p
+	lda #110
+.p:
+	tax
+	lda #GCC_WARBLE
+	jsr GbGlobal
+	ldx soundMode
+	lda gbWSpd,x
+	ldy actCnt+A_WOBBLE
+	beq .s
+	lda #16
+.s:
+	tax
+	lda #GCC_WSPEED
+	jmp GbGlobal
 
 SoundApply:
 	subroutine
@@ -315,6 +624,7 @@ SoundSid:
 	lda #0
 	sta SID+$17
 	sta sidFilt
+	sta sweepOn             ; (FILTER SWEEP switches it on again if held)
 .vol:
 	jmp SidVolume
 
@@ -348,14 +658,7 @@ SoundGb:
 	ldy gbRel,x
 	jsr .put
 	ldy t3                  ; glide per channel
-	lda gbGl1,x
-	cpy #0
-	beq .gl
-	lda gbGl2,x
-	cpy #1
-	beq .gl
-	lda gbGlW,x
-.gl:
+	jsr GbGlideVal
 	tay
 	lda #5
 	jsr .put
@@ -384,11 +687,7 @@ SoundGb:
 	lda #70
 	jsr .put
 	ldy t3
-	lda gbDetA,x
-	cpy #0
-	beq .dt
-	lda gbDetB,x
-.dt:
+	jsr GbDetVal
 	tay
 	lda #94
 	jsr .put
@@ -403,18 +702,7 @@ SoundGb:
 	ldy gbWShape,x
 	jsr .put
 	jsr GbLegato
-	ldx soundMode
-	lda #GCC_WSPEED
-	ldy gbWSpd,x
-	sty t0
-	ldx t0
-	jsr GbGlobal
-	ldx soundMode
-	lda #GCC_WARBLE
-	ldy gbWarb,x
-	sty t0
-	ldx t0
-	jmp GbGlobal
+	jmp WarbleSend
 .put:
 	jmp SoundGbPut
 
@@ -427,8 +715,25 @@ SoundGbPut:
 	ldx t2
 	rts
 
-; the sound's LFO on channel mS (X = soundMode; keeps X)
+; The pulses' LFO on channel mS (X = soundMode; keeps X): the sound's, or
+; vibrato on pitch with the ADVANCED SOUND values (VIBRATO held, or the
+; menu's VIBRATO ON), none on pitch (VIBRATO OFF), or TAPE WOBBLE's
 SoundGbLfo:
+	subroutine
+	lda actCnt+A_WOBBLE
+	bne .wob
+	lda vibBtn
+	bne .user
+	lda vibLock
+	beq .snd
+	cmp #1
+	beq .user
+	lda gbLDest,x           ; OFF: an LFO on pitch gets depth 0
+	bne .snd
+	lda #1
+	ldy #0
+	jmp SoundGbPut
+.snd:
 	lda #76
 	ldy gbLRate,x
 	jsr SoundGbPut
@@ -443,6 +748,45 @@ SoundGbLfo:
 	jsr SoundGbPut
 	lda #1
 	ldy gbLDepth,x
+	jmp SoundGbPut
+.user:
+	jsr .pitch
+	ldy uVibRate
+	lda gbVibRateT,y
+	tay
+	lda #76
+	jsr SoundGbPut
+	ldy #0
+	lda vibBtn
+	bne .dl
+	ldy uVibDel
+	lda gbVibDelT,y
+	tay
+.dl:
+	lda #79
+	jsr SoundGbPut
+	ldy uVibDep
+	lda gbVibDepT,y
+	tay
+	lda #1
+	jmp SoundGbPut
+.wob:
+	jsr .pitch
+	lda #76
+	ldy #52                 ; about 0.9 Hz
+	jsr SoundGbPut
+	lda #79
+	ldy #0
+	jsr SoundGbPut
+	lda #1
+	ldy #32
+	jmp SoundGbPut
+.pitch:
+	lda #78                 ; to pitch, triangle
+	ldy #0
+	jsr SoundGbPut
+	lda #77
+	ldy #0
 	jmp SoundGbPut
 
 ; Legato (CC 68) on the three note channels: on in MONO, so a new note on a
@@ -613,10 +957,13 @@ FxTick:
 
 SidFx:
 	subroutine
+	jsr SweepStep
 	ldx soundMode
-	; ---- filter: cutoff = base + LFO + envelope
+	; ---- filter: cutoff = base + LFO + envelope (+ FILTER SWEEP)
 	lda sndCut,x
-	beq .noF
+	bne .filt
+	jmp .noF
+.filt:
 	sta t0
 	lda sndFDep,x
 	beq .fenv
@@ -663,9 +1010,57 @@ SidFx:
 	dey
 	bne .fd
 .wr:
+	lda sweepLvl            ; FILTER SWEEP: opens up towards the top
+	beq .wr0
+	lda t0
+	eor #$FF
+	tay
+	lda sweepLvl
+	jsr Mul8
+	lda mt16+1
+	clc
+	adc t0
+	sta t0
+.wr0:
 	lda t0
 	sta SID+$16
+	jmp .pwm
 .noF:
+	; ---- an unfiltered sound: FILTER SWEEP switches the low-pass on and
+	; closes it down; let go, it opens again and switches off
+	lda sweepLvl
+	ora actCnt+A_SWEEP
+	beq .swOff
+	lda sweepOn
+	bne .swOn
+	lda #1
+	sta sweepOn
+	lda #$E7                ; resonance 14, voices 1-3
+	sta SID+$17
+	lda #$10
+	sta sidFilt
+	jsr SidVolume
+.swOn:
+	lda sweepLvl            ; cutoff 255 - 7/8 of the sweep
+	lsr
+	lsr
+	lsr
+	sta t1
+	lda sweepLvl
+	sec
+	sbc t1
+	eor #$FF
+	sta SID+$16
+	jmp .pwm
+.swOff:
+	lda sweepOn
+	beq .pwm
+	lda #0
+	sta sweepOn
+	sta SID+$17
+	sta sidFilt
+	jsr SidVolume
+.pwm:
 	; ---- width LFO: one voice per call (width = base + tri x depth / 8,
 	; each voice its own phase)
 	ldx soundMode
@@ -743,6 +1138,40 @@ SidFx:
 	rts
 
 sidVoice:   .byte 0,3,6         ; SID voice -> pool voice
+
+; FILTER SWEEP: sweepLvl up while held (about 1/3 s to the top), down when
+; let go (1/4 s)
+SweepStep:
+	subroutine
+	ldy fxN
+	lda actCnt+A_SWEEP
+	beq .down
+.u:
+	lda sweepLvl
+	clc
+	adc #3
+	bcc .us
+	lda #255
+.us:
+	sta sweepLvl
+	dey
+	bne .u
+	rts
+.down:
+	lda sweepLvl
+	beq .x
+.d:
+	lda sweepLvl
+	sec
+	sbc #4
+	bcs .ds
+	lda #0
+.ds:
+	sta sweepLvl
+	dey
+	bne .d
+.x:
+	rts
 
 ; SID voice envY: sidBase moves 1/2^k of the way to sidTgt, fxN times
 GlideStep:

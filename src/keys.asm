@@ -170,16 +170,17 @@ Suspect:
 
 ; A = key code
 ;   overlay        notes (K held + a note: set the key)
-;   F1/F3/F5/F7    octave: C4 / C3 / C2 / C1 on the lowest key
+;   F1 / F3        octave up / down            F5  beat start / stop
+;   F7             visualizer on / off         RETURN  the menu
 ;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
 ;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
-;   M              mute everything        SPACE  per its mode
-;   =              latch: off <-> on, in the menu's LATCH STYLE
-;   N              new chord: the next note starts one (twice: clear now)
+;   M              mute everything        SPACE  its action
+;   =              latch on (the menu's LATCH STYLE); latched with notes:
+;                  NEXT (the next key starts a new chord); again: off
 ;   Z / X          notes mode (POLY, CHORD, EXT) / extensions (7 9 11 13)
 ;   K + note / L   key root / major-minor
 ;   V / SHIFT+V    next / previous sound           C  POLY / MONO
-;   G / RETURN     next beat (and drum kit) / beat start-stop
+;   G              next beat (and drum kit)
 ;   A / S / D / F  arp mode / pattern / speed / SPARKLE octave
 ;   ; / :          free arp speed            B  tap tempo
 ;   , / .          SPACE mode (MUTES / BENDS)
@@ -202,7 +203,7 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 	jsr RepeatPress         ; REPEAT: its echoes (keeps X)
 	jsr GetTicks
 	jsr ApplySettings       ; (changes waiting for this note)
-	lda newPending          ; N or a setting change: this note starts a new chord
+	lda newPending          ; NEXT or a setting change: this note starts a new chord
 	beq .styles
 	lda #0
 	sta newPending
@@ -286,11 +287,30 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	bne .ctrlF
 	lda shiftDown
 	bne .shiftF
-	lda octaves,x
+	cpx #2
+	bcc .oct
+	beq .beat
+	jmp VizKey              ; F7
+.beat:
+	jmp BeatRunKey          ; F5
+.oct:
+	lda octBase             ; F1 up, F3 down: an octave (C0 .. C6 on the lowest key)
+	cpx #0
+	bne .down
+	cmp #OCT_TOP
+	bcs .ox
+	adc #12
+	bcc .os
+.down:
+	cmp #OCT_BOTTOM+12
+	bcc .ox
+	sbc #12
+.os:
 	sta octBase
 	lda #1
 	sta reallocFlag
 	sta screenDirty
+.ox:
 	rts
 .shiftF:
 	cpx #3
@@ -325,23 +345,23 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	rts
 
 ; key -> handler (KeyDown)
-cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_N,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,K_H,K_J,K_C,K_G,K_RETURN,0
-cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<NewChordKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpFaster,<ArpSlower,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<MonoKey,<BeatKey,<ReturnKey
-cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>NewChordKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpFaster,>ArpSlower,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>MonoKey,>BeatKey,>ReturnKey
+cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,K_H,K_J,K_C,K_G,K_RETURN,0
+cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpFaster,<ArpSlower,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<MonoKey,<BeatKey,<ReturnKey
+cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpFaster,>ArpSlower,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>MonoKey,>BeatKey,>ReturnKey
 
 CtrlDown:
 	lda #1
 	sta ctrlDown
 	rts
 
-; RETURN: beat demo start / stop; SHIFT+RETURN: the menu
+; RETURN: the menu (SHIFT+RETURN closes it again)
 ReturnKey:
 	subroutine
 	lda shiftDown
-	beq .run
+	bne .x
 	jmp MenuOpen
-.run:
-	jmp BeatRunKey
+.x:
+	rts
 
 MuteKey:
 	lda sidMute             ; (now mutes everything)
@@ -417,7 +437,7 @@ SpiceKey:
 
 ; Mode, extensions, key or major/minor changed. A latched chord keeps
 ; sounding as it is; the next note starts a new chord with the new settings
-; (like N). Otherwise they apply at once.
+; (latch NEXT). Otherwise they apply at once.
 SettingChanged:
 	subroutine
 	jsr Dirty
@@ -451,37 +471,40 @@ ApplySettings:
 	sta effMinor
 	rts
 
-; = : latch off <-> on, in the menu's LATCH STYLE (SMART / HOLD / ADD)
+; = : latch on, in the menu's LATCH STYLE (SMART / HOLD / ADD). Latched
+; with notes sounding: NEXT (the next key starts a new chord, the latch goes
+; on). = again before that (or latched with nothing sounding): latch off.
 LatchKey:
 	subroutine
-	ldx #0
 	lda latch
-	bne .l1
+	bne .on
 	ldx latchStyle          ; (0-2: SMART, HOLD, ADD)
 	inx
-.l1:
 	stx latch
 	lda #0
 	sta newPending
-	jsr Dirty
-	txa
-	bne .x
-	jmp KeepPhysical        ; latch off: only keys still down keep sounding
-.x:
-	rts
-
-; N: the next note starts a new chord. Pressed again before that: clear now.
-NewChordKey:
-	subroutine
+	jmp Dirty
+.on:
 	lda newPending
-	bne .now
+	bne .off                ; NEXT already: off
+	ldx #NIDX-1
+.c:
+	lda noteHeld,x
+	bne .next
+	dex
+	bpl .c
+.off:
+	lda #0
+	sta latch
+	sta newPending
+	jsr Dirty
+	jmp KeepPhysical        ; latch off: only keys still down keep sounding
+.next:
 	lda #1
 	sta newPending
 	jmp Dirty
-.now:
-	lda #0
-	sta newPending
-	jsr Dirty
+
+; Only the keys still down keep sounding (the settings catch up)
 KeepPhysical:
 	jsr ApplySettings
 	ldx #NIDX-1
@@ -499,8 +522,6 @@ Dirty:
 	sta screenDirty
 	rts
 
-; lowest overlay key for F1 F3 F5 F7
-octaves:    .byte 60,48,36,24
 
 ClearNotes:
 	subroutine

@@ -532,12 +532,21 @@ Mul16:
 	rts
 
 ; tremolo LFO, every 10 ms: tremA = 0-15. The sound's own (NES pulses with
-; an envelope), or TREMOLO held (SPACE / a button): then the SID's volume and
-; the NES pulses of sounds without an envelope follow it too (a sound with
-; none gets depth 10 at 6 Hz). The Game Boy has no tremolo yet.
+; an envelope), the menu's TREMOLO ON (the ADVANCED SOUND values) or TREMOLO
+; held (SPACE / a button): those two also move the SID's volume and the NES
+; pulses of sounds without an envelope (held on a sound with none: the
+; ADVANCED SOUND values). TREMOLO OFF: none. The Game Boy has no tremolo yet.
 TremTick:
 	subroutine
 	ldx soundMode
+	ldy tremLock
+	beq .snd
+	cpy #1
+	beq .user
+	lda #0                  ; OFF
+	sta exS
+	beq .btn
+.snd:
 	lda nesTrem,x
 	sta exS                 ; depth
 	lda nesTremRL,x
@@ -546,18 +555,15 @@ TremTick:
 	sta exK
 	lda nesTremSq,x
 	sta exD                 ; square?
+	jmp .btn
+.user:
+	jsr TremUser
+.btn:
 	lda tremBtn
 	beq .d
 	lda exS
 	bne .d
-	lda #10
-	sta exS
-	lda #<3932
-	sta exI
-	lda #>3932
-	sta exK
-	lda #0
-	sta exD
+	jsr TremUser
 .d:
 	lda exS
 	bne .on
@@ -590,8 +596,25 @@ TremTick:
 .out:
 	lda tremBtn
 	bne TremDirect
+	lda tremLock
+	cmp #1
+	beq TremDirect
 	lda tremWas
 	bne TremEnd
+	rts
+
+; the ADVANCED SOUND tremolo
+TremUser:
+	ldy uTremDep
+	lda uTremDepT,y
+	sta exS
+	ldy uTremRate
+	lda uTremRL,y
+	sta exI
+	lda uTremRH,y
+	sta exK
+	lda uTremShape
+	sta exD
 	rts
 
 ; TREMOLO held: the SID's volume and envelope-less NES pulses follow tremA
