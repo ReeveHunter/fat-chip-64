@@ -46,7 +46,8 @@
    {"id": "nesTriDropMs", "name": "NES DROP TIME", "type": "int", "default": 300, "blend": "log", "min": 50, "max": 1000, "unit": "ms", "map": {"nes": "over this long"}}
   ]},
   {"id": "detune", "name": "DETUNE", "voices": 0, "randOn": 0.6, "params": [
-   {"id": "cents", "name": "AMOUNT", "type": "int", "default": 7, "blend": "lerp", "min": 0, "max": 50, "unit": "cents", "rand": [3, 25], "map": {"sid": "voices 2 sharp, 3 flat", "gb": "pulse 1 flat, pulse 2 sharp (CC 94)", "nes": "pulse 1 flat, pulse 2 sharp (bend)"}}
+   {"id": "cents", "name": "AMOUNT", "type": "int", "default": 7, "blend": "lerp", "min": 0, "max": 50, "unit": "cents", "rand": [3, 25], "map": {"sid": "voices 2 sharp, 3 flat", "gb": "pulse 1 flat, pulse 2 sharp (CC 94)", "nes": "pulse 1 flat, pulse 2 sharp (bend)"}},
+   {"id": "wander", "name": "WANDER", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 50], "doc": "each voice's detune creeps slowly at random (a few seconds per move); at 100 it roams up to AMOUNT either side", "map": {"sid": "voice frequency offsets", "gb": "pitch bend per channel", "nes": "pitch bend per channel"}}
   ]},
   {"id": "vibrato", "name": "VIBRATO", "voices": 0, "randOn": 0.35, "params": [
    {"id": "depth", "name": "DEPTH", "type": "int", "default": 25, "blend": "lerp", "min": 0, "max": 50, "unit": "cents", "rand": [5, 40], "map": {"sid": "frequency LFO", "gb": "LFO to pitch", "nes": "pulses, by bend"}},
@@ -54,7 +55,7 @@
    {"id": "vibSync", "name": "VIBRATO SYNC", "type": "enum", "default": 0, "blend": "switch", "values": ["FREE", "1 BAR", "1/2", "1/4", "1/8 DOTTED", "1/8", "1/8T", "1/16", "1/16T", "1/32"], "doc": "FREE uses the rate in Hz; a division locks it to the tempo"},
    {"id": "delay", "name": "DELAY", "type": "int", "default": 0, "blend": "log", "min": 0, "max": 2000, "unit": "ms", "rand": [0, 800]},
    {"id": "shape", "name": "SHAPE", "type": "enum", "default": 1, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "rand": [0, 5]},
-   {"id": "spread", "name": "SPREAD", "type": "bool", "default": 0, "blend": "switch", "doc": "each voice its own phase"}
+   {"id": "drift", "name": "DRIFT", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 60], "doc": "each voice a little faster or slower, fanned evenly (up to +-25 % at 100), so they slide in and out of step; fixed, so a patch sounds the same every load. With a SYNC division the rates stay locked and the voices start apart instead", "map": {"sid": "each voice its own LFO step", "gb": "each channel its own LFO rate, sent once", "nes": "each channel its own bend LFO"}}
   ]},
   {"id": "glide", "name": "GLIDE", "voices": 0, "randOn": 0.25, "params": [
    {"id": "time", "name": "TIME", "type": "enum", "default": 1, "blend": "switch", "values": ["30 MS", "60 MS", "120 MS", "250 MS", "500 MS"], "map": {"sid": "1/2^k of the way per 4 ms, k 3-7", "gb": "glide (CC 5)", "nes": "by bend"}},
@@ -66,14 +67,15 @@
   ]},
   {"id": "warble", "name": "WARBLE", "voices": 0, "randOn": 0.3, "params": [
    {"id": "amount", "name": "AMOUNT", "type": "int", "default": 10, "blend": "lerp", "min": 0, "max": 50, "unit": "cents", "rand": [4, 40], "map": {"sid": "new: slow random drift", "gb": "warble (CC 104)", "nes": "new: slow random drift, by bend"}},
-   {"id": "speed", "name": "SPEED", "type": "int", "default": 40, "blend": "lerp", "min": 0, "max": 127, "rand": [10, 90], "map": {"gb": "warble speed (CC 105)"}}
+   {"id": "speed", "name": "SPEED", "type": "int", "default": 40, "blend": "lerp", "min": 0, "max": 127, "rand": [10, 90], "map": {"gb": "warble speed (CC 105)"}},
+   {"id": "drift", "name": "DRIFT", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 60], "doc": "each voice a little faster or slower, fanned evenly (up to +-25 % at 100), so they slide in and out of step; fixed, so a patch sounds the same every load. With a SYNC division the rates stay locked and the voices start apart instead", "map": {"sid": "each voice its own LFO step", "gb": "each channel its own LFO rate, sent once"}}
   ]},
   {"id": "tremolo", "name": "TREMOLO", "voices": 0, "randOn": 0.2, "params": [
    {"id": "depth", "name": "DEPTH", "type": "int", "default": 50, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [20, 90], "map": {"sid": "master volume (all three voices)", "gb": "new in Fat Chip GB (may click)", "nes": "per channel (CC 7)"}},
    {"id": "tremRate", "name": "TREMOLO RATE", "type": "hz", "default": 6, "blend": "log", "min": 0.05, "max": 20, "rand": [2, 10]},
    {"id": "tremSync", "name": "TREMOLO SYNC", "type": "enum", "default": 0, "blend": "switch", "values": ["FREE", "1 BAR", "1/2", "1/4", "1/8 DOTTED", "1/8", "1/8T", "1/16", "1/16T", "1/32"], "doc": "FREE uses the rate in Hz; a division locks it to the tempo"},
    {"id": "shape", "name": "SHAPE", "type": "enum", "default": 1, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "rand": [0, 5]},
-   {"id": "spread", "name": "SPREAD", "type": "bool", "default": 0, "blend": "switch", "doc": "NES and GB channels each their own phase"}
+   {"id": "drift", "name": "DRIFT", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 60], "doc": "each voice a little faster or slower, fanned evenly (up to +-25 % at 100), so they slide in and out of step; fixed, so a patch sounds the same every load. With a SYNC division the rates stay locked and the voices start apart instead", "map": {"sid": "each voice its own LFO step", "gb": "each channel its own LFO rate, sent once", "nes": "each channel its own bend LFO"}}
   ]},
   {"id": "pan", "name": "PAN", "voices": 0, "randOn": 0.3, "chips": ["gb"], "params": [
    {"id": "gbPulse1", "name": "PULSE 1", "type": "enum", "default": 1, "blend": "switch", "values": ["LEFT", "CENTRE", "RIGHT"], "map": {"gb": "CC 10"}},
@@ -84,7 +86,8 @@
    {"id": "panRate", "name": "AUTO-PAN RATE", "type": "hz", "default": 2, "blend": "log", "min": 0.05, "max": 20, "rand": [0.5, 6]},
    {"id": "panSync", "name": "AUTO-PAN SYNC", "type": "enum", "default": 0, "blend": "switch", "values": ["FREE", "1 BAR", "1/2", "1/4", "1/8 DOTTED", "1/8", "1/8T", "1/16", "1/16T", "1/32"], "doc": "FREE uses the rate in Hz; a division locks it to the tempo"},
    {"id": "shape", "name": "SHAPE", "type": "enum", "default": 4, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "doc": "SQUARE and RANDOM suit three positions best", "rand": [4, 5]},
-   {"id": "channels", "name": "CHANNELS", "type": "flags", "default": 3, "blend": "switch", "values": ["PULSE 1", "PULSE 2", "WAVE"]}
+   {"id": "channels", "name": "CHANNELS", "type": "flags", "default": 3, "blend": "switch", "values": ["PULSE 1", "PULSE 2", "WAVE"]},
+   {"id": "drift", "name": "DRIFT", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 60], "doc": "each voice a little faster or slower, fanned evenly (up to +-25 % at 100), so they slide in and out of step; fixed, so a patch sounds the same every load. With a SYNC division the rates stay locked and the voices start apart instead", "map": {"gb": "each channel its own LFO rate, sent once"}}
   ]},
   {"id": "wide", "name": "WIDE", "voices": 0, "randOn": 0.15, "params": [
    {"id": "amount", "name": "AMOUNT", "type": "int", "default": 50, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [30, 100], "map": {"sid": "more detune", "gb": "more detune, pulses panned apart", "nes": "more detune"}}
@@ -101,13 +104,15 @@
    {"id": "filtLfoRate", "name": "LFO RATE", "type": "hz", "default": 0.5, "blend": "log", "min": 0.05, "max": 20, "rand": [0.1, 6]},
    {"id": "filtLfoSync", "name": "LFO SYNC", "type": "enum", "default": 0, "blend": "switch", "values": ["FREE", "1 BAR", "1/2", "1/4", "1/8 DOTTED", "1/8", "1/8T", "1/16", "1/16T", "1/32"], "doc": "FREE uses the rate in Hz; a division locks it to the tempo"},
    {"id": "lfoShape", "name": "LFO SHAPE", "type": "enum", "default": 0, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "rand": [0, 5]},
-   {"id": "gbFollow", "name": "GB FOLLOWS", "type": "enum", "default": 1, "blend": "switch", "values": ["OFF", "SAW LP", "SQR LP", "ACID"], "doc": "OFF leaves the wave channel as TONE sets it", "map": {"gb": "the wave channel switches to that filtered shape and steps through it"}}
+   {"id": "gbFollow", "name": "GB FOLLOWS", "type": "enum", "default": 1, "blend": "switch", "values": ["OFF", "SAW LP", "SQR LP", "ACID"], "doc": "OFF leaves the wave channel as TONE sets it", "map": {"gb": "the wave channel switches to that filtered shape and steps through it"}},
+   {"id": "drift", "name": "DRIFT", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 60], "doc": "each voice a little faster or slower, fanned evenly (up to +-25 % at 100), so they slide in and out of step; fixed, so a patch sounds the same every load. With a SYNC division the rates stay locked and the voices start apart instead", "map": {"sid": "the SID's filter (one for all three voices)", "gb": "the wave channel's filter step, so it moves against the SID"}}
   ]},
   {"id": "pwm", "name": "PWM", "voices": 0, "randOn": 0.3, "params": [
    {"id": "depth", "name": "DEPTH", "type": "int", "default": 40, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [10, 80], "map": {"sid": "pulse width", "gb": "LFO to duty (four steps)"}},
    {"id": "pwmRate", "name": "PWM RATE", "type": "hz", "default": 0.5, "blend": "log", "min": 0.05, "max": 20, "rand": [0.1, 4]},
    {"id": "pwmSync", "name": "PWM SYNC", "type": "enum", "default": 0, "blend": "switch", "values": ["FREE", "1 BAR", "1/2", "1/4", "1/8 DOTTED", "1/8", "1/8T", "1/16", "1/16T", "1/32"], "doc": "FREE uses the rate in Hz; a division locks it to the tempo"},
-   {"id": "shape", "name": "SHAPE", "type": "enum", "default": 0, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "rand": [0, 5]}
+   {"id": "shape", "name": "SHAPE", "type": "enum", "default": 0, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "rand": [0, 5]},
+   {"id": "drift", "name": "DRIFT", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 60], "doc": "each voice a little faster or slower, fanned evenly (up to +-25 % at 100), so they slide in and out of step; fixed, so a patch sounds the same every load. With a SYNC division the rates stay locked and the voices start apart instead", "map": {"sid": "each voice its own LFO step", "gb": "each channel its own LFO rate, sent once", "nes": "duty steps per pulse channel"}}
   ]},
   {"id": "dutyseq", "name": "DUTY SEQUENCE", "voices": 0, "randOn": 0.1, "params": [
    {"id": "pattern", "name": "PATTERN", "type": "enum", "default": 0, "blend": "switch", "values": ["UP", "UP DOWN", "FLICKER"], "map": {"sid": "pulse width steps", "nes": "duty steps"}},
