@@ -448,8 +448,12 @@ btnAct      ds 3               ; the actions the keytar's buttons are holding
 actCnt      ds A_HELD          ; how many keys / buttons hold each held action
 bendDir     ds 1               ; BEND DOWN / UP: 1 = up
 vinylLvl    ds 1               ; VINYL STOP 0-255
-vinylSid    ds 1               ; ... the SID's second octave down (bend.asm)
-vinylSidNew ds 1
+bendHi      ds 1               ; the bend's second octave, 0-192 (bend.asm)
+bendSidHi   ds 1
+bendSentHi  ds 1
+bmL         ds 1               ; the whole bend, 0-384
+bmH         ds 1
+nbHi        ds 1
 vinylCut    ds 1               ; ... stopped: silent
 octUpAdd    ds 1               ; OCTAVE UP held: 12
 ; v0.15 MidiNES effects (nesfx.asm)
@@ -486,7 +490,7 @@ nbMag       ds 1
 nbUp        ds 1
 nbL         ds 1
 nbH         ds 1
-bendRange   ds 1               ; menu: BEND RANGE - 1 (0-11)
+bendRange   ds 1               ; menu: BEND RANGE - 1 (0-23)
 btL         ds 1               ; BendTotal: signed 1/16 semitones
 btIn        ds 4               ; ... what it was last worked out from
 btH         ds 1

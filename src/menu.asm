@@ -356,7 +356,7 @@ mHelp3:     .byte "RETURN: OPEN A PAGE",0
 mHelp4:     .byte "SHIFT+RETURN: BACK",0
 MENU_ITEMS  equ 35
 menuRowY:   .byte 2,3,4,5,6,7,8,9,10,13,14,15,16,18,4,5,6,7,8,9,10,11,12,13,14,15,3,4,5,6,7,8,9,10,11
-menuCount:  .byte 3,3,3,3,3,3,3,3,0,3,NUM_ACTS,12,2,0,4,7,5,4,4,5,2,4,3,14,8,6,3,2,2,2,2,2,NUM_ACTS,NUM_ACTS,NUM_ACTS
+menuCount:  .byte 3,3,3,3,3,3,3,3,0,3,NUM_ACTS,24,2,0,4,7,5,4,4,5,2,4,3,14,8,6,3,2,2,2,2,2,NUM_ACTS,NUM_ACTS,NUM_ACTS
 menuLblLo:  .byte <mI0,<mI1,<mI2,<mI3,<mI4,<mI5,<mI6,<mI7,<mI8,<mI9,<mI10,<mI11,<mI12,<mI13,<mI14,<mI15,<mI16,<mI17,<mI18,<mI19,<mI20,<mI21,<mI22,<mI23,<mI24,<mI25,<mI26,<mI27,<mI28,<mI29,<mI30,<mI31,<mI32,<mI33,<mI34
 menuLblHi:  .byte >mI0,>mI1,>mI2,>mI3,>mI4,>mI5,>mI6,>mI7,>mI8,>mI9,>mI10,>mI11,>mI12,>mI13,>mI14,>mI15,>mI16,>mI17,>mI18,>mI19,>mI20,>mI21,>mI22,>mI23,>mI24,>mI25,>mI26,>mI27,>mI28,>mI29,>mI30,>mI31,>mI32,>mI33,>mI34
 menuVarLo:  .byte <monoLock,<fbLock,<vibLock,<glideLock,<tremLock,<detLock,<warbLock,<rpLock,1,<latchStyle,<spaceAct,<bendRange,<beatTempo,2,<uVibDep,<uVibRate,<uVibDel,<uGlide,<uTremDep,<uTremRate,<uTremShape,<uDet,<uWarb,<uRpTime,<uRpCount,<uRpLevel,<syncTempo,<syncStart,<syncRhythm,<syncDrums,<syncVoice,<syncWheel,<btnTask,<[btnTask+1],<[btnTask+2]
@@ -412,7 +412,7 @@ mV3_1:   .byte "HOLD            ",0
 mV3_2:   .byte "ADD             ",0
 mI10:    .byte "SPACE .............. ",0
 mI11:    .byte "BEND RANGE ......... ",0
-mV4:     .word mV4_0,mV4_1,mV4_2,mV4_3,mV4_4,mV4_5,mV4_6,mV4_7,mV4_8,mV4_9,mV4_10,mV4_11
+mV4:     .word mV4_0,mV4_1,mV4_2,mV4_3,mV4_4,mV4_5,mV4_6,mV4_7,mV4_8,mV4_9,mV4_10,mV4_11,mV4_12,mV4_13,mV4_14,mV4_15,mV4_16,mV4_17,mV4_18,mV4_19,mV4_20,mV4_21,mV4_22,mV4_23
 mV4_0:   .byte "1 SEMITONE      ",0
 mV4_1:   .byte "2 SEMITONES     ",0
 mV4_2:   .byte "3 SEMITONES     ",0
@@ -425,6 +425,18 @@ mV4_8:   .byte "9 SEMITONES     ",0
 mV4_9:   .byte "10 SEMITONES    ",0
 mV4_10:  .byte "11 SEMITONES    ",0
 mV4_11:  .byte "12 SEMITONES    ",0
+mV4_12:  .byte "13 SEMITONES    ",0
+mV4_13:  .byte "14 SEMITONES    ",0
+mV4_14:  .byte "15 SEMITONES    ",0
+mV4_15:  .byte "16 SEMITONES    ",0
+mV4_16:  .byte "17 SEMITONES    ",0
+mV4_17:  .byte "18 SEMITONES    ",0
+mV4_18:  .byte "19 SEMITONES    ",0
+mV4_19:  .byte "20 SEMITONES    ",0
+mV4_20:  .byte "21 SEMITONES    ",0
+mV4_21:  .byte "22 SEMITONES    ",0
+mV4_22:  .byte "23 SEMITONES    ",0
+mV4_23:  .byte "24 SEMITONES    ",0
 mI12:    .byte "BEAT TEMPO ......... ",0
 mV5:     .word mV5_0,mV5_1
 mV5_0:   .byte "DEFAULT         ",0

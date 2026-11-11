@@ -673,7 +673,7 @@ SoundGb:
 	tay
 	lda #7
 	jsr .put
-	ldy #62                 ; bend range 12 semitones (Fat Chip 64 scales its bends)
+	ldy #127                ; bend range 24 semitones (Fat Chip 64 scales its bends)
 	lda #85
 	jsr .put
 	ldy t3

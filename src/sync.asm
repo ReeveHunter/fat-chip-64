@@ -554,7 +554,7 @@ ActionsEnd:
 	sta glideBtn
 	sta sustainOn
 	sta vinylLvl
-	sta vinylSid
+	sta bendHi
 	sta vinylCut
 	sta bendLvl
 	sta fillEnd

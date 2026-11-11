@@ -107,7 +107,7 @@ ratio = [sid_freq(c, v) / base[v] for v in range(3) if base[v]]
 check("bend: SID 2 semitones down (x 0.891)", ratio and all(abs(r - 0.8909) < 0.004 for r in ratio), ratio)
 b = bends(c, t0)
 gbv = [x for x in b if x[1] in GB]
-check("bend: Game Boy channels end at 8192 - 2/12 of 8192 (range 12)", all(gbv and [x for x in gbv if x[1] == ch][-1][2] == 8192 - 1366 for ch in GB), gbv[-3:])
+check("bend: Game Boy channels end at 8192 - 2/24 of 8192 (range 24, v0.17)", all(gbv and [x for x in gbv if x[1] == ch][-1][2] == 8192 - 682 for ch in GB), gbv[-3:])
 gaps = sorted({x[0] for x in gbv if x[1] == 0})
 gaps = [y - x for x, y in zip(gaps, gaps[1:])]
 check("bend: MIDI bends about every 20 ms, not faster", gaps and min(gaps) >= 15 and max(gaps) < 40, gaps)

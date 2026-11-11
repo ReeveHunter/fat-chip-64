@@ -177,7 +177,7 @@ f1 = sid_freq(c, 0)
 gbb = [((b << 7) | a) for _, s, a, b in since(c, t0) if s == 0xEA]
 nesb = [((b << 7) | a) for _, s, a, b in since(c, t0) if s == 0xE0]
 check("wheel up: SID up 2 semitones", abs(f1 / f0 - 2 ** (2 / 12)) < 0.01, round(f1 / f0, 4))
-check("wheel up: Game Boy bend 8192 + 2/12 (its range is 12)", gbb and gbb[-1] == 8192 + 1366, gbb[-1:])
+check("wheel up: Game Boy bend 8192 + 2/24 (its range is 24, v0.17)", gbb and gbb[-1] == 8192 + 682, gbb[-1:])
 check("wheel up: NES pulse bend above centre", nesb and nesb[-1] > 8192, nesb[-1:])
 c.midi_in(0xE0, 0, 0, ms=150)
 f2 = sid_freq(c, 0)
@@ -254,8 +254,8 @@ check("SPACE: BEND DOWN by default", c.v("spaceAct") == 1 and "BEND DN" in c.scr
 t0 = c.cpu.processorCycles
 c.run_ms(10)
 rng = [x[1:] for x in c.midi() if x[2] == 85 and (x[1] & 15) in GB]
-check("Game Boy bend range 12 (CC 85 = 62) on its three channels", sorted(set(x[0] & 15 for x in rng)) == [10, 11, 12]
-      and all(x[2] == 62 for x in rng), rng[:3])
+check("Game Boy bend range 24 (CC 85 = 127) on its three channels", sorted(set(x[0] & 15 for x in rng)) == [10, 11, 12]
+      and all(x[2] == 127 for x in rng), rng[:3])
 c.press("o", ms=500)                         # D4 (62)
 check("chip lines: Fat Bass voices show the note they play (D 2)", c.screen_row(5)[28:31] == "D 2"
       and c.screen_row(6)[28:31] == "D 2" and c.screen_row(4)[16:19] == "D 4", (c.screen_row(4), c.screen_row(5), c.screen_row(6)))
@@ -271,7 +271,7 @@ c.set("bendRange", 11)                       # 12 semitones
 c.midi_in(0xE0, 0, 0, ms=150)                # wheel all the way down
 check("BEND RANGE 12: wheel down = an octave down", abs(sid_freq(c, 0) / f0 - 0.5) < 0.004, round(sid_freq(c, 0) / f0, 4))
 gbb = [((b << 7) | a) for t, s, a, b in c.midi() if (s & 0xF0) == 0xE0 and (s & 15) == 10]
-check("... the Game Boy bottoms out (range 12)", gbb and gbb[-1] <= 4, gbb[-1:])
+check("... the Game Boy an octave down too (half its range 24)", gbb and abs(gbb[-1] - 4096) <= 4, gbb[-1:])
 c.midi_in(0xE0, 0, 64, ms=150)
 check("wheel centred", sid_freq(c, 0) == f0)
 c.set("bendRange", 1)

@@ -6,6 +6,17 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.17:** bends up to two octaves on every chip.
+- **VINYL STOP** now takes the SID, Game Boy and NES down two octaves together. Before, only the SID went past one octave.
+- **BEND RANGE** (menu) goes up to 24 semitones, for SPACE's BEND DOWN / BEND UP and the keytar's wheel.
+- **Game Boy:** its bend range is now set to 24 (CC 85 = 127). The Fat Chip GB ROM already allowed that, so the ROM is unchanged.
+- **NES:** the bend tables go to two octaves. Upward bends always fit the MidiNES's range.
+- **No wrap-around.** Going down, a Game Boy or NES note only bends as far as the bottom of its channel and holds there; lower would wrap round to a high note.
+  - Game Boy: pulses C2, wave C1.
+  - NES: pulses A1, triangle A0.
+  - So with a two-octave bend, a G3 on the Game Boy pulses stops at C2, while the SID keeps going.
+- Let go of VINYL STOP from a full stop, and the beat and arp pick up straight away instead of waiting out the long step they had while stopped.
+
 **v0.16:** speed: MIDI chip interrupts and a quicker keyboard scan.
 - **MIDI chip interrupts.** Until now Fat Chip checked the Kerberos's MIDI chip (an MC68B50 in Datel mode) 4,000 times a second, and that alone took 25–30% of the C64's time. Now the chip interrupts only when a byte has come in or the next one can go out, and the timer just ticks each millisecond.
   - At start-up Fat Chip asks the chip for one interrupt to see whether it reaches the C64. If it doesn't, it goes back to the old polling, so nothing breaks either way. (`midiIrq` in memory says which mode it's in.)
@@ -244,6 +255,7 @@ voices ±7 cents.
 | `src/nesfx.asm` | MidiNES vibrato, glide, detune (pitch bend) |
 | `test/test_v015.py` | VINYL STOP, OCTAVE UP, GLITCH, MidiNES effects |
 | `test/test_v016.py` | MIDI chip interrupts (and the polling fallback), the quicker keyboard scan |
+| `test/test_v017.py` | two-octave bends on every chip, holding at the bottom of each channel |
 | `test/test_v014.py` | keys, latch NEXT, BEAT TEMPO, sound switches, ADVANCED SOUND, the new actions, play screen, visualizer |
 | `src/repeat.asm` | REPEAT (echoes) |
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
@@ -267,7 +279,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.14)
+## Not yet (v0.17)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.
