@@ -57,7 +57,7 @@ check("startup: sweep off and sweep period 0 on the pulses",
 t0 = c.cpu.processorCycles
 c.press("q", ms=400)
 ev = on_ch(c, P1, t0)
-check("FAT: note on, no volume changes", [e[1] for e in ev] == ["on"], ev)
+check("FAT: note on, no volume changes (a detune bend first, v0.15)", [e[1] for e in ev] == ["bend", "on"], ev)
 t1 = c.cpu.processorCycles
 c.release("q", ms=60)
 check("FAT: release = note-off at once", [e[1] for e in on_ch(c, P1, t1)] == ["off"])

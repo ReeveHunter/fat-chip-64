@@ -304,8 +304,10 @@ check("panic: nothing left sounding", notes_on(c.midi()) == {} and all(c.sid(v)[
 c.release("q", "w", ms=40)
 c.tap("f7", ms=100)
 check("plain F7 is the visualizer, not panic", c.v("vizOn") == 1 and "VISUALIZER" in c.screen_row(0), c.screen_row(0))
+c.tap("f7", ms=100)
+check("F7 again: GLITCH", c.v("vizOn") == 2)
 c.tap("f7", ms=150)
-check("F7 again: the play screen", c.v("vizOn") == 0 and c.screen_row(4).startswith("SID"), c.screen_row(4))
+check("F7 a third time: the play screen", c.v("vizOn") == 0 and c.screen_row(4).startswith("SID"), c.screen_row(4))
 
 # ---------------------------------------------------------------- RESTORE
 c.run_ms(500)

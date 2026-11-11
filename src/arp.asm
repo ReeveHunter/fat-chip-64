@@ -172,8 +172,7 @@ SendTempo:
 .x:
 	rts
 
-; t1:t0 = stepMs, stretched by VINYL STOP (x 1 + vinyl / 256: half speed at
-; the bottom, with the pitch an octave down)
+; t1:t0 = stepMs, stretched by VINYL STOP (x 1 / speed, up to 8x)
 VinylStep:
 	subroutine
 	lda stepMs
@@ -182,19 +181,49 @@ VinylStep:
 	sta t1
 	lda vinylLvl
 	beq .x
-	ldx t0
-	stx mulA
-	ldx t1
-	stx mulA+1
-	jsr Mul16x8
+	lda t0
+	sta mulA
+	lda t1
+	sta mulA+1
+	jsr VinylExtra
 	lda t0
 	clc
-	adc mulR+1
+	adc mulA
 	sta t0
 	lda t1
-	adc mulR+2
+	adc mulA+1
 	sta t1
 .x:
+	rts
+
+; mulA (a step length) -> mulA = how much longer VINYL STOP makes it:
+; length x vinStretch / 32
+VinylExtra:
+	subroutine
+	lda vinylLvl
+	lsr
+	lsr
+	tax
+	lda vinStretch,x
+	jsr Mul16x8             ; mulR (3 bytes) = length x t
+	lda mulR+2
+	cmp #$20
+	bcc .ok
+	lda #$FF                ; (too long to count: as long as it goes)
+	sta mulA
+	sta mulA+1
+	rts
+.ok:
+	lda mulR+1              ; / 256 x 8
+	sta mulA
+	lda mulR+2
+	sta mulA+1
+	ldx #3
+.s:
+	asl mulA
+	rol mulA+1
+	dex
+	bne .s
 	rts
 
 ; stepMs from the speed setting

@@ -132,6 +132,11 @@ NesAfterOff:
 	beq .x
 	lda #0
 	sta triOn
+	sta nesBent,x           ; (nesfx.asm: centred now)
+	sta nesFxSL,x
+	sta nesFxSH,x
+	sta nesTotL,x
+	sta nesTotH,x
 	lda t1                  ; bend back to centre for the next note
 	ora #$E0
 	sta mS

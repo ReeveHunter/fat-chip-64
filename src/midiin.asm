@@ -323,7 +323,14 @@ IdxNote:
 	txa
 	clc
 	adc octBase
-	rts
+	jmp .up
 .midi:
 	lda midiNote-MIDI_FIRST,x
+.up:
+	clc                     ; OCTAVE UP held: + 12 (not past 127)
+	adc octUpAdd
+	bpl .x
+	sec
+	sbc #12
+.x:
 	rts

@@ -6,8 +6,12 @@
 ;     0-255 ramps up over about 1 s while held, back over about 0.5 s; full =
 ;     the menu's BEND RANGE (1-12 semitones, default 2)
 ;   the keytar's wheel: wheelMag 0-255 up or down, full = BEND RANGE
-;   VINYL STOP (held): vinylLvl 0-255 the same way, full = an octave down
-;     (and the beat demo and arp slow to half speed with it)
+;   VINYL STOP (held): vinylLvl 0-255 the same way, like a record stopping:
+;     speed (256 - lvl) / 256, the pitch 12 log2(1 / speed) down (vinPitch:
+;     an octave by lvl 128). The SID keeps on down a second octave (vinSid)
+;     and fades out from lvl 192; the beat and arp slow (up to 8x); at lvl
+;     248 everything has stopped: silent, no drums (vinylCut). Let go, it
+;     winds back up in 0.5 s.
 ; Then:
 ;   SID       its frequency x 2^(+-m/192), from tables (bendtab.asm)
 ;   Game Boy  bend range 12 (CC 85, sent with the sound), bend = 8192 +- m x 8192 / 192
@@ -48,6 +52,8 @@ BendTick:
 	ora bendMag
 	ora bendSent
 	ora bendSidMag
+	ora vinylSid
+	ora vinylCut
 	ora actCnt+A_BENDDN
 	ora actCnt+A_BENDUP
 	ora actCnt+A_VINYL
@@ -123,6 +129,27 @@ BendTick:
 	lda #0
 .vs:
 	sta vinylLvl
+	tax
+	lda vinSid,x            ; the SID's second octave down
+	cmp vinylSid
+	beq .vc
+	sta vinylSid
+	lda #1
+	sta vinylSidNew
+.vc:
+	lda #0                  ; stopped?
+	cpx #VINYL_CUT
+	bcc .vk
+	lda #1
+.vk:
+	cmp vinylCut
+	beq .vf
+	sta vinylCut
+	jsr MuteChanged
+.vf:
+	cpx #192                ; the SID fades from 192
+	bcc .midi
+	jsr SidVolume
 .midi:
 	; the total only when something in it changed
 	lda bendLvl
@@ -169,11 +196,15 @@ BendTick:
 .same:
 	lda bendMag
 	ldx bendUp
+	ldy vinylSidNew
+	bne .sid
 	cmp bendSidMag
 	bne .sid
 	cpx bendSidUp
 	beq .mid2
 .sid:
+	ldy #0
+	sty vinylSidNew
 	sta bendSidMag
 	stx bendSidUp
 	jsr SidBendAll
@@ -238,14 +269,8 @@ BendTotal:
 	jsr .scale
 	ldx wheelUp
 	jsr .add
-	lda vinylLvl            ; (lvl + 1) x 3/4: 0-192, always down
-	beq .v0
-	lsr
-	sta t0
-	lsr
-	sec
-	adc t0
-.v0:
+	ldx vinylLvl            ; like a record: 0-192, always down
+	lda vinPitch,x
 	ldx #0
 	jsr .add
 	; -> magnitude (at most 192) and direction
@@ -382,6 +407,26 @@ SidFreqOut:
 .u:
 	sta bT3
 .w:
+	lda vinylSid            ; VINYL STOP's second octave (SID only)
+	beq .w2
+	lda bT2
+	sta mulA
+	lda bT3
+	sta mulA+1
+	ldx vinylSid
+	lda sidDnL,x
+	sta mulB
+	lda sidDnH,x
+	sta mulB+1
+	jsr Mul16
+	lda bT2
+	sec
+	sbc mulR+2
+	sta bT2
+	lda bT3
+	sbc mulR+3
+	sta bT3
+.w2:
 	lda vibAmt,y            ; vibrato (sounds.asm)
 	beq .out
 	jsr SidVib
@@ -449,8 +494,153 @@ GbBendVoice:
 	jmp GbPut
 
 ; MidiNES voice t0, sounding note A (vOut style, NO_NOTE = centre): the bend
-; for bendLvl. (MidiTo also calls this before a new NES note.)
+; (SPACE, wheel, VINYL STOP) plus the voice's own effects (nesfx.asm:
+; vibrato, glide, detune). (MidiTo also calls this before a new NES note.)
 NesBendVoice:
+	subroutine
+	sta nbNote
+	ldx t0
+	jsr NesTotal
+	ldx t0
+	lda nfxL
+	sta nesFxSL,x
+	lda nfxH
+	sta nesFxSH,x
+	lda nbL
+	sta nesTotL,x
+	lda nbH
+	sta nesTotH,x
+	lda nbNote
+	sta nesBNote,x
+	lda bendMag
+	sta nbMag
+	lda bendUp
+	sta nbUp
+	; a pulse, no SPACE / wheel / VINYL bend, a small one: unit x m (quick)
+	lda bendMag
+	bne .full
+	ldx t0
+	lda nesUnL,x
+	ora nesUnH,x
+	beq .full
+	ldy #1
+	lda nbH
+	beq .q
+	cmp #$FF
+	bne .full
+	ldy #0
+	lda nbL
+	eor #$FF
+	clc
+	adc #1
+	bmi .full
+	bpl .qm
+.q:
+	lda nbL
+	bmi .full
+.qm:
+	sty bendUp
+	sta nbL                 ; m (0-127)
+	lda vIdx,x
+	clc
+	adc nesBase
+	and #15
+	ora #$E0
+	sta mS
+	lda nesUnL,x
+	sta mulA
+	lda nesUnH,x
+	sta mulA+1
+	lda nbL
+	sta nesBent,x
+	jsr Mul16x8             ; / 16
+	ldx #4
+.d:
+	lsr mulR+2
+	ror mulR+1
+	ror mulR
+	dex
+	bne .d
+	lda mulR+1
+	sta bT2
+	lda mulR
+	and #$FC                ; (MidiNES bends move in steps of 4)
+	sta bT3
+	jsr BendFromAmt
+	jsr NesPut
+	jmp .back
+.full:
+	lda nbH
+	; -> magnitude (at most 192) and direction
+	bmi .neg
+	ldy #1
+	lda nbH
+	bne .cap
+	lda nbL
+	beq .zero
+	cmp #193
+	bcc .set
+	bcs .cap
+.neg:
+	ldy #0
+	lda #0
+	sec
+	sbc nbL
+	sta nbL
+	lda #0
+	sbc nbH
+	bne .cap
+	lda nbL
+	cmp #193
+	bcc .set
+.cap:
+	lda #192
+	bne .set
+.zero:
+	ldy #0
+.set:
+	sta bendMag
+	sty bendUp
+	ldx t0
+	sta nesBent,x
+	lda nbNote
+	jsr NesBendRaw
+.back:
+	lda nbMag
+	sta bendMag
+	lda nbUp
+	sta bendUp
+	rts
+
+; nbH:nbL = NES voice X's whole bend, signed 1/16 semitones: the bend (up +,
+; down -) + its own effects (nfxH:nfxL, NesFxVal). Keeps X.
+NesTotal:
+	subroutine
+	jsr NesFxVal
+	ldy #0
+	lda bendMag
+	beq .p
+	ldy bendUp
+	bne .p0
+	eor #$FF
+	clc
+	adc #1
+	ldy #$FF
+	bne .p
+.p0:
+	ldy #0
+.p:
+	sty nbH
+	clc
+	adc nfxL
+	sta nbL
+	lda nbH
+	adc nfxH
+	sta nbH
+	rts
+
+; ... the bend for bendMag / bendUp
+NesBendRaw:
 	subroutine
 	ldx t0
 	sta bT1

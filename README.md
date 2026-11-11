@@ -6,6 +6,21 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.15:** VINYL STOP stops, OCTAVE UP, a GLITCH visualizer, MidiNES vibrato / glide / detune.
+- **VINYL STOP** works like a record stopping. Speed and pitch fall together: an octave down at half speed, then the SID carries on down a second octave while fading out. The beat and arp slow down (up to 8x) and then stop completely: silent, no drums. Let go and it all winds back up in 0.5 s. (The Game Boy and NES go down an octave and cut out at the stop.)
+- **OCTAVE UP** (held) now moves everything you play up an octave, the overlay and MIDI in, held notes included. Before, it only moved MIDI notes that came in afterwards, so from SPACE it seemed to do nothing.
+- **Visualizers:** F7 steps BARS → **GLITCH** → the play screen. GLITCH uses the whole screen with no text:
+  - Each new note tears a streak of PETSCII blocks across a row picked by its pitch, in its colour, and held notes keep spattering.
+  - Runs of the screen get copied over other places (datamosh) and wiped away, so it fills while you play and dissolves within a second or two when you stop.
+  - Kick drums shake the picture (the VIC's fine scroll) and flash the background in the key's colour. VINYL STOP makes it drip down the screen.
+- **MidiNES vibrato, glide and detune**, done with pitch bend on each NES channel and added on top of the SPACE / wheel / VINYL STOP bends:
+  - **Detune** pushes the pulses apart, by the same amount as the SID's detune (WIDE: more).
+  - **Vibrato** is the SID's (depth, rate, delay, spread, TAPE WOBBLE), on the two pulses; the triangle bass stays steady.
+  - **Glide** starts each new note bent back to the voice's last note and slides it in, on all three channels.
+  - The menu's sound settings now reach the NES. Bends only go out when they change (FAT's steady detune once, not before every note), and in steps of about 1/16 semitone.
+  - The NES effects get passes of their own, taking turns with the SID's (one NES channel a pass). Each NES pulse gets a vibrato bend every 30–40 ms or so. While the NES is also gliding or vibrating, the SID's own glide and vibrato update a little less often (about every 30 ms instead of 20).
+- **Main loop:** the screen no longer takes a pass after each keyboard scan when there's nothing to draw. The SID's glide and vibrato catch up after up to 32 ms instead of 16, and catching up takes one sum instead of one per 4 ms step.
+
 **v0.14:** keys, menu pages, sound switches, four new actions, a new play screen, a visualizer.
 - **Keys:** RETURN opens the menu, SHIFT+RETURN backs out (RETURN never changes a value). F1 / F3 move the octave up / down (the lowest key C0–C6). F5 starts / stops the beat. F7 is the visualizer. The N key is gone.
 - **Latch NEXT:** with a chord latched, = shows NEXT and the next key you press starts a new chord. Press = again before that and latch goes off (= with nothing sounding turns it straight off). NEW CHORD is gone from the actions.
@@ -98,7 +113,7 @@ lowest key (Q) starts at C3.
 | Overlay keys | Play notes (through the notes mode) |
 | F1 / F3 | Octave up / down (Q from C0 to C6; held notes move with it) |
 | F5 | Beat start / stop |
-| F7 | Visualizer on / off |
+| F7 | Visualizers: BARS → GLITCH → the play screen |
 | RETURN | The menu (SHIFT+RETURN backs out) |
 | **Notes mode** | |
 | Z | POLY (smart stacking) → SMART CHORD (each key plays its chord in the key) → EXT (the chord plus 7th, 9th, 11th or 13th) |
@@ -215,7 +230,9 @@ voices ±7 cents.
 | `src/sounds.asm`, `tools/gen_sounds.py` → `src/soundtab.asm` | sounds (V), MONO (C), Fat Bass, SID effects, duty steps |
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
 | `src/menu.asm` | the menu (RETURN): main, ADVANCED SOUND, DEVICE SYNC pages |
-| `src/viz.asm` | the visualizer (F7) |
+| `src/viz.asm` | the visualizers (F7): BARS, GLITCH |
+| `src/nesfx.asm` | MidiNES vibrato, glide, detune (pitch bend) |
+| `test/test_v015.py` | VINYL STOP, OCTAVE UP, GLITCH, MidiNES effects |
 | `test/test_v014.py` | keys, latch NEXT, BEAT TEMPO, sound switches, ADVANCED SOUND, the new actions, play screen, visualizer |
 | `src/repeat.asm` | REPEAT (echoes) |
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
@@ -243,7 +260,7 @@ pip install py65 pyboy numpy
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.
-- The NES has no vibrato, glide or detune, so those switches and TAPE WOBBLE / WIDE leave it alone. FILTER SWEEP is SID only.
+- FILTER SWEEP is SID only. The NES's vibrato, glide and detune are a little stepped (the MidiNES bends in steps of about 1/16 semitone).
 - Noise levels go out as CC7 (level × 8); the MidiNES's response to low levels on the noise channel is untested. Kits are picked from Reeve's Sound Sorter types by name only; tom pitch order (A47 / A46 / A43) is a guess.
 
 ## Next

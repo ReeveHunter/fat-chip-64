@@ -45,6 +45,8 @@ GB, NES = (0, 1, 2), (5, 6, 7)
 
 c = C64()
 c.run_ms(200)
+c.set("detLock", 2)                          # (DETUNE OFF: the bend maths exactly, no NES detune on top)
+c.set("detNow", 0)
 check("startup: no bends sent", bends(c, 0) == [])
 check("= toggles OFF -> SMART -> OFF", True)
 c.tap("=", ms=60)

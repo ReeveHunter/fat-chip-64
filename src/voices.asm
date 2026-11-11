@@ -45,6 +45,15 @@ SidVolume:
 	beq .z
 	lda muteNow
 	bne .off
+	lda vinylLvl            ; VINYL STOP fades the SID out from 192
+	cmp #192
+	bcc .full
+	eor #$FF                ; (255 - lvl) / 4
+	lsr
+	lsr
+	cmp #16
+	bcc .z
+.full:
 	lda #$0F
 	bne .z
 .off:
@@ -75,6 +84,7 @@ MuteChanged:
 .same:
 	lda muteVis
 	ora stutCut
+	ora vinylCut            ; (VINYL STOP stopped)
 	sta muteNow
 	jsr SidVolume
 	ldx #0
@@ -136,9 +146,7 @@ BuildHeld:
 	beq .hn
 	cpy #8
 	bcs .hn
-	txa
-	clc
-	adc octBase
+	jsr IdxNote             ; (keeps X, Y)
 	sta heldList,y
 	iny
 .hn:
@@ -151,7 +159,7 @@ BuildHeld:
 	lda noteHeld,x
 	beq .mn
 	stx exI
-	lda midiNote-MIDI_FIRST,x
+	jsr IdxNote
 	jsr InsertNote
 	ldx exI
 .mn:
@@ -619,6 +627,8 @@ NoteWasPressed:
 	sta exV
 	sec
 	sbc octBase
+	sec
+	sbc octUpAdd            ; (OCTAVE UP held)
 	cmp #MIDI_FIRST
 	bcs .midi
 	tay
@@ -630,6 +640,12 @@ NoteWasPressed:
 	lda notePressed+MIDI_FIRST,y
 	beq .n
 	lda midiNote,y
+	clc
+	adc octUpAdd
+	bpl .c
+	sec
+	sbc #12
+.c:
 	cmp exV
 	beq .yes
 .n:
@@ -856,14 +872,7 @@ MidiTo:
 	cmp #NO_NOTE
 	beq .done
 	jsr NesBeforeOn         ; PADS: NES pulse starts at volume 0 and attacks
-	ldx t0
-	lda vDev,x
-	cmp #DEV_NES
-	bne .noBend
-	lda bendMag
-	beq .noBend
-	lda mtTarget            ; SPACE bend / wheel: this note's bend first
-	jsr NesBendVoice
+	jsr NesPreOn            ; NES: this note's bend first
 .noBend:
 	ldx t0
 	lda mtTarget
@@ -876,6 +885,38 @@ MidiTo:
 	sta mD2
 	jsr DevPut
 .done:
+	rts
+
+; Before a note-on (voice t0, note mtTarget): a NES voice's glide starts and
+; its bend goes out first (SPACE / wheel / VINYL STOP, vibrato, glide,
+; detune) when the channel doesn't have that bend already
+NesPreOn:
+	subroutine
+	ldx t0
+	lda vDev,x
+	cmp #DEV_NES
+	bne .x
+	lda mtTarget
+	jsr NesNoteStart
+	jsr NesTotal            ; (a bend only if the channel needs a new one:
+	lda nbL                 ;  the amount depends on the note too)
+	ora nbH
+	ora nesTotL,x
+	ora nesTotH,x
+	beq .x                  ; none wanted, none there
+	lda nbL
+	cmp nesTotL,x
+	bne .b
+	lda nbH
+	cmp nesTotH,x
+	bne .b
+	lda mtTarget
+	cmp nesBNote,x
+	beq .x                  ; the same note, the same bend
+.b:
+	lda mtTarget
+	jmp NesBendVoice
+.x:
 	rts
 
 ; MONO legato on voice t0 (channel t1): from vOut to mtTarget without a new
@@ -892,6 +933,7 @@ MidiLegato:
 	jmp .done
 .nes:
 	jsr .noteOff
+	jsr NesPreOn
 	jsr .noteOn
 .done:
 	ldx t0

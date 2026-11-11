@@ -274,6 +274,8 @@ FxVars:
 	lda #1
 .b:
 	sta fxBusy
+	lda #6                  ; the NES voices catch up (nesfx.asm)
+	sta nfxRun
 	rts
 
 ; the ADVANCED SOUND vibrato (keeps X)
@@ -910,6 +912,23 @@ MonoNote:
 ; vibrato delays and glides move fxN steps; the SID registers are written once.
 FxTick:
 	subroutine
+	jsr NesFxDue            ; a MidiNES effects step due (nesfx.asm)?
+	beq .sid
+	lda nfxTurn             ; both due: they take turns
+	bne .nes
+	lda ticks
+	sec
+	sbc fxLast
+	cmp #FX_EVERY
+	bcc .nes                ; (the SID's not due: the NES)
+	lda #1
+	sta nfxTurn
+	bne .sid
+.nes:
+	lda #0
+	sta nfxTurn
+	jmp NesFxTick
+.sid:
 	lda ticks
 	sec
 	sbc fxLast
@@ -917,11 +936,11 @@ FxTick:
 	bcs .go
 	rts
 .go:
-	cmp #FX_EVERY*4
+	cmp #FX_EVERY*8
 	bcc .n
-	lda ticks               ; far behind: count 4 steps, start again from now
+	lda ticks               ; far behind: count 8 steps, start again from now
 	sta fxLast
-	lda #4
+	lda #8
 	bne .st
 .n:
 	lsr
@@ -1180,11 +1199,8 @@ GlideStep:
 	bne .on
 	rts
 .on:
-	lda fxN
-	sta bT1
-.again:
-	lda glideK
-	sta t1
+	; d = (target - now) / 2^glideK, worked out once; then d per 4 ms step
+	; (fxN of them), stopping at the target
 	ldy envY
 	lda sidTgtLo,y
 	sec
@@ -1195,7 +1211,7 @@ GlideStep:
 	sta t3                  ; t3:t2 = target - now (signed)
 	ora t2
 	beq .x
-	ldx t1
+	ldx glideK
 .sh:
 	lda t3
 	cmp #$80                ; arithmetic shift right
@@ -1208,10 +1224,12 @@ GlideStep:
 	beq .snap
 	lda t3
 	cmp #$FF
-	bne .add
+	bne .go
 	lda t2
 	cmp #$FF                ; -1 also snaps (a shift never reaches 0 going down)
 	beq .snap
+.go:
+	ldx fxN
 .add:
 	lda sidBaseLo,y
 	clc
@@ -1220,8 +1238,14 @@ GlideStep:
 	lda sidBaseHi,y
 	adc t3
 	sta sidBaseHi,y
-	dec bT1
-	bne .again
+	lda sidTgtLo,y          ; past the target (target - now has turned): there
+	cmp sidBaseLo,y
+	lda sidTgtHi,y
+	sbc sidBaseHi,y
+	eor t3
+	bmi .snap
+	dex
+	bne .add
 .x:
 	rts
 .snap:

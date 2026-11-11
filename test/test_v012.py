@@ -76,8 +76,8 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
-check("screen: header V0.14, sound line, tempo / beat line",
-      "V0.14" in c.screen_row(0) and c.screen_row(2).startswith("SOUND FAT ") and "POLY" in c.screen_row(2)
+check("screen: header V0.15, sound line, tempo / beat line",
+      "V0.15" in c.screen_row(0) and c.screen_row(2).startswith("SOUND FAT ") and "POLY" in c.screen_row(2)
       and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  BEAT ELECTRO  STOP",
       (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles
@@ -155,7 +155,7 @@ path = []
 for _ in range(12):
     c.run_ms(10)
     path.append(sid_freq(c, 0))
-check("GLIDE BASS: the SID glides up to G3 over tens of ms", path[0] < path[-1] and len(set(path)) >= 5 and path[0] > fq * 0.99,
+check("GLIDE BASS: the SID glides up to G3 over tens of ms", path[0] < path[-1] and len(set(path)) >= 4 and path[0] > fq * 0.99,
       (fq, path))
 c.release("t", "q", ms=200)
 

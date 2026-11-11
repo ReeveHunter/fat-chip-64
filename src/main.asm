@@ -103,6 +103,13 @@ Loop:
 	cmp #3
 	bcc .fx                 ; 1-2 ms to go
 .sdue:
+	lda scrStage            ; nothing to draw: the pass is the effects'
+	ora screenDirty
+	ora vizOn
+	bne .draw
+	sta scrAt
+	beq .fx
+.draw:
 	lda fxTurn
 	and fxBusy              ; (only sounds with SID effects need the turns)
 	beq .scr
@@ -223,6 +230,15 @@ InitState:
 	lda #1                  ; bend range 2 semitones
 	sta bendRange
 	sta beatFresh           ; (the first beat start sets its tempo)
+	ldx #NUM_VOICES-1       ; (no NES note to glide from yet)
+	lda #NO_NOTE
+.nl:
+	sta nesLast,x
+	dex
+	bpl .nl
+	lda #8                  ; (NesFxTick goes round NES voices 2, 5, 8)
+	sta nfxV
+	lda #1
 	; ADVANCED SOUND: what the menu's ON switches use until changed
 	sta uVibDep             ; 1/4 semitone
 	sta uGlide              ; MEDIUM
@@ -363,6 +379,7 @@ Nmi:
 	include "menu.asm"
 	include "screen.asm"
 	include "viz.asm"
+	include "nesfx.asm"
 	include "data.asm"
 	include "tables.asm"
 	include "nestables.asm"

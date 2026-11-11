@@ -52,6 +52,7 @@ DEV_NES     equ 2
 NUM_VOICES  equ 9
 NO_NOTE     equ $FF
 OCT_DEFAULT equ 48             ; lowest overlay key (Q) = MIDI 48 (C3) at start
+VINYL_CUT   equ 248            ; VINYL STOP: stopped from here
 OCT_BOTTOM  equ 12             ; F1 / F3: the lowest key goes C0 ..
 OCT_TOP     equ 84             ;  .. C6
 VELOCITY    equ 100
@@ -198,6 +199,7 @@ ptr2        ds 2
 irqT        ds 1               ; IRQ-only temporary
 subTick     ds 1               ; IRQs until the next 1 ms tick (3-0)
 linkLoad    ds 1               ; estimated bytes waiting in the Teensyboy (IRQ only)
+gSrc        ds 2               ; GLITCH datamosh source
 
 ; ------------------------------------------------------------ RAM ($C000-$CFFF)
 	seg.u ram
@@ -442,6 +444,44 @@ btnAct      ds 3               ; the actions the keytar's buttons are holding
 actCnt      ds A_HELD          ; how many keys / buttons hold each held action
 bendDir     ds 1               ; BEND DOWN / UP: 1 = up
 vinylLvl    ds 1               ; VINYL STOP 0-255
+vinylSid    ds 1               ; ... the SID's second octave down (bend.asm)
+vinylSidNew ds 1
+vinylCut    ds 1               ; ... stopped: silent
+octUpAdd    ds 1               ; OCTAVE UP held: 12
+; v0.15 MidiNES effects (nesfx.asm)
+nesLast     ds NUM_VOICES      ; the last note each NES voice played
+nesGlL      ds NUM_VOICES      ; glide offset, 1/256 semitones (signed)
+nesGlH      ds NUM_VOICES
+nesVT       ds NUM_VOICES      ; 4 ms steps since the note started (vibrato delay)
+nesFxSL     ds NUM_VOICES      ; effects last sent, 1/16 semitones
+nesFxSH     ds NUM_VOICES
+nesBent     ds NUM_VOICES      ; the channel's bend isn't centred
+nesTotL     ds NUM_VOICES      ; the whole bend the channel has (signed 1/16 semitones)
+nesTotH     ds NUM_VOICES
+nesBNote    ds NUM_VOICES      ; ... worked out for this note
+nesUnL      ds NUM_VOICES      ; a pulse's bend per 1/16 semitone x 16 (0: none)
+nesUnH      ds NUM_VOICES
+nfxTL       ds 1
+nfxTH       ds 1
+nfxLast     ds 1
+nfxV        ds 1               ; the NES voice NesFxTick did last
+nfxHave     ds 1
+nfxTurn     ds 1               ; 1 = the NES effects go next
+nfxGlide    ds 1               ; a NES glide is moving
+nfxRun      ds 1               ; NesFxTick steps still to run after an effects change
+nfxN        ds 1
+nfxK        ds 1
+nfxC        ds 1
+nfxX        ds 1
+nfxL        ds 1
+nfxH        ds 1
+nvPhL       ds 1
+nvPhH       ds 1
+nbNote      ds 1
+nbMag       ds 1
+nbUp        ds 1
+nbL         ds 1
+nbH         ds 1
 bendRange   ds 1               ; menu: BEND RANGE - 1 (0-11)
 btL         ds 1               ; BendTotal: signed 1/16 semitones
 btIn        ds 4               ; ... what it was last worked out from
@@ -561,3 +601,10 @@ vizKick     ds 1               ; a kick: the border flashes
 vizBorder   ds 1
 vizV        ds 1
 vizStep     ds 1
+gR          ds 2               ; GLITCH: random numbers
+gShake      ds 1               ; ... steps of shaking left
+gK          ds 1
+gV          ds 1
+gLen        ds 1
+gChr        ds 1
+gCol        ds 1

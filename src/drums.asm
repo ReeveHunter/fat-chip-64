@@ -484,20 +484,23 @@ BeatTick:
 	sta step16L
 	lda dvdH
 	sta step16H
-	lda vinylLvl            ; VINYL STOP: slower, down to half speed
+	lda vinylLvl            ; VINYL STOP: slower, up to 8x
 	beq .nv
 	lda step16L
 	sta mulA
 	lda step16H
 	sta mulA+1
-	lda vinylLvl
-	jsr Mul16x8
+	jsr VinylExtra
 	lda step16L
 	clc
-	adc mulR+1
+	adc mulA
 	sta step16L
 	lda step16H
-	adc mulR+2
+	adc mulA+1
+	sta step16H
+	bcc .nv
+	lda #$FF                ; (as long as it goes)
+	sta step16L
 	sta step16H
 .nv:
 	; base += (frac + step) / 16
@@ -699,6 +702,10 @@ BeatFollow:
 ; there is) and one noise sound (cymbal, open hat, closed hat)
 BeatPlay:
 	subroutine
+	lda vinylCut            ; VINYL STOP has stopped: no drums
+	beq .run
+	rts
+.run:
 	lda actCnt+A_FILL       ; BEAT FILL held: snare and toms instead
 	beq .pat
 	ldy fillK

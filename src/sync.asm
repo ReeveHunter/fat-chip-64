@@ -554,6 +554,8 @@ ActionsEnd:
 	sta glideBtn
 	sta sustainOn
 	sta vinylLvl
+	sta vinylSid
+	sta vinylCut
 	sta bendLvl
 	sta fillEnd
 	lda fillSolo            ; a fill that started the beat: it stops
@@ -613,13 +615,18 @@ ActSus:
 .x:
 	rts
 
+; OCTAVE UP held: everything you play an octave up (the overlay and MIDI
+; in), held notes too
 ActOctUp:
 	subroutine
 	cmp #0
-	beq .dn
-	jmp MidiOctUp
-.dn:
-	jmp MidiOctDown
+	beq .s
+	lda #12
+.s:
+	sta octUpAdd
+	lda #1
+	sta reallocFlag
+	jmp Dirty
 
 ; ARP held: the arp on (in the last mode A chose), off again when let go
 ActArp:

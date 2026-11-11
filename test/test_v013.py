@@ -278,7 +278,7 @@ c.set("bendRange", 1)
 
 c.set("spaceAct", 7)                         # VINYL STOP
 c.press("space", ms=1200)
-check("VINYL STOP: pitch an octave down", abs(sid_freq(c, 0) / f0 - 0.5) < 0.004 and c.v("vinylLvl") == 255,
+check("VINYL STOP: stopped, the SID two octaves down (v0.15)", abs(sid_freq(c, 0) / f0 - 0.25) < 0.004 and c.v("vinylLvl") == 255,
       round(sid_freq(c, 0) / f0, 4))
 c.release("space", ms=700)
 check("VINYL STOP let go: winds back up", sid_freq(c, 0) == f0 and c.v("vinylLvl") == 0)

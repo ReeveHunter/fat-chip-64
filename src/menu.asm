@@ -10,6 +10,7 @@
 MENU_VALCOL equ 23
 
 MenuOpen:
+	jsr GlitchCalm          ; (GLITCH may have the picture shaking)
 	lda #1
 	sta menuOn
 	lda #0
