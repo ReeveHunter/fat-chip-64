@@ -60,6 +60,10 @@ RxGot:
 	lda ticks+1
 	sta clkAtH
 	lda subTick
+	ldx midiIrq             ; (1 ms ticks: the timer's high byte counts 3-0
+	beq .q                  ;  through the ms, like subTick)
+	lda CIA1_TAHI
+.q:
 	sta clkAtS
 	inc clkBeat
 	ldx #0

@@ -350,10 +350,66 @@ Irq:
 	pla
 	rti
 
+; With the MIDI chip's interrupts (midiIrq, v0.16): the chip interrupts when
+; a byte has come in or the next can go out; the CIA timer ticks each ms.
+IrqMidi:
+	subroutine
+	pha
+	txa
+	pha
+	lda ACIA_STAT
+	bpl .tim                ; (not the MIDI chip)
+	lsr                     ; a byte in?
+	bcc .tx
+	jsr RxGot
+.tx:
+	lda ACIA_STAT
+	and #ACIA_TDRE
+	beq .tim
+	ldx wireTail
+	cpx wireHead
+	beq .quiet
+	lda wireBuf,x
+	sta ACIA_TX
+	inc wireTail
+	jmp .tim
+.quiet:
+	lda #ACIA_MODE_RX       ; nothing to send: no more "ready" interrupts
+	sta ACIA_CTRL
+.tim:
+	lda CIA1_ICR            ; the 1 ms tick?
+	lsr
+	bcc .out
+	tya
+	pha
+	inc ticks
+	bne .t
+	inc ticks+1
+.t:
+	jsr Schedule
+	jsr TxByte
+	jsr RxByte              ; (this one was long: a byte may be waiting)
+	pla
+	tay
+.out:
+	pla
+	tax
+	pla
+	rti
+
 ; RESTORE: the only NMI source. Count presses; the main loop acts on them.
+; (A MIDI chip wired to NMI instead could fire one during MidiIrqTest: that
+; isn't a press.)
 Nmi:
 	subroutine
 	pha
+	lda ACIA_STAT
+	bpl .r
+	lda #ACIA_MODE
+	sta ACIA_CTRL
+	pla
+	rti
+.r:
 	lda CIA2_ICR            ; acknowledge anything CIA 2 holds, so the NMI
 	                        ; line is free for the next RESTORE edge
 	inc nmiCount

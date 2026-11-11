@@ -6,6 +6,16 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.16:** speed: MIDI chip interrupts and a quicker keyboard scan.
+- **MIDI chip interrupts.** Until now Fat Chip checked the Kerberos's MIDI chip (an MC68B50 in Datel mode) 4,000 times a second, and that alone took 25–30% of the C64's time. Now the chip interrupts only when a byte has come in or the next one can go out, and the timer just ticks each millisecond.
+  - At start-up Fat Chip asks the chip for one interrupt to see whether it reaches the C64. If it doesn't, it goes back to the old polling, so nothing breaks either way. (`midiIrq` in memory says which mode it's in.)
+  - In the simulator, the main loop now goes round about twice as often with a chord held. The SID's effects run every 4 ms as intended (they had slipped to every 13 ms), the NES effects twice as often, and the longest pass is under 4 ms.
+  - MIDI in reacts sooner too, since each byte is picked up the moment it arrives.
+- **Quicker keyboard scan.** When the keyboard reads exactly as it did last time (nothing pressed or let go, even with keys held), the scan stops after reading it. That roughly halves the cost of most scans.
+- **Glide** (SID) now slides from the voice's last note even if that note was let go just before, like a mono synth's portamento and like the NES's.
+- The visualizers step at most every 8 ms, so they look as they did, not twice as fast.
+- Lookup tables for the NES bend maths are still an option for later.
+
 **v0.15:** VINYL STOP stops, OCTAVE UP, a GLITCH visualizer, MidiNES vibrato / glide / detune.
 - **VINYL STOP** works like a record stopping. Speed and pitch fall together: an octave down at half speed, then the SID carries on down a second octave while fading out. The beat and arp slow down (up to 8x) and then stop completely: silent, no drums. Let go and it all winds back up in 0.5 s. (The Game Boy and NES go down an octave and cut out at the stop.)
 - **OCTAVE UP** (held) now moves everything you play up an octave, the overlay and MIDI in, held notes included. Before, it only moved MIDI notes that came in afterwards, so from SPACE it seemed to do nothing.
@@ -18,7 +28,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
   - **Vibrato** is the SID's (depth, rate, delay, spread, TAPE WOBBLE), on the two pulses; the triangle bass stays steady.
   - **Glide** starts each new note bent back to the voice's last note and slides it in, on all three channels.
   - The menu's sound settings now reach the NES. Bends only go out when they change (FAT's steady detune once, not before every note), and in steps of about 1/16 semitone.
-  - The NES effects get passes of their own, taking turns with the SID's (one NES channel a pass). Each NES pulse gets a vibrato bend every 30–40 ms or so. While the NES is also gliding or vibrating, the SID's own glide and vibrato update a little less often (about every 30 ms instead of 20).
+  - The NES effects get passes of their own, taking turns with the SID's (one NES channel a pass). In v0.15 that slowed the SID's glide and vibrato a little while the NES was busy too; v0.16's speed-up more than makes up for it.
 - **Main loop:** the screen no longer takes a pass after each keyboard scan when there's nothing to draw. The SID's glide and vibrato catch up after up to 32 ms instead of 16, and catching up takes one sum instead of one per 4 ms step.
 
 **v0.14:** keys, menu pages, sound switches, four new actions, a new play screen, a visualizer.
@@ -233,6 +243,7 @@ voices ±7 cents.
 | `src/viz.asm` | the visualizers (F7): BARS, GLITCH |
 | `src/nesfx.asm` | MidiNES vibrato, glide, detune (pitch bend) |
 | `test/test_v015.py` | VINYL STOP, OCTAVE UP, GLITCH, MidiNES effects |
+| `test/test_v016.py` | MIDI chip interrupts (and the polling fallback), the quicker keyboard scan |
 | `test/test_v014.py` | keys, latch NEXT, BEAT TEMPO, sound switches, ADVANCED SOUND, the new actions, play screen, visualizer |
 | `src/repeat.asm` | REPEAT (echoes) |
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |

@@ -25,6 +25,16 @@ KeyScan:
 	bpl .col
 	lda #$FF
 	sta CIA1_PRA
+	; ---- every column as accepted (nothing pressed or let go): done
+	ldx #7
+.same:
+	lda keyNow,x
+	cmp keyAcc,x
+	bne .changed
+	dex
+	bpl .same
+	rts
+.changed:
 	; ---- releases first: accepted keys that are up now
 	ldx #0
 .rc:

@@ -28,12 +28,15 @@ ACIA_STAT   equ $DE06
 ACIA_RX     equ $DE07
 ACIA_RESET  equ $03            ; master reset
 ACIA_MODE   equ $16            ; /64 (31250 baud), 8N1, no interrupts
+ACIA_MODE_RX equ $96           ; ... and an interrupt when a byte comes in
+ACIA_MODE_TX equ $B6           ; ... and when the next byte can go out too
 ACIA_TDRE   equ $02            ; status: transmit register empty
 
 SCREEN      equ $0400
 COLRAM      equ $D800
 
 ; ------------------------------------------------------------ timing
+TICK_LATCH_MS equ 1023         ; with the MIDI chip's interrupts (midiIrq): 1 ms
 TICK_LATCH  equ 255            ; CIA1 timer A: 256 cycles = 1/4 ms (NTSC), quicker
                                ; than a MIDI byte (327 cycles), so the ACIA is fed
                                ; and read (MIDI in) even while the main loop is
@@ -199,6 +202,7 @@ ptr2        ds 2
 irqT        ds 1               ; IRQ-only temporary
 subTick     ds 1               ; IRQs until the next 1 ms tick (3-0)
 linkLoad    ds 1               ; estimated bytes waiting in the Teensyboy (IRQ only)
+midiIrq     ds 1               ; 1 = the MIDI chip's interrupts reach the C64 (v0.16)
 gSrc        ds 2               ; GLITCH datamosh source
 
 ; ------------------------------------------------------------ RAM ($C000-$CFFF)
@@ -601,6 +605,7 @@ vizKick     ds 1               ; a kick: the border flashes
 vizBorder   ds 1
 vizV        ds 1
 vizStep     ds 1
+vizAt       ds 1               ; the visualizer's last step (ticks)
 gR          ds 2               ; GLITCH: random numbers
 gShake      ds 1               ; ... steps of shaking left
 gK          ds 1

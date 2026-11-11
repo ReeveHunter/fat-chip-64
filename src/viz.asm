@@ -113,6 +113,15 @@ VizDraw:
 ; one screen step: the next bar (after the ninth, row 24 and the border)
 VizStep:
 	subroutine
+	lda ticks               ; one step every 8 ms at most (the main loop can
+	sec                     ;  come round much quicker than that now)
+	sbc vizAt
+	cmp #8
+	bcs .due
+	rts
+.due:
+	lda ticks
+	sta vizAt
 	lda vizOn
 	cmp #2
 	bne .bars

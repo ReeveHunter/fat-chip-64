@@ -762,13 +762,13 @@ VoiceSet:
 	sta sidTgtLo,y
 	lda ptr+1
 	sta sidTgtHi,y
-	; jump straight there, unless the sound glides and the voice was already
-	; playing (then FxTick slides sidBase to the target)
+	; jump straight there, unless the sound glides and the voice has played
+	; a note (still sounding or let go: like a mono synth's portamento, and
+	; the NES's); then FxTick slides sidBase to the target
 	lda glideK
 	beq .jump
-	ldx t0
-	lda vNote,x
-	cmp #NO_NOTE
+	lda sidBaseLo,y
+	ora sidBaseHi,y
 	bne .glide
 .jump:
 	lda ptr

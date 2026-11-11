@@ -1,6 +1,10 @@
 """py65 model of the parts of a C64 Fat Chip 64 uses.
 
-- CIA1 timer A: an IRQ every 256 cycles (1/4 ms) when enabled ($DC0D bit 0)
+- CIA1 timer A: an IRQ every latch + 1 cycles when enabled ($DC0D bit 0);
+  its counter reads back at $DC04/$DC05
+- the MC6850's interrupts (control bit 7: a byte in; bits 5-6 = 01: ready
+  to send) on the IRQ line, status bit 7 (acia_irq=False: the chip's IRQ
+  pin isn't wired, as on a cartridge without it)
 - keyboard matrix through CIA1 ports A/B (press keys by name)
 - RESTORE: an NMI
 - Kerberos MIDI out (MC6850 at $DE04-$DE07, DATEL layout): a byte written to
@@ -46,7 +50,7 @@ def load_symbols(path):
 
 
 class C64:
-    def __init__(self, prg=None, sym=None, seed=1, channels=(0, 5)):
+    def __init__(self, prg=None, sym=None, seed=1, channels=(0, 5), acia_irq=True):
         """channels = (Game Boy base, NES base) set before the devices start:
         (0, 5) is v0.11's layout (Game Boy on 1-5, MidiNES on 6-10), which the
         older tests assume; None keeps the program's own (11-15, 1-5)."""
@@ -67,8 +71,11 @@ class C64:
         self.tx = []            # (cycle, byte)
         self.tx_busy_until = 0
         self.timer_on = False
+        self.latch = IRQ_CYCLES - 1
         self.next_irq = IRQ_CYCLES
         self.irq_pending = False
+        self.acia_ctrl = 0
+        self.acia_wired = acia_irq
         self.rx_q = []          # (arrival cycle, byte) still on the way in
         self.rx_last = 0
         self.rdr = None         # ACIA receive data register
@@ -106,6 +113,25 @@ class C64:
             self.irq_pending = False
             return v
 
+        def wr_talo(_, v):
+            self.latch = (self.latch & 0xFF00) | v
+
+        def wr_tahi(_, v):
+            self.latch = (self.latch & 0xFF) | (v << 8)
+
+        def wr_cra(_, v):
+            if v & 0x10:            # force load
+                self.next_irq = self.cpu.processorCycles + self.latch + 1
+
+        def rd_ta(i):
+            def f(_):
+                cnt = max(0, self.next_irq - self.cpu.processorCycles - 1)
+                return (cnt >> (8 * i)) & 0xFF
+            return f
+
+        def wr_ctrl(_, v):
+            self.acia_ctrl = v
+
         def wr_icr(_, v):
             if v & 0x80 and v & 1:
                 self.timer_on = True
@@ -123,7 +149,8 @@ class C64:
 
         def rd_stat(_):
             rx_update()
-            return (0x02 if self.cpu.processorCycles >= self.tx_busy_until else 0x00) | (1 if self.rdr is not None else 0)
+            return (0x02 if self.cpu.processorCycles >= self.tx_busy_until else 0x00) | (1 if self.rdr is not None else 0) \
+                | (0x80 if self.acia_asks() else 0)
 
         def rd_rx(_):
             rx_update()
@@ -140,6 +167,13 @@ class C64:
         m.subscribe_to_write([0xDC00], wr_dc00)
         m.subscribe_to_read([0xDC0D], rd_icr)
         m.subscribe_to_write([0xDC0D], wr_icr)
+        m.subscribe_to_write([0xDC04], wr_talo)
+        m.subscribe_to_write([0xDC05], wr_tahi)
+        m.subscribe_to_write([0xDC0E], wr_cra)
+        m.subscribe_to_read([0xDC04], rd_ta(0))
+        m.subscribe_to_read([0xDC05], rd_ta(1))
+        m.subscribe_to_write([0xDE04], wr_ctrl)
+        self.rx_update = rx_update
         m.subscribe_to_read([0xDE06], rd_stat)
         m.subscribe_to_write([0xDE05], wr_tx)
         m.subscribe_to_read([0xDE07], rd_rx)
@@ -155,14 +189,31 @@ class C64:
         self.run_until(self.sym["Loop"], limit=3_000_000)
 
     # ------------------------------------------------------------ running
+    def acia_asks(self):
+        """The MC6850's IRQ output: a byte in (receive interrupt on), or
+        ready for the next byte (transmit interrupt on)."""
+        c = self.acia_ctrl
+        if c & 3 == 3:
+            return False
+        if c & 0x80 and self.rdr is not None:
+            return True
+        return (c & 0x60) == 0x20 and self.cpu.processorCycles >= self.tx_busy_until
+
     def step(self):
         cpu = self.cpu
         cpu.step()
-        if self.timer_on and cpu.processorCycles >= self.next_irq:
-            self.next_irq += IRQ_CYCLES
-            self.irq_pending = True
-        if self.irq_pending and not (cpu.p & cpu.INTERRUPT):
-            cpu.irq()
+        if cpu.processorCycles >= self.next_irq:
+            self.next_irq += self.latch + 1
+            if self.timer_on:
+                self.irq_pending = True
+        if not (cpu.p & cpu.INTERRUPT):
+            if self.irq_pending:
+                cpu.irq()
+            elif self.acia_wired and self.acia_ctrl & 0xA0:
+                if self.rx_q and self.rx_q[0][0] <= cpu.processorCycles:
+                    self.rx_update()
+                if self.acia_asks():
+                    cpu.irq()
 
     def run_until(self, pc, limit=1_000_000):
         n = 0

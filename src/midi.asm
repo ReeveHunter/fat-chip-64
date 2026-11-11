@@ -14,7 +14,62 @@ MidiInit:
 	sta ACIA_CTRL
 	lda #ACIA_MODE
 	sta ACIA_CTRL
+	; (fall into the test)
+
+; Does the MIDI chip's interrupt reach the C64? (v0.16) Ask for one (the
+; transmit-empty interrupt asks at once) with the timer quiet: if it comes,
+; the MIDI chip interrupts when a byte comes in or can go out (IrqMidi) and
+; the timer only ticks the ms. If not, poll it 4000 times a second (Irq) as
+; before. Interrupts are off when this is called.
+MidiIrqTest:
+	subroutine
+	lda #$7F                ; the CIA's interrupts off
+	sta CIA1_ICR
+	lda CIA1_ICR
+	lda #<IrqTest
+	sta $FFFE
+	lda #>IrqTest
+	sta $FFFF
+	lda #0
+	sta midiIrq
+	lda #ACIA_MODE_TX
+	sta ACIA_CTRL
+	cli
+	ldx #0
+.w:
+	dex
+	bne .w
+	sei
+	ldx midiIrq
+	lda midiCtl,x
+	sta ACIA_CTRL
+	lda irqLo,x
+	sta $FFFE
+	lda irqHi,x
+	sta $FFFF
+	lda latchLo,x
+	sta CIA1_TALO
+	lda latchHi,x
+	sta CIA1_TAHI
+	lda #$11                ; start, force load, continuous
+	sta CIA1_CRA
+	lda CIA1_ICR
+	lda #$81                ; timer A interrupt on
+	sta CIA1_ICR
 	rts
+IrqTest:
+	pha
+	lda #1
+	sta midiIrq
+	lda #ACIA_MODE          ; (quiet again)
+	sta ACIA_CTRL
+	pla
+	rti
+midiCtl:    .byte ACIA_MODE, ACIA_MODE_RX
+irqLo:      .byte <Irq, <IrqMidi
+irqHi:      .byte >Irq, >IrqMidi
+latchLo:    .byte <TICK_LATCH, <TICK_LATCH_MS
+latchHi:    .byte >TICK_LATCH, >TICK_LATCH_MS
 
 ; IRQ: send one wire byte if the ACIA is ready.
 TxByte:
@@ -34,6 +89,10 @@ TxByte:
 ; Main loop: same, with interrupts off around it.
 TxService:
 	subroutine
+	lda midiIrq             ; (the MIDI chip's interrupts do it)
+	beq .poll
+	rts
+.poll:
 	php
 	sei
 	jsr TxByte
@@ -195,6 +254,11 @@ WirePut:
 	ldx wireHead
 	sta wireBuf,x
 	inc wireHead
+	lda midiIrq             ; the MIDI chip: interrupt when it can take it
+	beq .x
+	lda #ACIA_MODE_TX
+	sta ACIA_CTRL
+.x:
 	rts
 
 ; ------------------------------------------------------------ queueing (main loop)
