@@ -6,6 +6,14 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.20:** patches over MIDI, for Chip Lab.
+- Fat Chip 64 takes a whole patch as a SysEx message on its MIDI in and plays it at once, notes held or not: its name shows as the sound. V or a program change goes back to the built-in patches.
+- The message is `F0 7D 46 43 01 <size>`, the patch's bytes as 4-bit halves, `F7`. Only a complete one with the right size is used; anything else is ignored.
+- **Chip Lab** (ReeveHunter.github.io `fatchip/chiplab/`) now builds patches from `patch/effects.json`: effects on and off, limited to some chips, every setting, the dice with locks, blending two patches, your own patches and notes. Each change goes to the C64 as you make it; the on-screen keys and a keyboard plugged into the Mac play it on MIDI channel 1.
+- `patch/fatchip-patch.js` is the JavaScript twin of `tools/gen_patches.py` (Chip Lab uses it); `test/test_patch_js.py` checks they agree on every built-in patch and 300 dice-rolled ones. `patch/c64-layout.json` (generated) gives Chip Lab the live patch's layout. `tools/sync_chiplab.sh` copies these files to Chip Lab.
+- **MIDI in fix:** a long 1 ms tick could leave a received byte waiting while the next arrived, and the MIDI chip holds only one, so a byte was lost now and then (a note-off, say) in a dense stream. The tick now picks up a waiting byte half way through as well as at the end.
+- The 8 × 8 multiply the vibrato uses is unrolled, a little quicker, so the longest main-loop pass stays under 4 ms.
+
 **v0.19:** the built-in patches are written in the shared units, and the Game Boy and NES follow each patch's envelope.
 - `patch/patches.json` holds the 19 built-in patches as TONE + effects in the units of `patch/effects.json` (ms, Hz, cents, %). `tools/gen_patches.py` turns them into what each chip plays (SID registers, Fat Chip GB CCs, the NES envelope); the old `tools/gen_sounds.py` is gone. Chip Lab will use the same files.
 - **One main envelope.** The Game Boy and NES now follow each patch's envelope (the SID's), so they ring out with it. Before, each chip had its own (FAT's Game Boy notes stopped almost at once and its NES notes had no envelope).
@@ -300,7 +308,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.19)
+## Not yet (v0.20)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.

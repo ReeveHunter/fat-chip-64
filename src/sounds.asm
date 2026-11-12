@@ -1421,24 +1421,30 @@ seqStart:   .byte 0, 4
 seqData:    .byte 0,1,2,1, 0,1,2,3,2,1   ; 1: lead, 2: shimmer
 dutyPw:     .byte $02,$04,$08,$0C        ; 12.5 / 25 / 50 / 75%
 
-; mt16 = A x Y (8 x 8). Keeps X.
+; mt16 = A x Y (8 x 8). Keeps X. Unrolled (v0.20: about 40 cycles quicker,
+; and the vibrato calls it several times a pass).
+	mac MULSTEP
+	lsr mulB
+	bcc .n{1}
+	clc
+	adc mulB+1
+.n{1}:
+	ror
+	ror mt16
+	endm
 Mul8:
 	subroutine
 	sta mulB
 	sty mulB+1
 	lda #0
-	sta mt16+1
-	ldy #8
-.l:
-	lsr mulB
-	bcc .n
-	clc
-	adc mulB+1
-.n:
-	ror
-	ror mt16
-	dey
-	bne .l
+	MULSTEP 1
+	MULSTEP 2
+	MULSTEP 3
+	MULSTEP 4
+	MULSTEP 5
+	MULSTEP 6
+	MULSTEP 7
+	MULSTEP 8
 	sta mt16+1
 	rts
 

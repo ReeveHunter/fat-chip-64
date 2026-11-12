@@ -389,8 +389,9 @@ IrqMidi:
 	inc ticks+1
 .t:
 	jsr Schedule
-	jsr TxByte
-	jsr RxByte              ; (this one was long: a byte may be waiting)
+	jsr RxByte              ; (a long tick: a byte may be waiting, and
+	jsr TxByte              ;  the MIDI chip holds only one)
+	jsr RxByte
 	pla
 	tay
 .out:

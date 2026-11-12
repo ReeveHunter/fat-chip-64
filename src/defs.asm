@@ -620,3 +620,7 @@ gCol        ds 1
 ; v0.18: the live patch. Every sound setting is read from here (the field
 ; names are in soundtab.asm); choosing a built-in patch copies it in
 livePatch   ds 128             ; PATCH_SIZE of it used
+sxBuf       ds 128             ; v0.20: a patch arriving over SysEx
+sxOn        ds 1               ; 1 = inside a SysEx
+sxPos       ds 1               ; data bytes so far
+sxCount     ds 1               ; patches received

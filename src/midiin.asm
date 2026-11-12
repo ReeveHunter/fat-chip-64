@@ -91,7 +91,12 @@ MidiInService:
 	cmp #$F8
 	bcs .rt                 ; realtime (clocks are counted by RxByte)
 	cmp #$F0
-	bcc .status
+	bcs .sys
+	ldx #0                  ; a channel message ends any SysEx
+	stx sxOn
+	beq .status
+.sys:
+	jsr SysexStatus         ; F0 starts a SysEx, F7 ends it (v0.20)
 	lda #0                  ; system: no running status until the next one
 .status:
 	sta rxStatus
@@ -99,6 +104,11 @@ MidiInService:
 	sta rxCnt
 	beq .next
 .data:
+	ldx sxOn
+	beq .nosx
+	jsr SysexByte
+	jmp .next
+.nosx:
 	ldx rxStatus
 	beq .next               ; no status yet
 	ldx rxCnt
@@ -338,3 +348,94 @@ IdxNote:
 	sbc #12
 .x:
 	rts
+
+; ------------------------------------------------------------ SysEx: a patch from Chip Lab (v0.20)
+; F0 7D 46 43 01 PATCH_SIZE, then the patch (PATCH_SIZE bytes, the live patch's layout:
+; tools/gen_patches.py) as two 4-bit halves each, high first, then F7. It
+; arrives in sxBuf; only a complete one goes into the live patch, which then
+; sounds at once (like choosing a sound). Anything else is ignored.
+SX_HEAD     equ 5
+SX_LEN      equ SX_HEAD + PATCH_SIZE * 2
+
+; A status byte in A (F0-F7); keeps A
+SysexStatus:
+	subroutine
+	cmp #$F0
+	bne .end
+	ldx #1
+	stx sxOn
+	ldx #0
+	stx sxPos
+	rts
+.end:
+	ldx sxOn
+	beq .x
+	ldx #0
+	stx sxOn
+	cmp #$F7
+	bne .x
+	ldx sxPos
+	cpx #SX_LEN
+	bne .x
+	pha
+	jsr PatchReceived
+	pla
+.x:
+	rts
+
+; A data byte (A) inside a SysEx
+SysexByte:
+	subroutine
+	ldx sxPos
+	cpx #SX_HEAD
+	bcs .body
+	cmp sxHead,x            ; the header must match, or the rest is ignored
+	bne .no
+	inc sxPos
+	rts
+.body:
+	cpx #SX_LEN
+	bcs .no                 ; too long
+	pha
+	txa
+	sec
+	sbc #SX_HEAD
+	lsr
+	tay                     ; byte number
+	pla
+	and #15
+	bcs .lo
+	asl
+	asl
+	asl
+	asl
+	sta sxBuf,y
+	inc sxPos
+	rts
+.lo:
+	ora sxBuf,y
+	sta sxBuf,y
+	inc sxPos
+	rts
+.no:
+	lda #0
+	sta sxOn
+	rts
+sxHead:     .byte $7D, $46, $43, $01, PATCH_SIZE   ; (the size: a Chip Lab with another layout is ignored)
+
+; the received patch -> the live patch, heard at once
+PatchReceived:
+	subroutine
+	jsr SoundRelease
+	ldy #PATCH_SIZE-1
+.c:
+	lda sxBuf,y
+	sta livePatch,y
+	dey
+	bpl .c
+	lda #$FF                ; no built-in patch: V and program changes load one again
+	sta soundMode
+	inc sxCount
+	jsr SoundVars
+	jsr SoundApply
+	jmp Dirty
