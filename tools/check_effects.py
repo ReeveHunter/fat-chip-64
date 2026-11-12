@@ -10,6 +10,8 @@ otherwise only show up on the C64 or in Chip Lab:
   - a 'map' naming a chip other than sid / gb / nes
   - an effect's 'chips' or 'voices' that make no sense
   - the patch's CHARACTER default naming effects that don't exist
+and in patch/patches.json (the built-in patches): every setting, effect and
+parameter named exists, every value is in range, 'on' names real chips.
 Exit status 1 if anything is wrong.
 """
 import json
@@ -18,6 +20,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PATH = os.path.join(HERE, "..", "patch", "effects.json")
+PATCHES = os.path.join(HERE, "..", "patch", "patches.json")
 
 TYPES = {"int", "ms", "hz", "enum", "flags", "bool", "text", "effects", "patch"}
 BLENDS = {"lerp", "log", "switch"}
@@ -105,6 +108,65 @@ def check_list(where, params):
         check_param(w, p)
 
 
+def value_ok(q, v):
+    t = q["type"]
+    if t in ("int", "hz") or (t == "ms" and "values" not in q):
+        return isinstance(v, (int, float)) and q["min"] <= v <= q["max"]
+    if t == "ms":
+        return v in q["values"]
+    if t == "enum":
+        return isinstance(v, int) and 0 <= v < len(q["values"])
+    if t == "flags":
+        return isinstance(v, int) and 0 <= v < 1 << len(q["values"])
+    if t == "bool":
+        return v in (0, 1)
+    if t == "text":
+        return isinstance(v, str) and len(v) <= q.get("maxLen", 16)
+    return True
+
+
+def check_patches(d):
+    if not os.path.exists(PATCHES):
+        return 0
+    with open(PATCHES) as f:
+        P = json.load(f)["patches"]
+    ps = {q["id"]: q for q in d["patch"]}
+    ef = {e["id"]: e for e in d["effects"]}
+    names = set()
+    for p in P:
+        w = f"patch '{p.get('name', '?')}'"
+        if p.get("name") in names:
+            bad(w, "name used twice")
+        names.add(p.get("name"))
+        for k, v in p.items():
+            if k == "fx":
+                continue
+            if k not in ps:
+                bad(w, f"no setting '{k}'")
+            elif k == "character":
+                for eid in v:
+                    if eid not in ef:
+                        bad(w, f"character names effect '{eid}'")
+                    elif eid not in p.get("fx", {}) and not ef[eid].get("alwaysOn"):
+                        bad(w, f"character '{eid}' isn't on")
+            elif not value_ok(ps[k], v):
+                bad(w, f"{k} = {v!r} out of range")
+        for eid, vals in p.get("fx", {}).items():
+            if eid not in ef:
+                bad(w, f"no effect '{eid}'")
+                continue
+            qs = {q["id"]: q for q in ef[eid]["params"]}
+            for k, v in vals.items():
+                if k == "on":
+                    if not v or any(c not in CHIPS for c in v):
+                        bad(w, f"{eid}: on {v!r}")
+                elif k not in qs:
+                    bad(w, f"{eid} has no '{k}'")
+                elif not value_ok(qs[k], v):
+                    bad(w, f"{eid}.{k} = {v!r} out of range")
+    return len(P)
+
+
 def main():
     with open(PATH) as f:
         d = json.load(f)
@@ -139,12 +201,13 @@ def main():
         if eid not in ids:
             bad("patch character", f"names effect '{eid}'")
     n = sum(len(e["params"]) for e in d["effects"])
+    np = check_patches(d)
     if problems:
         print("\n".join(problems))
         print(f"\n{len(problems)} problem(s)")
         sys.exit(1)
     print(f"ok: {len(d['effects'])} effects, {n} effect parameters, {len(d['patch'])} patch settings, "
-          f"{len(d.get('session', []))} session and {len(d.get('play', []))} play settings")
+          f"{len(d.get('session', []))} session and {len(d.get('play', []))} play settings; {np} built-in patches")
 
 
 if __name__ == "__main__":

@@ -305,7 +305,8 @@ check("TREMOLO in FAT: SID volume moves", len(vols) >= 4, sorted(vols))
 check("TREMOLO in FAT: NES pulse levels move (CC7)", len(set(cc7)) >= 3, cc7[:8])
 c.release("space", ms=60)
 cc7 = [b for t, s, a, b in since(c, t0) if s in (0xB0, 0xB1) and a == 7]
-check("TREMOLO let go: SID volume 15, NES back to 127", c.raw[0xD418] & 15 == 15 and cc7[-2:] == [127, 127], cc7[-2:])
+check("TREMOLO let go: SID volume 15, NES back to its envelope's sustain (FAT: 12, CC7 96)",
+      c.raw[0xD418] & 15 == 15 and cc7[-2:] == [96, 96], cc7[-2:])
 
 c.set("spaceAct", 5)                         # ARP
 c.press("space", ms=200)

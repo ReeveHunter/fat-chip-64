@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Fat Chip 64: MidiNES envelopes (PADS), startup settings, hard cuts.
+"""Fat Chip 64: MidiNES envelopes, startup settings, hard cuts. Since v0.19 the
+NES follows each patch's main envelope (the SID's), so FAT decays to its
+sustain and rings out with the SID too.
 (The triangle release drop is off since v0.09; its code is kept for a future
 mono bass sound.)"""
 import os
@@ -53,14 +55,19 @@ check("startup: hardware envelope off (CC11 = 64) on pulses and noise",
 check("startup: sweep off and sweep period 0 on the pulses",
       all((ch, 13, 0) in start and (ch, 15, 0) in start for ch in (P1, P2)))
 
-# ---------------------------------------------------------------- FAT: no envelope
+# ---------------------------------------------------------------- FAT: the SID's envelope
 t0 = c.cpu.processorCycles
 c.press("q", ms=400)
 ev = on_ch(c, P1, t0)
-check("FAT: note on, no volume changes (a detune bend first, v0.15)", [e[1] for e in ev] == ["bend", "on"], ev)
+check("FAT: full volume, a detune bend, the note (v0.15)", [e[1] for e in ev[:3]] == ["cc", "bend", "on"] and ev[0][3] == 120, ev)
+vols = [e[3] for e in ev if e[1] == "cc"]
+check("FAT: decays to sustain 12 (CC7 96) like the SID ($C9) and stays", vols[-1] == 96 and ev[-1][0] < 200, ev[-3:])
 t1 = c.cpu.processorCycles
-c.release("q", ms=60)
-check("FAT: release = note-off at once", [e[1] for e in on_ch(c, P1, t1)] == ["off"])
+c.release("q", ms=1000)
+rel = on_ch(c, P1, t1)
+off_at = next((e[0] for e in rel if e[1] == "off"), None)
+check("FAT: release fades 12 -> 0, then the note-off", [e[3] for e in rel if e[1] == "cc"][:2] == [88, 80] and rel[-1][1] == "off", rel[-3:])
+check("FAT: ... in about 0.6 s (the SID: 750 ms from full)", off_at is not None and 500 <= off_at <= 800, off_at)
 check("FAT: triangle note-off at once, no bends", [e[1] for e in on_ch(c, TRI, t1)] == ["off"])
 
 # ---------------------------------------------------------------- PADS
@@ -73,8 +80,8 @@ check("PADS: CC7 = 0 before the note-on", ev[0][1:] == ("cc", 7, 0) and kinds[1]
 vols = [e[3] for e in ev if e[1] == "cc" and e[2] == 7]
 peak_at = next((e[0] for e in ev if e[1] == "cc" and e[3] == 120), None)
 check("PADS: attack climbs through the levels to 15 (CC7 120)", vols[1:16] == list(range(8, 128, 8)), vols)
-check("PADS: attack takes about 0.6 s", peak_at is not None and 550 <= peak_at <= 700, peak_at)
-check("PADS: decays to sustain 11 (CC7 88) and stays", vols[-1] == 88 and vols[15:] == [120, 112, 104, 96, 88], vols[15:])
+check("PADS: attack takes about 0.5 s (the SID's $A)", peak_at is not None and 420 <= peak_at <= 600, peak_at)
+check("PADS: sustain 15: stays at the top", vols[-1] == 120 and vols.count(120) == 1, vols[-3:])
 check("PADS: pulse 2 gets the same envelope (C3 = pulse 2's note)",
       [e[3] for e in on_ch(c, P2, t0) if e[1] == "cc"][:3] == [0, 8, 16])
 t1 = c.cpu.processorCycles
@@ -82,9 +89,9 @@ c.release("q", ms=2600)
 rel = on_ch(c, P1, t1)
 off_at = next((e[0] for e in rel if e[1] == "off"), None)
 rvols = [e[3] for e in rel if e[1] == "cc"]
-check("PADS: release fades 11 -> 0 before the note-off", rvols[:3] == [80, 72, 64] and rvols[-1] == 0 and
+check("PADS: release fades 15 -> 0 before the note-off", rvols[:3] == [112, 104, 96] and rvols[-1] == 0 and
       rel[-1][1] == "off", rel[-4:])
-check("PADS: release takes about 2 s", off_at is not None and 1700 <= off_at <= 2200, off_at)
+check("PADS: release takes about 2.4 s (the SID's $B)", off_at is not None and 2000 <= off_at <= 2600, off_at)
 tri = on_ch(c, TRI, t1)
 check("PADS: the triangle (bass) just stops on release: note-off, no drop",
       [e[1] for e in tri] == ["off"] and tri[0][0] < 30, tri)
@@ -121,8 +128,9 @@ t1 = c.cpu.processorCycles
 c.tap("v", ms=60)
 ev = on_ch(c, P1, t1)
 check("FAT again: pulses back to full volume (CC7 127)", ("cc", 7, 127) in [e[1:] for e in ev], ev)
-c.release("q", ms=60)
-check("FAT again: plain note-off", [e[1] for e in on_ch(c, P1, c.cpu.processorCycles - 60 * CYCLES_PER_MS)] == ["off"])
+t1 = c.cpu.processorCycles
+c.release("q", ms=1000)
+check("FAT again: fades out, then the note-off", [e[1] for e in on_ch(c, P1, t1)][-1] == "off")
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

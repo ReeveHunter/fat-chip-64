@@ -139,7 +139,7 @@ check("Game Boy switched to the FAT CHIP profile", gb.var("_profile") == 1)
 check("warble depth from Fat Chip 64", gb.var("_warble_amt") == 24, gb.var("_warble_amt"))
 patch = gb.sym["_patch"]
 P_DETUNE = 10
-check("pulses detuned about -5 / +5 cents (patch 29 / 35)", (gb.mem(patch + P_DETUNE), gb.mem(patch + 32 + P_DETUNE)) == (29, 35),
+check("pulses detuned about -7 / +7 cents, like the SID (patch 28 / 36)", (gb.mem(patch + P_DETUNE), gb.mem(patch + 32 + P_DETUNE)) == (28, 36),
       (gb.mem(patch + P_DETUNE), gb.mem(patch + 32 + P_DETUNE)))
 check("chord on the Game Boy: pulse 1 G3, pulse 2 C3, wave C2 (bass)", notes == [55, 48, 36], notes)
 check("all three Game Boy voices sounding", sounding & 0x07 == 0x07, hex(sounding))
@@ -150,8 +150,8 @@ check("SPARKLE: Game Boy pulse 1 left only, pulse 2 right only (NR51)",
 check("SPARKLE: both pulses take turns on chord notes", len({a for a, _ in spark_notes}) >= 2
       and len({b for _, b in spark_notes}) >= 2, spark_notes)
 check("M with a chord held: every Game Boy voice let go", muted_gates == [0, 0, 0], muted_gates)
-check("PADS: Game Boy attack 5 / release 6 on pulses + wave, pulse 2 glide 8",
-      pad_patch == [(5, 6), (5, 6), (5, 6), 8], pad_patch)
+check("PADS: Game Boy attack 2 / release 7 on pulses + wave (the SID's, v0.19), glide 7",
+      pad_patch == [(2, 7), (2, 7), (2, 7), 7], pad_patch)
 check("RAW on the Game Boy: instant envelopes, pulse 1 50%, pulse 2 25%, wave as a pulse",
       raw_patch == [(0, 0, 2), (0, 0, 1), (0, 0, 8), 1], raw_patch)
 check("after fast playing every Game Boy note was released (gate off, releasing or idle)",

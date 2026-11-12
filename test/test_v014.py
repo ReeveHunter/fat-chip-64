@@ -54,7 +54,7 @@ c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.18") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.19") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])
@@ -181,8 +181,8 @@ f = [sid_freq(c, v) for v in range(3)]
 pan = [x for x in ccs(c, t0, 10) if x[0] in GB]
 det = [x for x in ccs(c, t0, 94) if x[0] in GB]
 check("WIDE held: SID detune 22, the held notes spread", c.v("detNow") == 22 and f[1] - f[2] > 0, (c.v("detNow"), f))
-check("WIDE held: Game Boy pulses panned apart, detuned wider (64 -+ 16)", (10, 0) in pan and (11, 127) in pan
-      and (10, 48) in det and (11, 80) in det, (pan, det))
+check("WIDE held: Game Boy pulses panned apart, detuned wider (FAT's 64 -+ 8, v0.19, then -+ 20)", (10, 0) in pan and (11, 127) in pan
+      and (10, 44) in det and (11, 84) in det, (pan, det))
 t0 = c.cpu.processorCycles
 c.release("space", ms=100)
 pan = [x for x in ccs(c, t0, 10) if x[0] in GB]

@@ -74,7 +74,7 @@ check("10 ms arp: the queues stay short (no overflow)", peak[0] < 20 and peak[1]
 gb_ons = [x for x in c.midi(since=t0) if x[1] & 0xF0 == 0x90 and x[1] & 15 == 0 and x[3]]
 check("10 ms arp: the Game Boy still steps (skipping what it can't keep up with)", len(gb_ons) > 40, len(gb_ons))
 c.release("q", "e", "t", "u")
-c.run_ms(400)
+c.run_ms(1200)                              # (v0.19: the NES rings out with the SID)
 on = notes_on(c.midi())
 check("10 ms arp: released = nothing left sounding anywhere", on == {}, on)
 check("10 ms arp: every voice off", all(v == 255 for v in c.v("vOut", 9)) and all(v == 255 for v in c.v("vNote", 9)))

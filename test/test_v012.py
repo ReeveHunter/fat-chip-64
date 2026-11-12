@@ -76,8 +76,8 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
-check("screen: header V0.18, sound line, tempo / beat line",
-      "V0.18" in c.screen_row(0) and c.screen_row(2).startswith("SOUND FAT ") and "POLY" in c.screen_row(2)
+check("screen: header V0.19, sound line, tempo / beat line",
+      "V0.19" in c.screen_row(0) and c.screen_row(2).startswith("SOUND FAT ") and "POLY" in c.screen_row(2)
       and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  BEAT ELECTRO  STOP",
       (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles
@@ -98,6 +98,7 @@ c.press("o", ms=120)                         # D4 (62) with Q = C3
 on = notes_on(c.midi())
 check("Fat Bass (FAT): D4 -> bass D2 (38) on the GB wave and NES triangle", on.get(12) == 38 and on.get(2) == 38, on)
 c.release("o", ms=80)
+c.run_ms(900)                                # (v0.19: the NES rings out with the SID)
 check("all off", notes_on(c.midi()) == {}, notes_on(c.midi()))
 
 # ---------------------------------------------------------------- sounds

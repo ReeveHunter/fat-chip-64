@@ -77,6 +77,7 @@ c.run_ms(40)
 check("held row", "C 3" in c.screen_row(15), c.screen_row(15))
 
 c.release("q", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 on = notes_on(c.midi())
 check("release: every MIDI voice off", on == {}, on)
 check("release: SID gates off", all(c.sid(v)[1] == 0x20 for v in range(3)))
@@ -92,6 +93,7 @@ sid_notes = [c.sid(v)[0] for v in range(3)]
 check("chord: lowest notes stacked fattest",
       list(on.values()).count(48) >= list(on.values()).count(55), on)
 c.release("q", "e", "t", ms=80)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("chord released", notes_on(c.midi()) == {})
 
 # ---------------------------------------------------------------- devices
@@ -126,25 +128,30 @@ t0 = c.cpu.processorCycles
 c.tap("m", ms=60)
 check("M: mute: SID volume 0, red border, MUTE ON", c.raw[0xD418] & 15 == 0 and c.raw[0xD020] == 2
       and c.screen_row(12)[35:39] == "MUTE", c.screen_row(12))
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("M: the Game Boy and NES get note-offs (nothing sounds)", notes_on(c.midi()) == {}, notes_on(c.midi()))
 c.release("q", ms=40)
 c.press("w", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("muted: new notes aren't sent", notes_on(c.midi()) == {})
 c.set("spaceAct", 0)                        # SPACE = MUTE (v0.13 default: BEND DOWN)
 c.press("space", ms=60)
 on = notes_on(c.midi())
 check("muted + SPACE held: the chord plays", on.get(0) == 50 and c.raw[0xD418] & 15 == 15, on)
 c.release("space", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("SPACE let go: muted again", notes_on(c.midi()) == {} and c.raw[0xD418] & 15 == 0)
 c.tap("m", ms=60)
 on = notes_on(c.midi())
 check("M again: unmuted, the held note comes back", on.get(0) == 50 and c.raw[0xD418] & 15 == 15
       and c.raw[0xD020] == 0, on)
 c.press("space", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("unmuted + SPACE held: silent", notes_on(c.midi()) == {} and c.raw[0xD418] & 15 == 0)
 c.release("space", ms=60)
 check("SPACE let go: sounding again", notes_on(c.midi()).get(0) == 50)
 c.release("w", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("all off", notes_on(c.midi()) == {})
 
 shifted("f5", "ctrl")
@@ -186,6 +193,7 @@ on = notes_on(c.midi())
 check("octave change while holding: the note moves, no hung old note",
       on.get(0) == 60 and on.get(1) == 60 and on.get(2) == 36 and on.get(7) == 36, on)
 c.release("q", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("released after an octave change: all off", notes_on(c.midi()) == {})
 for _ in range(4):
     c.tap("f1", ms=30)
@@ -218,6 +226,7 @@ c.tap("u", ms=150)                          # within the window, but NEXT said n
 check("after NEXT the next note starts a new chord, latch back to SMART", sounding() <= {59, 35} and 59 in sounding()
       and c.screen_row(9)[33:38] == "SMART", (sounding(), c.screen_row(9)))
 c.tap("=", ms=20); c.tap("=", ms=150)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("= twice: NEXT, then latch off: silent", sounding() == set() and c.v("latch") == 0
       and c.screen_row(9)[27:38] == "LATCH OFF  ", c.screen_row(9))
 c.tap("=", ms=40)
@@ -235,6 +244,7 @@ c.press("q", ms=40); c.press("t", ms=40)
 c.release("q", "t", ms=40)
 check("hold: notes pressed together add up", {48, 55} <= sounding(), sounding())
 c.tap("=", ms=20); c.tap("=", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("hold: = = latch off, silent", c.v("latch") == 0 and sounding() == set())
 
 c.set("latch", 3); c.set("screenDirty", 1); c.run_ms(150)
@@ -252,6 +262,7 @@ check("add: NEXT waits for the next note", {48, 55, 57} <= sounding())
 c.tap("q", ms=60)
 check("add: after NEXT, the next key starts again", sounding() <= {48, 36} and 48 in sounding(), sounding())
 c.tap("=", ms=20); c.tap("=", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("add: = = clears", sounding() == set() and c.v("latch") == 0)
 
 c.set("latch", 3)
@@ -260,6 +271,7 @@ c.tap("=", ms=30); c.tap("=", ms=60)        # NEXT, then off
 on = notes_on(c.midi())
 check("latch off: only the key still down sounds", set(on.values()) <= {50, 38} and on, on)
 c.release("w", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("latch off: release stops it", notes_on(c.midi()) == {})
 check("latch OFF on screen", c.screen_row(9)[33:38] == "OFF  ", c.screen_row(9))
 
@@ -269,6 +281,7 @@ c.press("t", ms=60)
 on = notes_on(c.midi())
 check("filter off (default): Q 2 T also plays the phantom G# (key 6)", 56 in on.values(), on)
 c.release("q", "2", "t", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("phantom stops with the chord", notes_on(c.midi()) == {})
 c.set("ghostFilter", 1)                     # (no key for it now: setup menu later)
 c.run_ms(20)
@@ -277,6 +290,7 @@ c.press("e", ms=60)                         # Q 2 E: the matrix also reads 4 as 
 on = notes_on(c.midi())
 check("Q 2 E: all three play (the ghost lands on 4, an unused key)", {48, 49, 52} <= set(on.values()), on)
 c.release("q", "2", "e", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("no hung notes after a ghosting chord", notes_on(c.midi()) == {})
 c.press("q", "2", ms=40)
 c.press("t", ms=60)                         # ghost on 6, which is a note (G#)
@@ -287,6 +301,7 @@ c.release("q", ms=60)                       # rectangle broken
 on = notes_on(c.midi())
 check("rectangle broken: T plays, the phantom never did", 55 in on.values() and 56 not in on.values(), on)
 c.release("2", "t", ms=60)
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("all off", notes_on(c.midi()) == {})
 
 # ---------------------------------------------------------------- panic
@@ -300,6 +315,7 @@ check("SHIFT+F7 panic: NES all-notes-off on its 5 channels",
 check("SHIFT+F7 panic: Game Boy panic CC and per-channel all-notes-off",
       any(s == 0xB0 and a == 111 for _, s, a, _ in after)
       and sorted(s & 15 for _, s, a, _ in after if a == 123 and (s & 15) in GB) == [0, 1, 2])
+c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("panic: nothing left sounding", notes_on(c.midi()) == {} and all(c.sid(v)[1] & 1 == 0 for v in range(3)))
 c.release("q", "w", ms=40)
 c.tap("f7", ms=100)
@@ -347,7 +363,9 @@ for idle in (40000, 70000, 100000):         # ms of silence
     c.release("q", ms=60)
     m2 = c.midi(since=t0)
     check(f"after {idle // 1000} s of silence notes still go out right away",
-          len([x for x in m2 if (x[1] & 15) in GB]) == 6 and len([x for x in m2 if (x[1] & 15) in NES]) == 6, len(m2))
+          len([x for x in m2 if (x[1] & 15) in GB]) == 6 and len([x for x in m2 if (x[1] & 0xF0) == 0x90 and x[3] and (x[1] & 15) in NES]) == 3,
+          len(m2))
+    c.run_ms(900)
 
 # ---------------------------------------------------------------- the Teensyboy link
 import random  # noqa: E402

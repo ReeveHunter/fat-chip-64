@@ -150,9 +150,10 @@ check("PADS: SID slow attack, long release, pulse wave", c.raw[0xD405] == 0xA0 a
       and c.sid(0)[1] & 0xF0 == 0x40, (hex(c.raw[0xD405]), hex(c.raw[0xD406])))
 check("PADS: SID low-pass filter on all voices", c.raw[0xD417] == 0x77 and c.raw[0xD418] == 0x1F, hex(c.raw[0xD418]))
 cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]
-check("PADS: Game Boy slow attack + release on pulses and wave",
-      all((ch, 73, 80) in cc and (ch, 72, 96) in cc for ch in (0, 1, 2)), cc)      # attack 5, release 6 of 7
-check("PADS: Game Boy pulse 2 glides, deeper warble", (1, 5, 64) in cc and (0, 104, 48) in cc, cc)
+check("PADS: Game Boy attack + release follow the SID's (v0.19) on pulses and wave",
+      all((ch, 73, 32) in cc and (ch, 72, 112) in cc for ch in (0, 1, 2)), cc)     # attack 2, release 7 of 7
+check("PADS: Game Boy glides (v0.19: every channel), deeper warble",
+      all((ch, 5, 56) in cc for ch in (0, 1, 2)) and (0, 104, 49) in cc, cc)
 f0 = c.raw[0xD416]
 c.run_ms(1500)
 check("PADS: the filter sweeps", c.raw[0xD416] != f0, (f0, c.raw[0xD416]))
@@ -194,7 +195,7 @@ check("SHIFT+V twice: back to FAT", c.v("soundMode") == 0)
 check("FAT: saw, filter off", c.sid(0)[1] & 0xF0 == 0x20 and c.raw[0xD417] == 0 and c.raw[0xD418] == 0x0F)
 cc = [(s & 15, a, b) for _, s, a, b in c.midi(since=t0) if (s & 0xF0) == 0xB0]
 check("FAT: Game Boy envelopes, duty, wave triangle and warble back",
-      (0, 73, 0) in cc and (0, 72, 32) in cc and (1, 70, 64) in cc and (2, 71, 37) in cc and (2, 70, 0) in cc and (0, 104, 24) in cc, cc)
+      (0, 73, 0) in cc and (0, 72, 48) in cc and (1, 70, 64) in cc and (2, 71, 37) in cc and (2, 70, 0) in cc and (0, 104, 24) in cc, cc)
 check("FAT: MidiNES pulse 2 back to 50%", (6, 1, 64) in cc, cc)
 
 print(f"\n{fails} failure(s)")

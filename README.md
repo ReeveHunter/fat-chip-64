@@ -6,6 +6,20 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.19:** the built-in patches are written in the shared units, and the Game Boy and NES follow each patch's envelope.
+- `patch/patches.json` holds the 19 built-in patches as TONE + effects in the units of `patch/effects.json` (ms, Hz, cents, %). `tools/gen_patches.py` turns them into what each chip plays (SID registers, Fat Chip GB CCs, the NES envelope); the old `tools/gen_sounds.py` is gone. Chip Lab will use the same files.
+- **One main envelope.** The Game Boy and NES now follow each patch's envelope (the SID's), so they ring out with it. Before, each chip had its own (FAT's Game Boy notes stopped almost at once and its NES notes had no envelope).
+  - The Game Boy has no sustain level yet, so it holds at its level when the sustain is 8 or more, and falls away to silence below that (ELECTRIC PIANO, VIBRAPHONE, ECHO PLUCK).
+  - Game Boy envelope times top out at about 1.6 s, so long pad releases stop there.
+  - A patch can still give the Game Boy or the NES an envelope of its own (GB / NES ENVELOPE: OWN) when its character needs one. None of the 19 does for now.
+- **Other effects follow the shared settings too,** so a few Game Boy details moved a little:
+  - Detune is the same number of cents on every chip: FAT's Game Boy pulses are about 7 cents apart like the SID, not 5.
+  - WHISTLE and GLIDE BASS's Game Boy glide and WHISTLE's vibrato delay now match the SID's times.
+  - PADS's glide, which was on Game Boy pulse 2 only, is now on all three Game Boy channels (and still not the SID).
+  - DUTY SHIMMER PAD's Game Boy duty wobble runs at the SID's PWM rate.
+- An effect can be limited to some chips in a patch (`"on": ["gb"]`), which is how PADS glides only on the Game Boy and the warble stays on the Game Boy.
+- `tools/check_effects.py` now checks the patches too, and the build runs it.
+
 **v0.18:** the live patch, the first step of the patch rework. Nothing should sound different.
 - Every sound setting is now read from one block in memory, the **live patch**, instead of straight from the table of built-in sounds. Choosing a sound (V, the menu or a program change) copies that built-in patch into it whole, name included.
 - That's what the next steps build on: effect menus that change the live patch, and Chip Lab sending a whole patch to the C64 over MIDI.
@@ -255,7 +269,7 @@ voices ±7 cents.
 | `src/pads.asm` | Tri, SPARKLE octave (the sounds moved to sounds.asm) |
 | `src/midiin.asm` | MIDI in: receive, parse, MIDI slots, H / J octave |
 | `src/bend.asm`, `tools/gen_bend.py` → `src/bendtab.asm` | bends (actions, wheel, VINYL STOP), SPACE's action keys |
-| `src/sounds.asm`, `tools/gen_sounds.py` → `src/soundtab.asm` | sounds (V), MONO (C), Fat Bass, SID effects, duty steps |
+| `patch/effects.json`, `patch/patches.json`, `tools/gen_patches.py` → `src/soundtab.asm`; `src/sounds.asm` | the patch definition, the built-in patches (V) and what each becomes on each chip; MONO (C), Fat Bass, SID effects, duty steps |
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
 | `src/menu.asm` | the menu (RETURN): main, ADVANCED SOUND, DEVICE SYNC pages |
 | `src/viz.asm` | the visualizers (F7): BARS, GLITCH |
@@ -286,7 +300,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.18)
+## Not yet (v0.19)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.
