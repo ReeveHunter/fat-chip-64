@@ -253,7 +253,9 @@ InitState:
 	sta uRpLevel            ; 70 %
 	lda #4
 	sta uVibRate            ; 6 HZ
-	jsr SoundVars           ; FAT's settings
+	ldx soundMode
+	jsr PatchLoad           ; FAT
+	jsr SoundVars           ;  and its settings
 	lda #OCT_DEFAULT
 	sta octBase
 	lda #1

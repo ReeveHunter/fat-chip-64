@@ -33,7 +33,7 @@
    {"id": "gbDuty2", "name": "GB PULSE 2 DUTY", "type": "enum", "default": 2, "blend": "switch", "values": ["12.5%", "25%", "50%", "75%"], "map": {"gb": "pulse 2 duty"}},
    {"id": "gbWaveMode", "name": "GB WAVE MODE", "type": "enum", "default": 2, "blend": "switch", "values": ["SYNTH", "PULSE", "TRI", "DUAL", "DRUMS", "SPEECH", "SING"], "rand": [0, 3], "map": {"gb": "wave channel mode (P_MODE)"}},
    {"id": "gbWaveShape", "name": "GB WAVE SHAPE", "type": "enum", "default": 1, "blend": "switch", "values": ["PULSE", "SAW LP", "SQR LP", "ACID", "FOLD", "ORGAN", "SYNC", "FM 1:1", "FM 1:2", "VOX", "PHASE", "RING", "CRUSH", "NOISE", "MORPH", "HARM"], "map": {"gb": "wave shape (P_SHAPE), in SYNTH mode"}},
-   {"id": "gbWaveTimbre", "name": "GB WAVE TIMBRE", "type": "int", "default": 8, "blend": "lerp", "min": 0, "max": 15, "doc": "for the filtered shapes (SAW LP, SQR LP, ACID) this is the filter; FILTER can move it", "map": {"gb": "the shape's step (P_TIMBRE)"}},
+   {"id": "gbWaveTimbre", "name": "GB WAVE TIMBRE", "type": "int", "default": 8, "blend": "lerp", "min": 0, "max": 15, "doc": "for the filtered shapes (SAW LP, SQR LP, ACID) this is the filter; WAVE FILTER can move it", "map": {"gb": "the shape's step (P_TIMBRE)"}},
    {"id": "nesDuty1", "name": "NES PULSE 1 DUTY", "type": "enum", "default": 2, "blend": "switch", "values": ["12.5%", "25%", "50%", "75%"], "map": {"nes": "pulse 1 duty"}},
    {"id": "nesDuty2", "name": "NES PULSE 2 DUTY", "type": "enum", "default": 2, "blend": "switch", "values": ["12.5%", "25%", "50%", "75%"], "map": {"nes": "pulse 2 duty"}}
   ]},
@@ -92,9 +92,9 @@
   {"id": "wide", "name": "WIDE", "voices": 0, "randOn": 0.15, "params": [
    {"id": "amount", "name": "AMOUNT", "type": "int", "default": 50, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [30, 100], "map": {"sid": "more detune", "gb": "more detune, pulses panned apart", "nes": "more detune"}}
   ]},
-  {"id": "filter", "name": "FILTER", "voices": 0, "randOn": 0.4, "doc": "the SID's filter; the GB wave channel follows it through its filtered shapes", "params": [
+  {"id": "filter", "name": "FILTER", "voices": 0, "randOn": 0.4, "chips": ["sid"], "doc": "the SID's filter (one for all three SID voices). The Game Boy's is WAVE FILTER: it sounds different, so it has its own settings", "params": [
    {"id": "type", "name": "TYPE", "type": "enum", "default": 0, "blend": "switch", "values": ["LOW", "BAND", "HIGH", "NOTCH"], "rand": [0, 2], "map": {"sid": "filter mode"}},
-   {"id": "cutoff", "name": "CUTOFF", "type": "int", "default": 128, "blend": "lerp", "min": 0, "max": 255, "rand": [20, 220], "map": {"sid": "cutoff (high byte)", "gb": "the filtered shape's step"}},
+   {"id": "cutoff", "name": "CUTOFF", "type": "int", "default": 128, "blend": "lerp", "min": 0, "max": 255, "rand": [20, 220], "map": {"sid": "cutoff (high byte)"}},
    {"id": "resonance", "name": "RESONANCE", "type": "int", "default": 6, "blend": "lerp", "min": 0, "max": 15, "rand": [0, 14], "map": {"sid": "resonance"}},
    {"id": "keyTrack", "name": "KEY TRACK", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "doc": "the cutoff follows the note", "rand": [0, 100]},
    {"id": "envAmount", "name": "ENV AMOUNT", "type": "int", "default": 0, "blend": "lerp", "min": -127, "max": 127, "rand": [-60, 127]},
@@ -103,9 +103,18 @@
    {"id": "lfoDepth", "name": "LFO DEPTH", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 127, "rand": [0, 100]},
    {"id": "filtLfoRate", "name": "LFO RATE", "type": "hz", "default": 0.5, "blend": "log", "min": 0.05, "max": 20, "rand": [0.1, 6]},
    {"id": "filtLfoSync", "name": "LFO SYNC", "type": "enum", "default": 0, "blend": "switch", "values": ["FREE", "1 BAR", "1/2", "1/4", "1/8 DOTTED", "1/8", "1/8T", "1/16", "1/16T", "1/32"], "doc": "FREE uses the rate in Hz; a division locks it to the tempo"},
+   {"id": "lfoShape", "name": "LFO SHAPE", "type": "enum", "default": 0, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "rand": [0, 5]}
+  ]},
+  {"id": "wavefilter", "name": "WAVE FILTER", "voices": 0, "randOn": 0.3, "chips": ["gb"], "doc": "the Game Boy wave channel's filter sweeps (LSDJ style): Fat Chip GB steps the wave through a filtered shape. Separate from the SID's FILTER because it sounds different; FOLLOW SID ties the two together", "params": [
+   {"id": "shape", "name": "SHAPE", "type": "enum", "default": 0, "blend": "switch", "values": ["SAW LP", "SQR LP", "ACID"], "rand": [0, 2], "map": {"gb": "the wave channel plays this filtered shape (SYNTH mode)"}},
+   {"id": "cutoff", "name": "CUTOFF", "type": "int", "default": 8, "blend": "lerp", "min": 0, "max": 15, "rand": [2, 13], "map": {"gb": "the shape's step (P_TIMBRE): 16 steps, dark to bright"}},
+   {"id": "envAmount", "name": "ENV AMOUNT", "type": "int", "default": 0, "blend": "lerp", "min": -15, "max": 15, "unit": "steps", "rand": [-8, 15], "doc": "each note opens (or closes) the filter by this many steps"},
+   {"id": "envDecay", "name": "ENV DECAY", "type": "int", "default": 300, "blend": "log", "min": 10, "max": 4000, "unit": "ms", "rand": [50, 2000]},
+   {"id": "lfoDepth", "name": "LFO DEPTH", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 15, "unit": "steps", "rand": [0, 10]},
+   {"id": "lfoRate", "name": "LFO RATE", "type": "hz", "default": 0.5, "blend": "log", "min": 0.05, "max": 20, "rand": [0.1, 6]},
+   {"id": "lfoSync", "name": "LFO SYNC", "type": "enum", "default": 0, "blend": "switch", "values": ["FREE", "1 BAR", "1/2", "1/4", "1/8 DOTTED", "1/8", "1/8T", "1/16", "1/16T", "1/32"], "doc": "FREE uses LFO RATE"},
    {"id": "lfoShape", "name": "LFO SHAPE", "type": "enum", "default": 0, "blend": "switch", "values": ["TRI", "SINE", "SAW UP", "SAW DOWN", "SQUARE", "RANDOM"], "rand": [0, 5]},
-   {"id": "gbFollow", "name": "GB FOLLOWS", "type": "enum", "default": 1, "blend": "switch", "values": ["OFF", "SAW LP", "SQR LP", "ACID"], "doc": "OFF leaves the wave channel as TONE sets it", "map": {"gb": "the wave channel switches to that filtered shape and steps through it"}},
-   {"id": "drift", "name": "DRIFT", "type": "int", "default": 0, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [0, 60], "doc": "each voice a little faster or slower, fanned evenly (up to +-25 % at 100), so they slide in and out of step; fixed, so a patch sounds the same every load. With a SYNC division the rates stay locked and the voices start apart instead", "map": {"sid": "the SID's filter (one for all three voices)", "gb": "the wave channel's filter step, so it moves against the SID"}}
+   {"id": "follow", "name": "FOLLOW SID", "type": "bool", "default": 0, "blend": "switch", "doc": "on: the wave filter moves with the SID's FILTER instead of its own envelope and LFO (CUTOFF still sets where it sits)"}
   ]},
   {"id": "pwm", "name": "PWM", "voices": 0, "randOn": 0.3, "params": [
    {"id": "depth", "name": "DEPTH", "type": "int", "default": 40, "blend": "lerp", "min": 0, "max": 100, "unit": "%", "rand": [10, 80], "map": {"sid": "pulse width", "gb": "LFO to duty (four steps)"}},

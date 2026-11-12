@@ -617,3 +617,6 @@ gV          ds 1
 gLen        ds 1
 gChr        ds 1
 gCol        ds 1
+; v0.18: the live patch. Every sound setting is read from here (the field
+; names are in soundtab.asm); choosing a built-in patch copies it in
+livePatch   ds 128             ; PATCH_SIZE of it used

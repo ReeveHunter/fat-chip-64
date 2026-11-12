@@ -712,9 +712,8 @@ VoiceSet:
 	sta SID+4,x
 	rts
 .sidOn:
-	ldx soundMode           ; the sound may play the SID an octave off
-	clc
-	adc sndOct,x
+	clc                     ; the patch may play the SID an octave off
+	adc sndOct
 	bpl .o1
 	clc
 	adc #12
@@ -811,12 +810,11 @@ SidAttackFx:
 	lda #0
 	sta vibT,y
 	sta vibAmt,y
-	ldx soundMode
-	lda sndFEnv,x
+	lda sndFEnv
 	beq .x
 	sta fEnv
 	clc                     ; open the filter now (FxTick takes it from here)
-	adc sndCut,x
+	adc sndCut
 	bcc .c
 	lda #$FF
 .c:

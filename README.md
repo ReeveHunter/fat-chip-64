@@ -6,6 +6,13 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.18:** the live patch, the first step of the patch rework. Nothing should sound different.
+- Every sound setting is now read from one block in memory, the **live patch**, instead of straight from the table of built-in sounds. Choosing a sound (V, the menu or a program change) copies that built-in patch into it whole, name included.
+- That's what the next steps build on: effect menus that change the live patch, and Chip Lab sending a whole patch to the C64 over MIDI.
+- The 19 sounds are the first 19 built-in patches. In the simulator each one sends the same MIDI and sets the same SID registers as in v0.17; the only differences are where a vibrato or envelope step lands a fraction of a millisecond later.
+- RAW's three SID widths are now a setting in the patch rather than something tied to its number.
+- `patch/effects.json` is the shared definition of a patch (every effect's parameters, ranges, dice ranges, blending and what each chip does); `tools/check_effects.py` checks it. New since it was written: DRIFT on every effect with an oscillator, WANDER on DETUNE, and the Game Boy's filter sweeps as their own effect, WAVE FILTER, separate from the SID's FILTER.
+
 **v0.17:** bends up to two octaves on every chip.
 - **VINYL STOP** now takes the SID, Game Boy and NES down two octaves together. Before, only the SID went past one octave.
 - **BEND RANGE** (menu) goes up to 24 semitones, for SPACE's BEND DOWN / BEND UP and the keytar's wheel.
@@ -279,7 +286,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.17)
+## Not yet (v0.18)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.

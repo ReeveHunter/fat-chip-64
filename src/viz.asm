@@ -305,10 +305,9 @@ VizInfo:
 .info:
 	lda #0
 	sta t2
-	ldx soundMode
-	lda sndNameLo,x
+	lda #<patchName
 	sta ptr
-	lda sndNameHi,x
+	lda #>patchName
 	sta ptr+1
 	ldx #1
 	ldy #24

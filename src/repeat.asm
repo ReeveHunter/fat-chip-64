@@ -406,7 +406,7 @@ RepeatFromSound:
 	lda rpLock
 	cmp #1
 	beq .user
-	lda sndRp,x             ; a sound without REPEAT: REPEAT held uses these too
+	lda sndRp             ; a sound without REPEAT: REPEAT held uses these too
 	bne .snd
 .user:
 	lda uRpTime
@@ -418,15 +418,15 @@ RepeatFromSound:
 	jmp RepeatLockSet
 .snd:
 	ldx soundMode
-	lda sndRpTime,x
+	lda sndRpTime
 	sta rpTime
-	lda sndRpCount,x
+	lda sndRpCount
 	sta rpCount
-	lda sndRpLevel,x
+	lda sndRpLevel
 	sta rpLevel
 RepeatLockSet:
 	ldx soundMode
-	lda sndRp,x
+	lda sndRp
 	ldy rpLock
 	beq .s
 	lda #1

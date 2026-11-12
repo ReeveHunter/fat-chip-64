@@ -222,10 +222,9 @@ ScrSound:
 	subroutine
 	lda #0
 	sta t2
-	ldx soundMode
-	lda sndNameLo,x
+	lda #<patchName
 	sta ptr
-	lda sndNameHi,x
+	lda #>patchName
 	sta ptr+1
 	ldx #6
 	ldy #2
@@ -337,7 +336,7 @@ ScrChip:
 .sid:
 	ldy soundMode
 	clc
-	adc sndOct,y
+	adc sndOct
 	bpl .pn
 	clc
 	adc #12

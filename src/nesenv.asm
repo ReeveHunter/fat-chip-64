@@ -552,13 +552,13 @@ TremTick:
 	sta exS
 	beq .btn
 .snd:
-	lda nesTrem,x
+	lda nesTrem
 	sta exS                 ; depth
-	lda nesTremRL,x
+	lda nesTremRL
 	sta exI                 ; rate
-	lda nesTremRH,x
+	lda nesTremRH
 	sta exK
-	lda nesTremSq,x
+	lda nesTremSq
 	sta exD                 ; square?
 	jmp .btn
 .user:

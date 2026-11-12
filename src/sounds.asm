@@ -47,9 +47,25 @@ SoundSet:
 	tax
 SoundSetX:
 	stx soundMode
+	jsr PatchLoad
 	jsr SoundVars
 	jsr SoundApply          ; ...and come back with the new one
 	jmp Dirty
+
+;  built-in patch X -> livePatch, the patch everything plays from (keeps X)
+PatchLoad:
+	subroutine
+	lda patchLo,x
+	sta .src+1
+	lda patchHi,x
+	sta .src+2
+	ldy #PATCH_SIZE-1
+.src:
+	lda $FFFF,y
+	sta livePatch,y
+	dey
+	bpl .src
+	rts
 
 ; C: POLY <-> MONO (each sound picks one when chosen; this overrides it)
 MonoKey:
@@ -100,17 +116,17 @@ SoundVars:
 	subroutine
 	jsr MonoSet
 	jsr FatBassSet
-	lda nesEnv,x
+	lda nesEnv
 	sta nesEnvOn
-	lda nesAtk,x
+	lda nesAtk
 	sta envAtkV
-	lda nesDec,x
+	lda nesDec
 	sta envDecV
-	lda nesSus,x
+	lda nesSus
 	sta envSusV
-	lda nesPeak,x
+	lda nesPeak
 	sta envPeakV
-	lda nesRel,x
+	lda nesRel
 	sta envRelV
 	lda #0
 	sta fEnv
@@ -123,7 +139,7 @@ SoundVars:
 FatBassSet:
 	subroutine
 	ldx soundMode
-	lda sndFat,x
+	lda sndFat
 	ldy fbLock
 	beq .s
 	lda #1
@@ -138,7 +154,7 @@ FatBassSet:
 MonoSet:
 	subroutine
 	ldx soundMode
-	lda sndMono,x
+	lda sndMono
 	ldy monoLock
 	beq .s
 	lda #1
@@ -181,15 +197,15 @@ FxVars:
 	sta vibSpr
 	beq .vb
 .vs:
-	lda sndVib,x
+	lda sndVib
 	sta vibDepth
-	lda sndVibRL,x
+	lda sndVibRL
 	sta vibRL
-	lda sndVibRH,x
+	lda sndVibRH
 	sta vibRH
-	lda sndVibDel,x
+	lda sndVibDel
 	sta vibDel
-	lda sndVibSpr,x
+	lda sndVibSpr
 	sta vibSpr
 	jmp .vb
 .vu:
@@ -225,7 +241,7 @@ FxVars:
 	lda #0
 	beq .gb
 .gs:
-	lda sndGlide,x
+	lda sndGlide
 	jmp .gb
 .gu:
 	ldy uGlide
@@ -246,7 +262,7 @@ FxVars:
 	lda #0
 	beq .dw
 .ds:
-	lda sndDet,x
+	lda sndDet
 	jmp .dw
 .du:
 	ldy uDet
@@ -262,12 +278,12 @@ FxVars:
 .dk:
 	sta detNow
 	; ---- anything for FxTick to do?
-	lda sndFDep,x
-	ora sndFEnv,x
-	ora sndPwm,x
+	lda sndFDep
+	ora sndFEnv
+	ora sndPwm
 	ora vibDepth
 	ora glideK
-	ora sndSeq,x
+	ora sndSeq
 	ora sweepLvl
 	ora actCnt+A_SWEEP
 	beq .b
@@ -443,13 +459,13 @@ GbGlideVal:
 	lda #0
 	beq .b
 .s:
-	lda gbGl1,x
+	lda gbGl1
 	cpy #0
 	beq .b
-	lda gbGl2,x
+	lda gbGl2
 	cpy #1
 	beq .b
-	lda gbGlW,x
+	lda gbGlW
 	jmp .b
 .u:
 	ldy uGlide
@@ -477,10 +493,10 @@ GbDetVal:
 	lda #0
 	beq .off
 .s:
-	lda gbDetA,x
+	lda gbDetA
 	cpy #0
 	beq .abs
-	lda gbDetB,x
+	lda gbDetB
 .abs:
 	sec                     ; distance from 64
 	sbc #64
@@ -550,7 +566,7 @@ GbDetAll:
 WarbleSend:
 	subroutine
 	ldx soundMode
-	lda gbWarb,x
+	lda gbWarb
 	ldy warbLock
 	beq .w
 	lda #0
@@ -567,7 +583,7 @@ WarbleSend:
 	lda #GCC_WARBLE
 	jsr GbGlobal
 	ldx soundMode
-	lda gbWSpd,x
+	lda gbWSpd
 	ldy actCnt+A_WOBBLE
 	beq .s
 	lda #16
@@ -590,19 +606,21 @@ SoundSid:
 	ldy sidOfs,x
 	stx t1
 	ldx soundMode
-	lda sndAD,x
+	lda sndAD
 	sta SID+5,y
-	lda sndSR,x
+	lda sndSR
 	sta SID+6,y
-	lda sndWave,x
+	lda sndWave
 	sta t0
-	lda sndPwLo,x
+	lda sndPwLo
 	sta SID+2,y
-	lda sndPwHi,x
-	cpx #SND_RAW
-	bne .pw
-	ldx t1                  ; RAW: each SID voice its own width
+	lda sndPwVoice
+	beq .pw0
+	ldx t1                  ; (RAW) each SID voice its own width
 	lda rawPwHi,x
+	bne .pw
+.pw0:
+	lda sndPwHi
 .pw:
 	sta SID+3,y
 	ldx t1
@@ -614,10 +632,10 @@ SoundSid:
 	dex
 	bpl .v
 	ldx soundMode
-	lda sndCut,x
+	lda sndCut
 	beq .noFilt
 	sta SID+$16
-	lda sndRes,x            ; resonance, voices 1-3 through the filter
+	lda sndRes            ; resonance, voices 1-3 through the filter
 	sta SID+$17
 	lda #$10                ; low-pass
 	sta sidFilt
@@ -651,13 +669,13 @@ SoundGb:
 	sta mS
 	ldx soundMode
 	lda #73
-	ldy gbAtk,x
+	ldy gbAtk
 	jsr .put
 	lda #75
-	ldy gbDec,x
+	ldy gbDec
 	jsr .put
 	lda #72
-	ldy gbRel,x
+	ldy gbRel
 	jsr .put
 	ldy t3                  ; glide per channel
 	jsr GbGlideVal
@@ -665,10 +683,10 @@ SoundGb:
 	lda #5
 	jsr .put
 	ldy t3                  ; level: pulses / wave
-	lda gbLvl,x
+	lda gbLvl
 	cpy #2
 	bne .lv
-	lda gbLvlW,x
+	lda gbLvlW
 .lv:
 	tay
 	lda #7
@@ -680,10 +698,10 @@ SoundGb:
 	cpy #2
 	beq .wave
 	; ---- pulses: duty, detune, LFO
-	lda gbDuty1,x
+	lda gbDuty1
 	cpy #0
 	beq .d
-	lda gbDuty2,x
+	lda gbDuty2
 .d:
 	tay
 	lda #70
@@ -698,10 +716,10 @@ SoundGb:
 	jmp .ch
 .wave:
 	lda #71
-	ldy gbWMode,x
+	ldy gbWMode
 	jsr .put
 	lda #70
-	ldy gbWShape,x
+	ldy gbWShape
 	jsr .put
 	jsr GbLegato
 	jmp WarbleSend
@@ -730,26 +748,26 @@ SoundGbLfo:
 	beq .snd
 	cmp #1
 	beq .user
-	lda gbLDest,x           ; OFF: an LFO on pitch gets depth 0
+	lda gbLDest           ; OFF: an LFO on pitch gets depth 0
 	bne .snd
 	lda #1
 	ldy #0
 	jmp SoundGbPut
 .snd:
 	lda #76
-	ldy gbLRate,x
+	ldy gbLRate
 	jsr SoundGbPut
 	lda #77
-	ldy gbLShape,x
+	ldy gbLShape
 	jsr SoundGbPut
 	lda #78
-	ldy gbLDest,x
+	ldy gbLDest
 	jsr SoundGbPut
 	lda #79
-	ldy gbLDelay,x
+	ldy gbLDelay
 	jsr SoundGbPut
 	lda #1
-	ldy gbLDepth,x
+	ldy gbLDepth
 	jmp SoundGbPut
 .user:
 	jsr .pitch
@@ -840,14 +858,14 @@ NesDuty:
 	lda #1
 	sta mD1
 	ldx soundMode
-	lda nesDuty1,x
+	lda nesDuty1
 	sta mD2
 	lda nesBase
 	ora #$B0
 	sta mS
 	jsr NesPut
 	ldx soundMode
-	lda nesDuty2,x
+	lda nesDuty2
 	sta mD2
 	lda nesBase
 	clc
@@ -886,7 +904,7 @@ MidiNoteValue:
 	bne .x
 	ldy soundMode
 	clc
-	adc gbOct,y
+	adc gbOct
 .x:
 	rts
 
@@ -959,16 +977,16 @@ FxTick:
 	bne SidFx
 	rts
 
-; X = soundMode: phase (ptr2 -> 2 bytes) += rate x fxN
+; phase += rate x fxN
 	mac ADVANCE             ; {1} phase lo, {2} rate lo, {3} rate hi
 	ldy fxN
 .adv{1}:
 	lda {1}
 	clc
-	adc {2},x
+	adc {2}
 	sta {1}
 	lda {1}+1
-	adc {3},x
+	adc {3}
 	sta {1}+1
 	dey
 	bne .adv{1}
@@ -977,19 +995,18 @@ FxTick:
 SidFx:
 	subroutine
 	jsr SweepStep
-	ldx soundMode
 	; ---- filter: cutoff = base + LFO + envelope (+ FILTER SWEEP)
-	lda sndCut,x
+	lda sndCut
 	bne .filt
 	jmp .noF
 .filt:
 	sta t0
-	lda sndFDep,x
+	lda sndFDep
 	beq .fenv
 	ADVANCE fPhL, sndFRateL, sndFRateH
 	lda fPhH
 	jsr Tri                 ; 0-127
-	ldy sndFDep,x
+	ldy sndFDep
 	jsr Mul8                ; tri x depth
 	asl mt16
 	lda mt16+1
@@ -1082,8 +1099,7 @@ SidFx:
 .pwm:
 	; ---- width LFO: one voice per call (width = base + tri x depth / 8,
 	; each voice its own phase)
-	ldx soundMode
-	lda sndPwm,x
+	lda sndPwm
 	beq .noP
 	ADVANCE pPhL, sndPwmRL, sndPwmRH
 	ldy fxVoice
@@ -1097,7 +1113,7 @@ SidFx:
 	clc
 	adc pwPhase,y
 	jsr Tri
-	ldy sndPwm,x
+	ldy sndPwm
 	jsr Mul8
 	lsr mt16+1
 	ror mt16
@@ -1107,13 +1123,12 @@ SidFx:
 	ror mt16                ; / 8
 	ldy fxVoice
 	ldx sidOfs,y
-	ldy soundMode
 	lda mt16
 	clc
-	adc sndPwLo,y
+	adc sndPwLo
 	sta SID+2,x
 	lda mt16+1
-	adc sndPwHi,y
+	adc sndPwHi
 	sta SID+3,x
 .noP:
 	; ---- pitch: glide and vibrato, every sounding voice
@@ -1329,18 +1344,17 @@ SeqTick:
 .no:
 	rts
 .go:
-	ldx soundMode
-	lda sndSeq,x
+	lda sndSeq
 	beq .no
 	lda dutyMs
 	clc
 	adc fxN
 	sta dutyMs
-	cmp sndSeqMs,x
+	cmp sndSeqMs
 	bcc .no
 	lda #0
 	sta dutyMs
-	ldy sndSeq,x
+	ldy sndSeq
 	inc dutyIdx
 	lda dutyIdx
 	cmp seqLen-1,y
@@ -1353,7 +1367,7 @@ SeqTick:
 	tay
 	lda seqData,y
 	sta t0                  ; duty 0-3
-	lda sndSeqSid,x
+	lda sndSeqSid
 	beq .nes
 	lda devOn+DEV_SID
 	beq .nes
