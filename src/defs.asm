@@ -649,6 +649,9 @@ dcN         ds 1
 dcR         ds 1
 undoOk      ds 1               ; v0.22: a dice roll can be undone (C= + /)
 diceUndo    ds 128             ;   the live patch before the roll
+sxCmd       ds 1               ; v0.23: the SysEx's command (1 patch, 2 chips)
+sxArg       ds 1
+sxI         ds 1
 ramEnd      ds 0
   if ramEnd > $C900
     echo "RAM variables run past $C900: clear more in Start"

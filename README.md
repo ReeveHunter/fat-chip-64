@@ -6,6 +6,10 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.23:** the chips on and off from Chip Lab.
+- A SysEx `F0 7D 46 43 02 m F7` turns the SID (bit 0), Game Boy (bit 1) and NES (bit 2) on or off, as C= + F1 / F3 / F5 do. Chip Lab's new SID / GB / NES buttons in its top bar send it, so you can hear a patch on one chip at a time.
+- Chip Lab: the note keys (A W S E D …) keep playing after you've touched a slider (before, a slider kept the keyboard until you clicked elsewhere), and a slider being dragged is sent every 120 ms as it moves.
+
 **v0.22:** the keyboard, redone (the tables under Playing).
 - **Patches in banks:** A S D F G pick a bank (FAT, PADS, LEADS, BASS, FX) and switch at once; Z X C V B pick patch 1–5 in it. 19 of the 25 slots are filled; Chip Lab favourites fill the rest. V's step-through is gone (the NEXT SOUND action still steps).
 - **C= is the "how you play" layer** (arp type and settings, notes mode, extensions, MONO, latch style, SPACE's action, MIDI-in octave, undo the dice, chips on / off, panic) and **RUN/STOP the beats** (tap: start / stop; held + A–H: pick a beat).
@@ -339,7 +343,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.22)
+## Not yet (v0.23)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.

@@ -350,6 +350,7 @@ IdxNote:
 	rts
 
 ; ------------------------------------------------------------ SysEx: a patch from Chip Lab (v0.20)
+; (v0.23: F0 7D 46 43 02 m F7 sets the chips on / off: DevicesReceived)
 ; F0 7D 46 43 01 PATCH_SIZE, then the patch (PATCH_SIZE bytes, the live patch's layout:
 ; tools/gen_patches.py) as two 4-bit halves each, high first, then F7. It
 ; arrives in sxBuf; only a complete one goes into the live patch, which then
@@ -364,6 +365,7 @@ SysexStatus:
 	bne .end
 	ldx #1
 	stx sxOn
+	stx sxCmd
 	ldx #0
 	stx sxPos
 	rts
@@ -374,6 +376,9 @@ SysexStatus:
 	stx sxOn
 	cmp #$F7
 	bne .x
+	ldx sxCmd
+	cpx #2
+	beq .dev
 	ldx sxPos
 	cpx #SX_LEN
 	bne .x
@@ -382,11 +387,36 @@ SysexStatus:
 	pla
 .x:
 	rts
+.dev:
+	ldx sxPos
+	cpx #5
+	bne .x
+	pha
+	jsr DevicesReceived
+	pla
+	rts
 
 ; A data byte (A) inside a SysEx
 SysexByte:
 	subroutine
 	ldx sxPos
+	cpx #3                  ; the command: 1 a patch, 2 the chips on / off
+	bne .nc
+	cmp #2
+	bne .nc
+	sta sxCmd
+	inc sxPos
+	rts
+.nc:
+	ldy sxCmd
+	cpy #2
+	bne .pat
+	cpx #4                  ; 2: one byte, bit 0 SID, 1 Game Boy, 2 NES
+	bne .no
+	sta sxArg
+	inc sxPos
+	rts
+.pat:
 	cpx #SX_HEAD
 	bcs .body
 	cmp sxHead,x            ; the header must match, or the rest is ignored
@@ -422,6 +452,29 @@ SysexByte:
 	sta sxOn
 	rts
 sxHead:     .byte $7D, $46, $43, $01, PATCH_SIZE   ; (the size: a Chip Lab with another layout is ignored)
+
+; F0 7D 46 43 02 m F7 (v0.23): the chips on or off, m bit 0 SID, 1 Game
+; Boy, 2 NES (Chip Lab's chip buttons) - as SHIFT / C= + F1 F3 F5 do
+DevicesReceived:
+	subroutine
+	ldx #0
+.d:
+	stx sxI
+	lda sxArg
+	and dvBit,x
+	beq .z
+	lda #1
+.z:
+	cmp devOn,x
+	beq .n
+	jsr ToggleDevice
+.n:
+	ldx sxI
+	inx
+	cpx #3
+	bne .d
+	rts
+dvBit:      .byte 1, 2, 4
 
 ; the received patch -> the live patch, heard at once
 PatchReceived:
