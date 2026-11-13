@@ -5,6 +5,7 @@
 set -e
 cd "$(dirname "$0")/.."
 python3 tools/gen_patches.py >/dev/null
+python3 tools/make_demo_patches.py >/dev/null
 DEST=${1:-../ReeveHunter.github.io/fatchip/chiplab}
-cp patch/effects.json patch/patches.json patch/c64-layout.json patch/fatchip-patch.js "$DEST"/
+cp patch/effects.json patch/patches.json patch/demo-patches.json patch/c64-layout.json patch/fatchip-patch.js "$DEST"/
 echo "copied to $DEST"

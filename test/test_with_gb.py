@@ -100,7 +100,7 @@ while i < len(wire):
     if quiet_frame is None and limit >= t_quiet:   # 300 ms after the last key, before the next note
         quiet_frame = frame
         vs = gb.sym["_voice"]
-        quiet_sound = [(gb.mem(vs + v * 45 + 2), gb.mem(vs + v * 45 + 30)) for v in range(3)]  # gate, env stage
+        quiet_sound = [(gb.mem(vs + v * 48 + 2), gb.mem(vs + v * 48 + 30)) for v in range(3)]  # gate, env stage
     chunk = []
     while i < len(wire) and wire[i][0] < limit:
         chunk.append(wire[i][1])
@@ -113,7 +113,7 @@ while i < len(wire):
     frame += 1
     if muted_gates is None and limit >= t_mute + 200 * CYCLES_PER_MS:
         vs = gb.sym["_voice"]
-        muted_gates = [gb.mem(vs + v * 45 + 2) for v in range(3)]
+        muted_gates = [gb.mem(vs + v * 48 + 2) for v in range(3)]
     if raw_patch is None and limit >= t_raw + 180 * CYCLES_PER_MS:
         pp = gb.sym["_patch"]
         # (attack, release, shape) for pulse 1, pulse 2, wave, + wave mode
@@ -123,18 +123,18 @@ while i < len(wire):
         pad_patch = [(gb.mem(pp + v * 32 + 5), gb.mem(pp + v * 32 + 7)) for v in range(3)] + [gb.mem(pp + 32 + 8)]
     if t_spark + 200 * CYCLES_PER_MS <= limit < t_spark + 900 * CYCLES_PER_MS:
         vs = gb.sym["_voice"]
-        spark_notes.add((gb.mem(vs), gb.mem(vs + 45)))
+        spark_notes.add((gb.mem(vs), gb.mem(vs + 48)))
         if spark is None:
             spark = gb.mem(0xFF25)          # NR51: bits 0-3 right, 4-7 left
     if chord_frame is not None and frame == chord_frame + 2:
         # snapshot while the chord is held, before the screen-off taps
         vs = gb.sym["_voice"]
-        notes = [gb.mem(vs + v * 45) for v in range(3)]
+        notes = [gb.mem(vs + v * 48) for v in range(3)]
         sounding = gb.mem(0xFF26)
 gb.run(10)
 gb.run(60)
 vs = gb.sym["_voice"]
-after_panic = [(gb.mem(vs + v * 45 + 2), gb.mem(vs + v * 45 + 30)) for v in range(3)]
+after_panic = [(gb.mem(vs + v * 48 + 2), gb.mem(vs + v * 48 + 30)) for v in range(3)]
 
 check("Game Boy switched to the FAT CHIP profile", gb.var("_profile") == 1)
 check("warble depth from Fat Chip 64", gb.var("_warble_amt") == 24, gb.var("_warble_amt"))

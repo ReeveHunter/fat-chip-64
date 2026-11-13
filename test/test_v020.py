@@ -25,7 +25,7 @@ P = gen_patches.PATCHES
 size = json.load(open(os.path.join(os.path.dirname(__file__), "..", "patch", "c64-layout.json")))["patchSize"]
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.30", "V0.30" in c.screen_row(0), c.screen_row(0))
+check("header V0.31", "V0.31" in c.screen_row(0), c.screen_row(0))
 
 # a built-in patch sent whole matches what choosing it loads
 for i in (1, 13):

@@ -365,6 +365,12 @@ GbStartup:
 	subroutine
 	lda devOn+DEV_GB
 	beq .done
+	ldy #15                 ; (the cached CCs: send them all again)
+	lda #$FF
+.cc:
+	sta gbCcS,y
+	dey
+	bpl .cc
 	; first, move the Game Boy's voices to our channels (Fat Chip GB v0.08
 	; hears CC 113 on any channel, so its own setting doesn't matter)
 	lda gbBase

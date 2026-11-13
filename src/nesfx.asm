@@ -121,6 +121,7 @@ NesFxTick:
 	lda nesGlL,x
 	ora nesGlH,x
 	ora nesBent,x
+	ora nesRd,x
 	bne .t
 	ldx #2
 .t:
@@ -229,6 +230,7 @@ NesNoteStart:
 	sta nfxK
 	lda #0
 	sta nesVT,x
+	sta nesRd,x             ; (a new note: BEND OUT's done)
 	lda vsGlide
 	beq .no
 	lda nesLast,x
@@ -322,6 +324,28 @@ NesFxVal:
 	ror nfxL
 	dey
 	bne .g
+	lda nesRd,x             ; BEND OUT: its drop (semitones x 64)
+	beq .nr
+	sta foW
+	lda #0
+	sta foW+1
+	ldy #6
+.r6:
+	asl foW
+	rol foW+1
+	dey
+	bne .r6
+	lda foW+1               ; (negative: the top bits are the sign)
+	ora #$C0
+	sta foW+1
+	lda nfxL
+	clc
+	adc foW
+	sta nfxL
+	lda nfxH
+	adc foW+1
+	sta nfxH
+.nr:
 	lda tuneN               ; FINE TUNE, Synthcart TUNE TO: every channel
 	beq .tn
 	jsr .add

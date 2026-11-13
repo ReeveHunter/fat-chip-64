@@ -37,8 +37,6 @@ NesSoftRelease:
 	clc
 	rts
 .go:
-	lda nesEnvOn
-	beq .nope
 	lda muteNow
 	ora hardCut
 	bne .nope
@@ -46,17 +44,19 @@ NesSoftRelease:
 	beq .nope
 	lda vDev,x
 	cmp #DEV_NES
-	bne .no
+	bne .nope
 	lda vOut,x
 	cmp #NO_NOTE
-	beq .no
+	beq .nope
+	lda nesEnvOn
+	beq .fo                 ; (no envelope: BEND OUT's fall-off, if any)
 	ldy vEnvSlot,x
 	bmi .tri
 	; pulse: release from the current level; step = level x factor / 4 + 1
 	; (8.8 per 10 ms), so any level fades out in 10.24 s / factor (PADS: 5,
 	; about 2 s). Factor 0: no release, cut.
 	lda envRelV
-	beq .no
+	beq .fo
 	stx t2
 	sty t3
 	lda envLvH,y
@@ -81,11 +81,12 @@ NesSoftRelease:
 	sta envRel,y
 	lda #ENV_R
 	sta envPh,y
+	jsr RdBend              ; BEND OUT: it sags as it fades
 	sec
 	rts
 .tri:
 	if TRI_DROP_PADS == 0
-	jmp .no                 ; PADS: the bass just stops (Reeve, 2026-11-01)
+	jmp .fo                 ; PADS: the bass just stops (Reeve, 2026-11-01)
 	endif
 	lda vIdx,x
 	cmp #2
@@ -106,8 +107,39 @@ NesSoftRelease:
 	sta triOn
 	sec
 	rts
+; BEND OUT with no fade to bend in: a fall-off (the note holds for TIME as
+; it falls, then stops)
+.fo:
+	lda nesRdrop
+	beq .no
+	lda sndRdropT
+	beq .no
+	sta nesFoT,x
+	inc foAny
+	jsr RdBend
+	sec
+	rts
 .no:
 	clc
+	rts
+
+; NES voice X let go: BEND OUT's drop (the glide eases it in: nesRd + the
+; glide offset start at 0 and end at -amount). Keeps X.
+RdBend:
+	subroutine
+	lda nesRdrop
+	beq .x
+	sta nesGlH,x
+	lda #0
+	sta nesGlL,x
+	sec
+	sbc nesRdrop
+	sta nesRd,x
+	lda sndRdropK
+	sta nesK,x
+	lda #1
+	sta nfxGlide
+.x:
 	rts
 
 ; MidiTo hooks (voice t0, channel t1).
@@ -118,6 +150,9 @@ NesAfterOff:
 	lda vDev,x
 	cmp #DEV_NES
 	bne .x
+	lda #0                  ; (BEND OUT done: no drop, no fall-off)
+	sta nesRd,x
+	sta nesFoT,x
 	ldy vEnvSlot,x
 	bmi .tri
 	lda #ENV_IDLE
@@ -226,6 +261,9 @@ NesEnvTick:
 	jsr EnvStep
 	ldy #1
 	jsr EnvStep
+	lda foAny
+	beq .tri
+	jsr FoStep
 .tri:
 	lda triOn
 	beq .x
@@ -244,6 +282,32 @@ NesEnvTick:
 	; bend rate skips steps instead of stretching the drop
 	jmp TriStep
 .x:
+	rts
+
+; BEND OUT's fall-offs, one 10 ms step: a voice's time up, its note-off
+FoStep:
+	subroutine
+	lda #0
+	sta foAny
+	ldx #2
+.v:
+	lda nesFoT,x
+	beq .n
+	dec nesFoT,x
+	bne .on
+	stx t0                  ; time's up: the note-off (MidiTo -> NesAfterOff)
+	lda #NO_NOTE
+	jsr MidiTo
+	ldx t0
+	jmp .n
+.on:
+	inc foAny
+.n:
+	inx
+	inx
+	inx
+	cpx #NUM_VOICES
+	bcc .v
 	rts
 
 ; envelope slot Y, one 10 ms step
@@ -826,6 +890,22 @@ NesCutAll:
 	lda t3
 	cmp #2
 	bne .s
+	ldx #2                  ; BEND OUT's fall-offs: cut
+.f:
+	lda nesFoT,x
+	beq .fn
+	stx t0
+	lda #NO_NOTE
+	jsr MidiTo
+	ldx t0
+.fn:
+	inx
+	inx
+	inx
+	cpx #NUM_VOICES
+	bcc .f
+	lda #0
+	sta foAny
 	lda triOn
 	beq .r
 	lda #8

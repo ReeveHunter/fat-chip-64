@@ -775,12 +775,22 @@ GbChan:
 	ldy #127                ; bend range 24 semitones (Fat Chip 64 scales its bends)
 	lda #85
 	jsr .put
-	ldy gbPenvA             ; BEND IN: the Game Boy's own pitch envelope
+	; BEND IN (the Game Boy's own pitch envelope) and BEND OUT (its release
+	; drop, v0.31): sent only when they change, to keep a sound change short
+	lda #0
+	sta gbK
+	ldy gbPenvA
 	lda #80
-	jsr .put
+	jsr .cput
 	ldy gbPenvT
 	lda #81
-	jsr .put
+	jsr .cput
+	ldy gbRdA
+	lda #87
+	jsr .cput
+	ldy gbRdT
+	lda #88
+	jsr .cput
 	ldy t3
 	cpy #2
 	beq .wave
@@ -807,6 +817,26 @@ GbChan:
 	ldy gbWShape
 .put:
 	jmp SoundGbPut
+; A = CC, Y = value: sent only if it isn't what this channel (t3) last got
+; (gbCcS, 4 a channel, gbK the next of them). Keeps X.
+.cput:
+	sta gbCc
+	sty gbV
+	lda t3
+	asl
+	asl
+	ora gbK
+	inc gbK
+	tay
+	lda gbV
+	cmp gbCcS,y
+	beq .cx
+	sta gbCcS,y
+	tay
+	lda gbCc
+	jmp SoundGbPut
+.cx:
+	rts
 
 ; A = CC, Y = value, on channel mS (keeps X)
 SoundGbPut:

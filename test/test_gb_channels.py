@@ -60,9 +60,9 @@ while i < len(wire):
     gb.run(1)
     frame += 1
     if "chord" not in snap and limit >= t_chord + 60 * CYCLES_PER_MS:
-        snap["chord"] = ([gb.mem(vs + v * 45) for v in range(3)], gb.mem(0xFF26))
+        snap["chord"] = ([gb.mem(vs + v * 48) for v in range(3)], gb.mem(0xFF26))
     if "leg" not in snap and limit >= t_leg + 60 * CYCLES_PER_MS:
-        snap["leg"] = [gb.mem(vs + v * 45) for v in range(3)]
+        snap["leg"] = [gb.mem(vs + v * 48) for v in range(3)]
 gb.run(30)
 check("CC 113 moved it to 11-15", gb.var("_midi_ch", 5) == [10, 11, 12, 13, 14], gb.var("_midi_ch", 5))
 notes, nr52 = snap["chord"]

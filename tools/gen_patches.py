@@ -232,7 +232,15 @@ def fields(p):
     f["gbPenvT"] = cc(gb_penv_t(pg["time"]) if pg else 0, 15)
     rd = on.get("rdrop") if has("rdrop", "sid") else None
     f["sndRdrop"] = rd["amount"] if rd else 0
-    f["sndRdropK"] = bend_k(rd["time"]) if rd else 0
+    ra = on.get("rdrop")
+    f["sndRdropK"] = bend_k(ra["time"]) if ra else 0
+    # ---- v0.31: BEND OUT on the NES (a bend while it fades, or a fall-off) and the Game Boy (CC 87 / 88)
+    rn = ra if has("rdrop", "nes") else None
+    f["nesRdrop"] = rn["amount"] if rn else 0
+    f["sndRdropT"] = min(255, round(rn["time"] / 10)) if rn else 0
+    rg = ra if has("rdrop", "gb") else None
+    f["gbRdA"] = rg["amount"] if rg else 0
+    f["gbRdT"] = gb_penv_t(rg["time"]) * 8 if rg else 0
     return f
 
 

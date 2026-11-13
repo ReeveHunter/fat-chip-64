@@ -764,6 +764,14 @@ clickOn     ds 3               ; per SID voice: the CLICK's noise is on
 blT         ds 1               ; BlipApply's scratch
 atkOn       ds 1               ; this sound has a BLIP or CLICK (FxVars)
 nesK        ds NUM_VOICES      ; per NES voice: its own glide k now (BEND IN)
+nesRd       ds NUM_VOICES      ; per NES voice: BEND OUT's drop (-semitones; the glide eases it in)
+nesFoT      ds NUM_VOICES      ; per NES voice: a fall-off's 10 ms steps left (then the note-off)
+foAny       ds 1               ; fall-offs running
+gbCcS       ds 16              ; the Game Boy's CC 80 / 81 / 87 / 88 last sent, per channel
+gbK         ds 1
+gbCc        ds 1
+gbV         ds 1
+foW         ds 2               ; NesFxVal's scratch
 rpShift     ds 1               ; REPEAT: each echo moved by this (signed)
 rpMode      ds 1               ;   bit 0 scale steps, bits 1-2 ECHOES (0 GB + NES, 1 ALL CHIPS, 2 ONE CHIP)
 rpCur       ds 1               ;   RepeatPress: the echo's note
