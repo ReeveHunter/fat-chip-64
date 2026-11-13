@@ -379,9 +379,7 @@ GbStartup:
 	lda #GCC_PANIC
 	ldx #0
 	jsr GbGlobal
-	ldx tuneNow             ; (Synthcart TUNE TO, or 64: none)
-	lda tuneCC,x
-	tax
+	ldx gbTune              ; (FINE TUNE, Synthcart TUNE TO)
 	lda #GCC_TUNE
 	jsr GbGlobal
 	lda #GCC_WARBLE         ; a little drift so stacked voices breathe

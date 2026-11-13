@@ -673,8 +673,8 @@ NesBendVoice:
 	sta mulA+1
 	lda nbL
 	sta nesBent,x
-	jsr Mul16x8             ; / 16
-	ldx #4
+	jsr Mul16x8             ; / 64
+	ldx #6
 .d:
 	lsr mulR+2
 	ror mulR+1
@@ -704,6 +704,13 @@ NesBendVoice:
 	sta nbH
 .pos:
 	sty bendUp
+	lda nbL                 ; 1/64 -> 1/16 semitones, the rest on top
+	and #3
+	sta nbFrac
+	lsr nbH
+	ror nbL
+	lsr nbH
+	ror nbL
 	lda #0
 	sta bendHi
 	lda nbH
@@ -751,13 +758,17 @@ NesBendVoice:
 	sta bendHi
 	rts
 
-; nbH:nbL = NES voice X's whole bend, signed 1/16 semitones: the bend (up +,
+; nbH:nbL = NES voice X's whole bend, signed 1/64 semitones: the bend (up +,
 ; down -) + its own effects (nfxH:nfxL, NesFxVal). Keeps X.
 NesTotal:
 	subroutine
 	jsr NesFxVal
 	stx nfxX
 	jsr BendM
+	asl bmL                 ; (1/16 -> 1/64 semitones)
+	rol bmH
+	asl bmL
+	rol bmH
 	ldx nfxX
 	lda bendUp
 	bne .p
@@ -875,10 +886,40 @@ NesBendRaw:
 	and #$FC                ; MidiNES bends move in steps of 4
 	sta bT3
 	lda mulR+3              ; (more than 16 bits: the end of the range)
-	beq .send
+	beq .fr
 	lda #$FF
 	sta bT2
+	bne .send
+.fr:
+	lda nbFrac              ; 1/64 semitones on top: the voice's unit x f / 64
+	beq .send
+	ldx t0
+	lda nesUnL,x
+	sta mulA
+	lda nesUnH,x
+	sta mulA+1
+	ora mulA
+	beq .send
+	lda nbFrac
+	jsr Mul16x8
+	ldx #6
+.fs:
+	lsr mulR+2
+	ror mulR+1
+	ror mulR
+	dex
+	bne .fs
+	lda mulR
+	clc
+	adc bT3
+	and #$FC
+	sta bT3
+	lda mulR+1
+	adc bT2
+	sta bT2
 .send:
+	lda #0
+	sta nbFrac
 	jsr BendFromAmt
 	jmp NesPut
 

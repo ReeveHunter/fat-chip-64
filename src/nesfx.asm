@@ -226,7 +226,7 @@ NesNoteStart:
 	sta nfxK
 	lda #0
 	sta nesVT,x
-	lda glideK
+	lda vsGlide
 	beq .no
 	lda nesLast,x
 	cmp #NO_NOTE
@@ -284,7 +284,7 @@ NesNoteStart:
 .u:
 	rts
 
-; nfxH:nfxL = voice X's effects in 1/16 semitones (signed): detune and
+; nfxH:nfxL = voice X's effects in 1/64 semitones (signed): detune and
 ; vibrato on the pulses, glide on all three. Keeps X (uses Y).
 NesFxVal:
 	subroutine
@@ -295,12 +295,12 @@ NesFxVal:
 	rts
 .w:
 	stx nfxX
-	; glide: 1/256 -> 1/16 semitones
+	; glide: 1/256 -> 1/64 semitones
 	lda nesGlH,x
 	sta nfxH
 	lda nesGlL,x
 	sta nfxL
-	ldy #4
+	ldy #2
 .g:
 	lda nfxH
 	cmp #$80
@@ -308,21 +308,18 @@ NesFxVal:
 	ror nfxL
 	dey
 	bne .g
-	ldy tuneNow             ; Synthcart TUNE TO: every channel
+	lda tuneN               ; FINE TUNE, Synthcart TUNE TO: every channel
 	beq .tn
-	lda tune16,y
 	jsr .add
 .tn:
 	lda vIdx,x
 	cmp #2
 	beq .x                  ; the triangle: glide only (and the tuning)
 	sta nfxK                ; pulse 0 / 1
-	; detune: (detNow + 4) / 8 sixteenths, pulse 1 down, pulse 2 up
+	; detune: (detNow + 1) / 2 sixty-fourths, pulse 1 down, pulse 2 up
 	lda detNow
 	clc
-	adc #4
-	lsr
-	lsr
+	adc #1
 	lsr
 	ldy nfxK
 	bne .up
@@ -348,11 +345,7 @@ NesFxVal:
 	adc #64
 .ph:
 	jsr VibAt               ; vibNow (signed)
-	lda vibNow
-	cmp #$80
-	ror
-	cmp #$80
-	ror
+	lda vibNow              ; / 4: 1/64 semitones
 	cmp #$80
 	ror
 	cmp #$80

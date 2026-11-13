@@ -288,6 +288,18 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 	jmp MenuKey
 KeyCmdPlay:                     ; (A = a command key: its usual job)
 	sta keyCodeNow
+	ldx okpOn               ; ONE KEY PLAY: the cursor keys play
+	beq .nokp
+	ldx #1
+	cmp #K_CRSR_DOWN
+	beq .okp
+	inx
+	cmp #K_CRSR_RIGHT
+	bne .nokp
+.okp:
+	txa
+	jmp OkpPress
+.nokp:
 	cmp #K_F1
 	bcc .table
 	cmp #K_F7+1
@@ -698,9 +710,9 @@ KeyShapeDone:
 
 ModeKey:
 	subroutine
-	ldx playMode
+	ldx playMode            ; POLY, SMART CHORD, EXT, DRONE
 	inx
-	cpx #3
+	cpx #4
 	bcc .s
 	ldx #0
 .s:
@@ -749,7 +761,7 @@ ApplySettings:
 	beq .pm
 	lda dhNotes             ; DH-100 NOTES: CHORD or HARMONY, whatever's chosen
 	beq .pm
-	cmp #2                  ; 1 CHORD, 2 -> 3 HARMONY
+	cmp #2                  ; 1 CHORD, 2 HARMONY
 	bne .m
 	lda #MODE_HARM
 	bne .m
@@ -763,6 +775,20 @@ ApplySettings:
 	sta effRoot
 	lda keyScale
 	sta effScale
+	lda effMode             ; a new notes mode: CHORD CHANGE may glide now
+	cmp lastEff
+	beq .r
+	sta lastEff
+	txa
+	pha
+	tya
+	pha
+	jsr FxVars
+	pla
+	tay
+	pla
+	tax
+.r:
 	rts
 
 ; L: latch on (in the LATCH STYLE: SMART / HOLD / ADD) or off
@@ -862,6 +888,16 @@ NoteUp:                         ; A = note index
 .x:
 	rts
 .cmd:
+	ldx #1                  ; One Key Play: a cursor key let go
+	cmp #K_CRSR_DOWN
+	beq .okp
+	inx
+	cmp #K_CRSR_RIGHT
+	bne .ct
+.okp:
+	txa
+	jmp OkpRelease
+.ct:
 	cmp #K_CTRL
 	bne .cb
 	lda #0

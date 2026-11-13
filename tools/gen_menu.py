@@ -207,6 +207,14 @@ def enum(lbl, var, values, hook=None, show=None):
     return dict(kind=1, lbl=lbl, var=var, values=values, hook=hook, show=show)
 
 
+WANDER_S = ["0.5", "1", "2", "3", "4", "6", "8"]
+
+
+def number(lbl, var, half, suffix="", hook=None):
+    """kind 5: a value 0..2*half shown as -half..+half (and the suffix)"""
+    return dict(kind=5, lbl=lbl, var=var, count=2 * half + 1, suffix=suffix, hook=hook, show=None)
+
+
 def text(lbl):
     return dict(kind=4, lbl=lbl)
 
@@ -219,10 +227,11 @@ HELP = [
     "; : ARP SPEED SPACE ITS ACTION",
     "F1 F3 OCTAVE  F5 ARP  F7 VISUALS",
     "RUN/STOP BEAT (HELD + A-H: PICK ONE)",
+    "CRSR DOWN / RIGHT: ONE KEY PLAY",
     "",
     "C= + A ARP TYPE   S D F PATTERN,",
     "      SPEED, OCTAVE",
-    "C= + Z MODE  X EXTENSIONS  C MONO",
+    "C= + Z MODE (..DRONE)  X EXT  C MONO",
     "C= + L LATCH STYLE  , . SPACE'S ACTION",
     "C= + ; : MIDI IN OCTAVE  / UNDO DICE",
     "C= + F1 F3 F5 CHIPS  F7 PANIC",
@@ -254,6 +263,7 @@ def build_pages(params, effects):
         None,
         page("PATCH", "patch"),
         page("PLAYING", "playing"),
+        page("ONE KEY PLAY", "okp"),
         page("DEVICES", "devices"),
         None,
         page("YAMAHA SHS-10", "shs", show="useShs"),
@@ -278,6 +288,20 @@ def build_pages(params, effects):
         enum("SPACE", "spaceAct", ACTS, hook="SpaceHook"),
         enum("BEND RANGE", "bendRange", [f"{i} SEMITONE" + ("S" if i > 1 else "") for i in range(1, 25)]),
         enum("BEAT TEMPO", "beatTempo", ["DEFAULT", "IGNORE"]),
+        None,
+        number("FINE TUNE", "fineTune", 50, " CENTS", hook="SyncDerive"),
+        None,
+        enum("CHORD CHANGE", "chgMode", ["AS MODE", "ATTACK", "GLIDE", "SPLIT", "WANDER"], hook="SoundVarsHook"),
+        enum("WANDER TIME", "wanderT", [f"{t} S" for t in WANDER_S]),
+        enum("DRONE VOICING", "droneVc", ["FIFTHS", "FIFTHS + 9TH", "SUS4"], hook="SettingChanged"),
+    ], parent="main")
+    add_page("okp", "ONE KEY PLAY", "THE CURSOR KEYS PLAY", [
+        enum("ONE KEY PLAY", "okpOn", ["OFF", "ON"], hook="OkpHook"),
+        enum("NOTES", "okpSrc", ["PENTATONIC PAIRS", "CHORD NOTES"], hook="OkpHook"),
+        enum("MOTION", "okpMotion", ["DOWN", "MOSTLY DOWN", "PING PONG", "RANDOM WALK"]),
+        enum("TURN", "okpTurn", ["NEVER", "A LITTLE", "SOME", "A LOT"]),
+        enum("DIRECTION", "okpDir", ["DOWN", "UP"]),
+        enum("EACH PRESS", "okpRing", ["CUTS", "RINGS ON"]),
     ], parent="main")
     add_page("devices", "DEVICES", "WHAT'S PLUGGED IN", [
         enum("YAMAHA SHS-10", "useShs", ["NOT USED", "IN USE"], hook="UseHook"),
@@ -306,7 +330,7 @@ def build_pages(params, effects):
     ], parent="main")
     add_page("sc", "ATARI SYNTHCART", "TEMPO: , . NUDGE, SHIFT , . STEP", [
         enum("TEMPO", "scSync", ["OFF", "SYNC"], hook="SyncDerive"),
-        enum("TRIM", "scTrim", [f"{v:+d}" if v else "0" for v in range(-8, 9)], hook="TempoHook"),
+        number("TRIM", "scTrim", 8, hook="TempoHook"),
         None,
         enum("TUNE TO", "scSound", ["OFF", "SQUARE C -10", "LEAD F -10", "BASS C# -35", "PITFALL C# -30", "SAW C# +10"],
              hook="SyncDerive"),
@@ -377,6 +401,8 @@ def main():
             args.append(it["var"]); counts.append(len(it["values"])); vlo.append(f"mE{i}")
         elif it["kind"] == 2:
             args.append(str(it["fx"])); counts.append(0); vlo.append("0")
+        elif it["kind"] == 5:
+            args.append(it["var"]); counts.append(it["count"]); vlo.append(f"mU{i}")
         elif it["kind"] == 3:
             args.append(str(it["param"])); counts.append(0); vlo.append("0")
         else:
@@ -398,6 +424,8 @@ def main():
     lists = {}
     for i, it in enumerate(items):
         A(f'mL{i}:      .byte "{it["lbl"]} ",0')
+        if it["kind"] == 5:
+            A(f'mU{i}:      .byte "{it["suffix"]}",0')
         if it["kind"] == 1:
             key = tuple(it["values"])
             if key in lists:
@@ -413,6 +441,16 @@ def main():
     A("pgBack:     .byte " + ",".join(str(p["back"]) for p in PAGES))
     A("pgBackItem: .byte " + ",".join(str(p["backItem"]) for p in PAGES))
     A("pgFx:       .byte " + ",".join(str(next((k for k, e in enumerate(effects) if "fx_" + e["eid"] == p["name"]), 255)) for p in PAGES))
+    # fine tuning: |2^(c/1200) - 1| x 65536 for c = 0..100 cents, up and down
+    import math
+    up = [round((2 ** (c / 1200) - 1) * 65536) for c in range(101)]
+    dn = [round((1 - 2 ** (-c / 1200)) * 65536) for c in range(101)]
+    A("tuneUpL:    .byte " + ",".join(f"<{v}" for v in up))
+    A("tuneUpH:    .byte " + ",".join(f">{v}" for v in up))
+    A("tuneDnL:    .byte " + ",".join(f"<{v}" for v in dn))
+    A("tuneDnH:    .byte " + ",".join(f">{v}" for v in dn))
+    # WANDER TIME in 64 ms units
+    A("wanderU:    .byte " + ",".join(str(min(127, round(float(t) * 1000 / 64))) for t in WANDER_S))
     A("efPage:     .byte " + ",".join(str(next((k for k, p in enumerate(PAGES) if p["name"] == "fx_" + e["eid"]), 255)) for e in effects))
     lo_hi("pgTitle", [f"pgT{i}" for i in range(len(PAGES))])
     lo_hi("pgHdr", [("pgH%d" % i) if p["header"] and p["header"] != "@NAME" else ("patchName" if p["header"] else "0") for i, p in enumerate(PAGES)])

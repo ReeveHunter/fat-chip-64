@@ -173,8 +173,10 @@ BuildHeld:
 	cpx #NIDX
 	bne .m
 	lda effMode
-	bne Expand
-	rts
+	beq .o
+	jsr Expand
+.o:
+	jmp OkpAdd              ; (One Key Play's notes: never expanded)
 
 ; SMART CHORD / EXTENSIONS: each held note becomes a chord built in the key.
 ; A note in the scale gets its diatonic chord (stacked scale thirds: triad,
@@ -182,6 +184,10 @@ BuildHeld:
 ; major triad (+ b7, 9, 11, 13). Results merge, ascending, at most 8.
 Expand:
 	subroutine
+	cmp #MODE_DRONE
+	bne .e
+	jmp DroneExpand
+.e:
 	ldx heldCount
 	stx exCount
 .cp:
@@ -623,6 +629,7 @@ VoiceEnabled:
 ; if it already plays that note.
 ApplyVoices:
 	subroutine
+	jsr UnitNow
 	ldx #0
 .v:
 	stx t0
@@ -630,6 +637,8 @@ ApplyVoices:
 	beq .pad
 	jmp .next
 .pad:
+	lda sndGlideK           ; (VoiceSet: the patch's glide, unless CHORD CHANGE says)
+	sta vsGlide
 	lda #0
 	sta t3                  ; retrigger?
 	lda vArpHit,x           ; an arp step re-attacks its voices
@@ -660,9 +669,16 @@ ApplyVoices:
 	lda vWant,x
 	cmp vNote,x
 	bne .change
+	lda #0
+	sta vWaitOn,x
 	lda t3
 	beq .next
+	bne .chg2
 .change:
+	jsr ChgStyle            ; CHORD CHANGE: glide, re-attack, or wait (WANDER)
+	beq .chg2
+	jmp .next
+.chg2:
 	lda vDev,x
 	beq .set                ; SID: always
 	lda hardCut
@@ -684,10 +700,13 @@ ApplyVoices:
 	ldx t0
 	inx
 	cpx #NUM_VOICES
-	bne .v
+	beq .vd
+	jmp .v
+.vd:
 	; presses and the arp step handled
 	lda #0
 	sta arpHit
+	sta okpHit
 	ldx #NIDX-1
 .p:
 	sta notePressed,x
@@ -700,6 +719,13 @@ ApplyVoices:
 NoteWasPressed:
 	subroutine
 	sta exV
+	ldy okpHit              ; One Key Play's new notes
+	beq .k
+	cmp okpNotes
+	beq .yes
+	cmp okpNotes+1
+	beq .yes
+.k:
 	sec
 	sbc octBase
 	sec
@@ -787,54 +813,7 @@ VoiceSet:
 	sta SID+4,x
 	rts
 .sidOn:
-	clc                     ; the patch may play the SID an octave off
-	adc sndOct
-	bpl .o1
-	clc
-	adc #12
-.o1:
-	tax
-	lda sidFreqLo,x
-	sta ptr
-	lda sidFreqHi,x
-	sta ptr+1
-	lda tuneNow             ; (Synthcart TUNE TO)
-	beq .tuned
-	jsr SidTune
-.tuned:
-	; detune: SID 2 sharp, SID 3 flat by (high byte x det / 8); FAT's 8 is
-	; about 7 cents
-	cpy #0
-	beq .freq
-	sty t1
-	lda ptr+1
-	ldy detNow              ; (the sound's, the menu's, WIDE: FxVars)
-	jsr Mul8
-	lsr mt16+1
-	ror mt16
-	lsr mt16+1
-	ror mt16
-	lsr mt16+1
-	ror mt16
-	ldy t1
-	cpy #1
-	bne .flat
-	lda ptr
-	clc
-	adc mt16
-	sta ptr
-	lda ptr+1
-	adc mt16+1
-	sta ptr+1
-	jmp .freq
-.flat:
-	lda ptr
-	sec
-	sbc mt16
-	sta ptr
-	lda ptr+1
-	sbc mt16+1
-	sta ptr+1
+	jsr SidPitch            ; -> ptr
 .freq:
 	lda ptr
 	sta sidTgtLo,y
@@ -843,7 +822,7 @@ VoiceSet:
 	; jump straight there, unless the sound glides and the voice has played
 	; a note (still sounding or let go: like a mono synth's portamento, and
 	; the NES's); then FxTick slides sidBase to the target
-	lda glideK
+	lda vsGlide
 	beq .jump
 	lda sidBaseLo,y
 	ora sidBaseHi,y
@@ -883,9 +862,65 @@ VoiceSet:
 .legato:
 	rts
 
+; A = note, Y = SID voice -> ptr = its frequency: the patch's octave, the
+; tuning, the detune (SID 2 sharp, SID 3 flat). Keeps Y.
+SidPitch:
+	subroutine
+	clc                     ; the patch may play the SID an octave off
+	adc sndOct
+	bpl .o1
+	clc
+	adc #12
+.o1:
+	tax
+	lda sidFreqLo,x
+	sta ptr
+	lda sidFreqHi,x
+	sta ptr+1
+	lda tuneC               ; (FINE TUNE, Synthcart TUNE TO)
+	beq .tn
+	jsr SidTune
+.tn:
+	; detune: SID 2 sharp, SID 3 flat by (high byte x det / 8); FAT's 8 is
+	; about 7 cents
+	cpy #0
+	beq .x
+	sty t1
+	lda ptr+1
+	ldy detNow              ; (the sound's, the menu's, WIDE: FxVars)
+	jsr Mul8
+	lsr mt16+1
+	ror mt16
+	lsr mt16+1
+	ror mt16
+	lsr mt16+1
+	ror mt16
+	ldy t1
+	cpy #1
+	bne .flat
+	lda ptr
+	clc
+	adc mt16
+	sta ptr
+	lda ptr+1
+	adc mt16+1
+	sta ptr+1
+	rts
+.flat:
+	lda ptr
+	sec
+	sbc mt16
+	sta ptr
+	lda ptr+1
+	sbc mt16+1
+	sta ptr+1
+.x:
+	rts
+
 ; A SID voice (Y) attacks: its vibrato delay starts again, the filter
 ; envelope opens. Keeps Y.
 SidAttackFx:
+	subroutine
 	lda #0
 	sta vibT,y
 	sta vibAmt,y

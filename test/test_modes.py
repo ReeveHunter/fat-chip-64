@@ -86,7 +86,8 @@ check("two 13th chords: at most 8 notes, lowest kept", chord("q", "w") == [48, 5
 c.tap("x", ms=30)                           # back to 7th
 
 # arp over a smart chord: one key arpeggiates the chord
-c.tap("z", ms=20)                           # EXT -> POLY
+c.tap("z", ms=20)                           # EXT -> DRONE (v0.27)
+c.tap("z", ms=20)                           # -> POLY
 c.tap("z", ms=60)                           # -> SMART CHORD
 check("Z cycles back round to SMART CHORD", c.v("playMode") == 1, c.v("playMode"))
 c.tap("a", ms=40)                           # arp UNISON
@@ -96,7 +97,7 @@ notes = [a for cyc, s, a, b in c.midi(since=t0) if s == 0x90 and b]
 check("arp + smart chord: one key arpeggiates C E G", notes[:3] == [48, 52, 55], notes)
 c.release("q", ms=60)
 c.tap("a", ms=20); c.tap("a", ms=40)         # SPARKLE -> OFF
-c.tap("z", ms=20); c.tap("z", ms=60)         # CHORD -> EXT -> POLY
+c.tap("z", ms=20); c.tap("z", ms=20); c.tap("z", ms=60)         # CHORD -> EXT -> DRONE -> POLY
 check("back to POLY", c.v("playMode") == 0)
 
 # ---------------------------------------------------------------- latched chord + a mode change
@@ -119,10 +120,10 @@ c.press("q", ms=60)
 c.tap("z", ms=80)                           # latch off: applies at once to held keys
 check("latch off: a mode change applies at once", held() == [48, 52, 55, 59], held())
 c.release("q", ms=40)
-c.tap("z", ms=20); c.tap("z", ms=60)         # EXT -> POLY -> CHORD
+c.tap("z", ms=20); c.tap("z", ms=20); c.tap("z", ms=60)         # EXT -> DRONE -> POLY -> CHORD
 c.tap("z", ms=60)
 check("(mode back to EXT for the next part)", c.v("playMode") == 2)
-c.tap("z", ms=60)
+c.tap("z", ms=20); c.tap("z", ms=60)
 
 # ---------------------------------------------------------------- SPARKLE octave
 c.tap("a", ms=20); c.tap("a", ms=60)         # SPARKLE

@@ -60,7 +60,8 @@ rows = [c.screen_row(r) for r in range(25)]
 check("menu: HELP, the chips, PATCH, PLAYING, DEVICES, the SHS-10 (in use)",
       rows[2].startswith("> HELP") and rows[4][2:].startswith("SID") and rows[5][2:].startswith("GAME BOY")
       and rows[6][2:].startswith("MIDINES") and rows[8][2:].startswith("PATCH") and rows[9][2:].startswith("PLAYING")
-      and rows[10][2:].startswith("DEVICES") and rows[12][2:].startswith("YAMAHA SHS-10") and rows[13].strip() == "", rows[2:14])
+      and rows[10][2:].startswith("ONE KEY PLAY") and rows[11][2:].startswith("DEVICES") and rows[13][2:].startswith("YAMAHA SHS-10")
+      and rows[14].strip() == "", rows[2:15])
 for _ in range(5):
     c.tap("crsrdown", ms=40)
 check("CRSR DOWN x5 (past the gaps): PLAYING", c.screen_row(9).startswith("> PLAYING"), c.screen_row(9))

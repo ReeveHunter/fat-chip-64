@@ -60,7 +60,7 @@ def name(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.26", "V0.26" in c.screen_row(0), c.screen_row(0))
+check("header V0.27", "V0.27" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)
@@ -68,7 +68,7 @@ r = rows(c)
 check("main page: HELP first, then SID / GAME BOY / MIDINES, all ON", all("ON" in r[i][23:] for i in (4, 5, 6))
       and r[2].startswith("> HELP") and r[4][2:].startswith("SID"), r[2:7])
 check("... the SHS-10's page (in use); the DH-100 and Synthcart hidden",
-      r[12][2:].startswith("YAMAHA SHS-10") and "CASIO" not in "".join(r) and "SYNTHCART" not in "".join(r))
+      r[13][2:].startswith("YAMAHA SHS-10") and "CASIO" not in "".join(r) and "SYNTHCART" not in "".join(r))
 c.tap("f3", ms=30); c.tap("f3", ms=30)
 c.tap("f7", ms=150)
 check("F3 x2 (past the gap): GAME BOY; F7 turns it off", c.v("devOn", 3) == [1, 0, 1] and "OFF" in c.screen_row(5), c.v("devOn", 3))
@@ -101,8 +101,8 @@ check("all three changed", c.v("useShs") == 0 and c.v("useDh") == 1 and c.v("use
 back(c)
 r = rows(c)
 check("main page: the DH-100 and Synthcart pages, not the SHS-10's (the lines move up)",
-      r[12][2:].startswith("CASIO DH-100") and r[13][2:].startswith("ATARI SYNTHCART") and "YAMAHA" not in "".join(r), r[10:13])
-check("... the cursor back on DEVICES", c.screen_row(10).startswith("> DEVICES"))
+      r[13][2:].startswith("CASIO DH-100") and r[14][2:].startswith("ATARI SYNTHCART") and "YAMAHA" not in "".join(r), r[10:13])
+check("... the cursor back on DEVICES", c.screen_row(11).startswith("> DEVICES"))
 c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30)
 check("CRSR DOWN skips the gaps and hidden lines: wraps from SYNTHCART to HELP", c.screen_row(2).startswith("> HELP"), c.screen_row(2))
 check("SHS-10 not in use: no keytar tempo, start / stop or drums", c.v("syncTempo") == 1 and c.v("syncStart") == 1
@@ -328,11 +328,11 @@ c.midi_in(0x90, 60, 100, ms=80)
 f_bass = sid_f(c)
 bends = nes_bends(c, t0)
 c.midi_in(0x80, 60, 0, ms=300)
-c.set("tuneNow", 0)
+c.set("tuneC", 0)
 c.midi_in(0x90, 60, 100, ms=80)
 f_0 = sid_f(c)
 c.midi_in(0x80, 60, 0, ms=300)
-c.set("tuneNow", 3)
+c.set("tuneC", 256 - 35)
 check("... the SID 35 cents flat (SQUARE was 10)", 0.9785 < f_bass / f_0 < 0.9815 and 0.9935 < f_sq / f_0 < 0.9955,
       (f_0, f_sq, f_bass))
 check("... the NES bent flat before its notes", any((b << 7 | a) < 8192 for st, a, b in bends), bends[:4])

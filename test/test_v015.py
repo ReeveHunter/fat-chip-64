@@ -33,7 +33,7 @@ def ons(c, t0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.26", "V0.26" in c.screen_row(0), c.screen_row(0))
+check("header V0.27", "V0.27" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- OCTAVE UP
 c.set("spaceAct", A_OCTUP)
@@ -84,7 +84,7 @@ c.tap("f5", ms=150)
 t0 = c.cpu.processorCycles
 c.press("q", ms=200)
 tl = c.v("nesTotL", 9)
-check("NES detune (FAT): pulse 1 bent down, pulse 2 up (sent once, kept)", tl[2] == 255 and tl[5] == 1, tl)
+check("NES detune (FAT): pulse 1 bent down, pulse 2 up (sent once, kept)", tl[2] == 252 and tl[5] == 4, tl)   # (v0.27: 1/64 semitones)
 c.release("q", ms=100)
 t0 = c.cpu.processorCycles
 c.press("q", ms=200)

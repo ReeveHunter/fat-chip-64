@@ -438,10 +438,12 @@ ScBeat:
 	ldx t1
 	jmp SetBeat16
 
-; ------------------------------------------------------------ Synthcart tuning
-; tuneNow = the TUNE TO sound while the Synthcart is in use (else 0): the
-; Game Boy gets it as master tune (CC 103), the NES in its bends, the SID in
-; its note frequencies. MATCH KEY sets the key's root once, when it changes.
+; ------------------------------------------------------------ tuning
+; tuneC = PLAYING's FINE TUNE + the Synthcart's TUNE TO (while it's in use),
+; in cents (-100..+100). The Game Boy gets it as master tune (CC 103), the
+; NES in its bends (tuneN, 1/64 semitones), the SID in its note frequencies
+; (SidTune; the notes sounding move at once). MATCH KEY sets the key's root
+; once, when it changes.
 ScTune:
 	subroutine
 	lda #0
@@ -449,16 +451,27 @@ ScTune:
 	beq .t
 	lda scSound
 .t:
-	cmp tuneNow
+	sta tuneNow             ; (the Synthcart sound, for MATCH KEY)
+	tax
+	lda fineTune
+	sec
+	sbc #50
+	clc
+	adc scCents,x
+	bvc .c                  ; (can't overflow: -85..+60)
+.c:
+	cmp tuneC
 	beq .k
-	sta tuneNow
-	tax
-	lda tuneCC,x
-	tax
+	sta tuneC
+	jsr TuneUnits
+	ldx gbTune
 	lda #GCC_TUNE
 	jsr GbGlobal
-	lda #1
+	lda #8
 	sta nfxRun              ; (the NES bends again)
+	lda #0
+	sta vsGlide
+	jsr SidRetune           ; (the SID's notes sounding: there at once)
 .k:
 	ldx tuneNow
 	beq .x
@@ -472,15 +485,96 @@ ScTune:
 .x:
 	rts
 
-; the SID frequency in ptr, moved by tuneNow's cents (keeps Y)
+; tuneC -> tuneN (c x 0.64: 1/64 semitones) and gbTune (64 + c x 1.28),
+; rounded: (|c| x 41 + 32) / 64 and (|c| x 41 + 16) / 32
+TuneUnits:
+	subroutine
+	lda tuneC
+	bpl .p
+	eor #$FF
+	clc
+	adc #1
+.p:
+	ldy #41
+	jsr Mul8                ; mt16 = |c| x 41
+	lda mt16
+	clc
+	adc #16
+	sta t0
+	lda mt16+1
+	adc #0
+	sta t1                  ; t1:t0 = |c| x 41 + 16
+	ldx #5
+.s5:
+	lsr t1
+	ror t0
+	dex
+	bne .s5
+	lda t0
+	sta t2                  ; |cc - 64|
+	lda mt16
+	clc
+	adc #32
+	sta t0
+	lda mt16+1
+	adc #0
+	sta t1
+	ldx #6
+.s6:
+	lsr t1
+	ror t0
+	dex
+	bne .s6                 ; t0 = |n|
+	lda tuneC
+	bmi .neg
+	lda t0
+	sta tuneN
+	lda #64
+	clc
+	adc t2
+	cmp #128
+	bcc .g
+	lda #127
+.g:
+	sta gbTune
+	rts
+.neg:
+	lda #0
+	sec
+	sbc t0
+	sta tuneN
+	lda #64
+	sec
+	sbc t2
+	bcs .g2
+	lda #0
+.g2:
+	sta gbTune
+	rts
+
+; the SID frequency in ptr, moved by tuneC cents (keeps Y)
 SidTune:
 	subroutine
-	ldx tuneNow
-	lda tuneKL,x
+	lda tuneC
+	bmi .dn
+	tax
+	lda tuneUpL,x
 	sta mulB
-	lda tuneKH,x
+	lda tuneUpH,x
 	sta mulB+1
-	lda tuneUp,x
+	lda #1
+	bne .m
+.dn:
+	eor #$FF
+	clc
+	adc #1
+	tax
+	lda tuneDnL,x
+	sta mulB
+	lda tuneDnH,x
+	sta mulB+1
+	lda #0
+.m:
 	pha
 	lda ptr
 	sta mulA
@@ -504,14 +598,14 @@ SidTune:
 	sta ptr
 	lda ptr+1
 	adc mulR+3
+	bcc .u
+	lda #$FF                ; (the top of the SID's range)
+	sta ptr
+.u:
 	sta ptr+1
 	rts
 
 ;            OFF SQUARE LEAD BASS PITFALL SAW
 ;                C -10  F -10 C# -35 C# -30 C# +10
 tuneRoot:   .byte 0,0,5,1,1,1
-tuneCC:     .byte 64,51,51,19,26,77         ; 64 + cents / 0.78
-tuneKL:     .byte <0,<378,<378,<1312,<1126,<380   ; |2^(c/1200) - 1| x 65536
-tuneKH:     .byte >0,>378,>378,>1312,>1126,>380
-tuneUp:     .byte 0,0,0,0,0,1
-tune16:     .byte 0,<-2,<-2,<-6,<-5,2       ; 1/16 semitones (the NES)
+scCents:    .byte 0,<-10,<-10,<-35,<-30,10

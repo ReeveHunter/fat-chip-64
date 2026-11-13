@@ -496,6 +496,11 @@ ScrKey:
 	jsr PutChar
 .ka:
 	ldx playMode
+	cpx #MODE_DRONE
+	bne .m0
+	ldx #6
+	bne .m1
+.m0:
 	cpx #MODE_EXT
 	bne .m1
 	lda spice

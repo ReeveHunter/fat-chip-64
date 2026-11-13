@@ -287,6 +287,11 @@ MenuVal:
 	beq .enum
 	cmp #2
 	beq .fx
+	cmp #5
+	bne .par
+	jsr NumText             ; a number: -half..+half and its suffix
+	jmp .pr
+.par:
 	; a patch setting: its step's label
 	lda mArgLo,x
 	tax
@@ -345,6 +350,80 @@ MenuVal:
 	lda #0
 	sta t2
 	rts
+; line X (kind 5): its value v as v - half (half = (count - 1) / 2), signed,
+; then its suffix -> ptr = numBuf
+NumText:
+	subroutine
+	lda mArgLo,x
+	sta ptr
+	lda mArgHi,x
+	sta ptr+1
+	ldy #0
+	lda mCount,x
+	lsr
+	sta t0                  ; half
+	lda (ptr),y
+	sec
+	sbc t0
+	beq .z
+	bcs .p
+	eor #$FF
+	adc #1                  ; (carry clear)
+	pha
+	lda #$2D                ; -
+	bne .s
+.p:
+	pha
+	lda #$2B                ; +
+.s:
+	sta numBuf,y
+	iny
+	pla
+	ldx #0                  ; tens
+.t:
+	cmp #10
+	bcc .u
+	sbc #10
+	inx
+	bne .t
+.u:
+	pha
+	txa
+	beq .o
+	ora #$30
+	sta numBuf,y
+	iny
+.o:
+	pla
+.z:
+	ora #$30
+	sta numBuf,y
+	iny
+	ldx exK                 ; the suffix
+	lda mValLo,x
+	sta ptr
+	lda mValHi,x
+	sta ptr+1
+	sty t0
+	ldy #0
+.c:
+	lda (ptr),y
+	sty t1
+	ldy t0
+	sta numBuf,y
+	cmp #0
+	beq .x
+	inc t0
+	ldy t1
+	iny
+	bne .c
+.x:
+	lda #<numBuf
+	sta ptr
+	lda #>numBuf
+	sta ptr+1
+	rts
+
 mOpen:      .byte "RETURN: OPEN",0
 mOnTxt:     .byte "ON",0
 mOffTxt:    .byte "OFF",0

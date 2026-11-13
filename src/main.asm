@@ -232,6 +232,18 @@ InitState:
 	lda #1                  ; Synthcart: TUNE TO SQUARE, MATCH KEY ON (once in use)
 	sta scSound
 	sta scKey
+	sta okpOn               ; ONE KEY PLAY on: PENTATONIC PAIRS, PING PONG, SOME turns, CUTS
+	lda #2
+	sta okpMotion
+	sta okpTurn
+	lda #50                 ; FINE TUNE 0
+	sta fineTune
+	lda #64                 ; (the Game Boy's master tune: 0 cents)
+	sta gbTune
+	lda #3                  ; WANDER TIME 3 s
+	sta wanderT
+	lda #$FF
+	sta okpPos
 	lda #127                ; full breath until the DH-100 says otherwise
 	sta breath
 	lda #1                  ; BREATH FEEL NORMAL
@@ -453,6 +465,7 @@ Nmi:
 	include "menu.asm"
 	include "patchedit.asm"
 	include "devices.asm"
+	include "wander.asm"
 	include "screen.asm"
 	include "viz.asm"
 	include "nesfx.asm"

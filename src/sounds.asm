@@ -282,6 +282,15 @@ FxVars:
 	lda uGlideT,y
 .gk:
 	sta glideK
+	sta sndGlideK
+	jsr ChgEff              ; CHORD CHANGE glides: a glide even if the patch has none
+	cmp #CHG_GLIDE
+	bcc .gd
+	lda glideK
+	bne .gd
+	lda #CHG_K
+	sta glideK
+.gd:
 	; ---- detune
 	ldy detLock
 	beq .ds

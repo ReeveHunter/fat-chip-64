@@ -35,7 +35,7 @@ vIdx:       .byte 0,0,0, 1,1,1, 2,2,2      ; SID voice / channel offset from the
 vBass:      .byte 0,0,0, 0,0,0, 0,1,1      ; GB wave and NES triangle: bass, octave down
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64  V0.26        RETURN: MENU ",0
+txtHeader:  .byte " FAT CHIP 64  V0.27        RETURN: MENU ",0
 txtBlank6:  .byte "       ",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -108,14 +108,15 @@ tS16:       .byte "TAP    ",0
 tS17:       .byte "BEAT   ",0
 tS18:       .byte "SOUND  ",0
 tS19:       .byte "NOTHING",0
-modeTxtLo:  .byte <tMPoly,<tMChord,<tMEx7,<tMEx9,<tMEx11,<tMEx13
-modeTxtHi:  .byte >tMPoly,>tMChord,>tMEx7,>tMEx9,>tMEx11,>tMEx13
+modeTxtLo:  .byte <tMPoly,<tMChord,<tMEx7,<tMEx9,<tMEx11,<tMEx13,<tMDrone
+modeTxtHi:  .byte >tMPoly,>tMChord,>tMEx7,>tMEx9,>tMEx11,>tMEx13,>tMDrone
 tMPoly:     .byte "POLY      ",0
 tMChord:    .byte "SMART CHRD",0
 tMEx7:      .byte "EXT 7TH   ",0
 tMEx9:      .byte "EXT 9TH   ",0
 tMEx11:     .byte "EXT 11TH  ",0
 tMEx13:     .byte "EXT 13TH  ",0
+tMDrone:    .byte "DRONE     ",0
 txtPoly:    .byte "POLY",0
 txtMono:    .byte "MONO",0
 txtFatBass: .byte "FAT BASS",0

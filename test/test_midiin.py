@@ -133,7 +133,7 @@ c.tap("z", ms=60)                           # SMART CHORD
 c.midi_in(0x90, 57, 64, ms=80)              # A3 in C major: A minor
 check("SMART CHORD: a MIDI note plays its chord", c.v("heldList", 3) == [57, 60, 64], c.v("heldList", 3))
 c.midi_in(0x80, 57, 0, ms=40)
-c.tap("z", ms=30); c.tap("z", ms=60)        # back to POLY
+c.tap("z", ms=30); c.tap("z", ms=30); c.tap("z", ms=60)        # back to POLY (past DRONE)
 c.press("k", ms=20)
 c.midi_in(0x90, 62, 64, ms=40)              # K + D: key of D
 c.midi_in(0x80, 62, 0, ms=20)

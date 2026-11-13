@@ -155,7 +155,8 @@ SMART_WINDOW equ 500           ; ms: SMART latch adds notes pressed within this
 MODE_POLY   equ 0
 MODE_CHORD  equ 1
 MODE_EXT    equ 2
-MODE_HARM   equ 3             ; v0.24: DH-100 HARMONY (root + a third)
+MODE_DRONE  equ 3             ; v0.27: open fifths that wander
+MODE_HARM   equ 4             ; v0.24: DH-100 HARMONY (root + a third)
 SND_FAT     equ 0
 SND_PADS    equ 1
 SND_RAW     equ 2
@@ -706,7 +707,39 @@ scKey       ds 1               ;   MATCH KEY: 1 ON
 mvDir       ds 1               ; the menu: 0 down a line, 1 up
 mvBack      ds 1               ;   1: step a value back
 mvCnt       ds 1
-tuneNow     ds 1               ; the tuning in use (scSound while the Synthcart is in use)
+tuneNow     ds 1
+; v0.27: fine tune, chord changes, drone, One Key Play
+fineTune    ds 1               ; PLAYING FINE TUNE: 0-100 (50 = 0 cents)
+tuneC       ds 1               ; the whole tuning in cents (signed, -100..+100)
+tuneN       ds 1               ;   in 1/64 semitones (the NES)
+gbTune      ds 1               ;   as the Game Boy's CC 103 value
+chgMode     ds 1               ; CHORD CHANGE: 0 AS MODE, 1 ATTACK, 2 GLIDE, 3 SPLIT, 4 WANDER
+wanderT     ds 1               ; WANDER TIME (wanderU)
+droneVc     ds 1               ; DRONE VOICING: 0 FIFTHS, 1 + 9TH, 2 SUS4
+sndGlideK   ds 1               ; the patch's own glide (glideK may add CHORD CHANGE's)
+vsGlide     ds 1               ; VoiceSet: glide this change (0: jump)
+vWaitOn     ds NUM_VOICES      ; WANDER: the voice waits to move
+vDue        ds NUM_VOICES      ;   until this time (32 ms units)
+unitNow     ds 1
+nbFrac      ds 1               ; NesBendRaw: 1/64 semitones on top (0-3)
+okpOn       ds 1               ; ONE KEY PLAY: 1 on
+okpSrc      ds 1               ;   0 PENTATONIC PAIRS, 1 CHORD NOTES
+okpMotion   ds 1               ;   0 DOWN, 1 MOSTLY DOWN, 2 PING PONG, 3 RANDOM WALK
+okpTurn     ds 1               ;   0 NEVER .. 3 A LOT
+okpDir      ds 1               ;   0 DOWN, 1 UP
+okpRing     ds 1               ;   0 CUTS, 1 RINGS ON
+okpPos      ds 1               ; where the phrase is
+okpGoing    ds 1               ; 0 going down, 1 up (PING PONG, RANDOM WALK)
+okpDown     ds 1               ; cursor keys held (bit 0 CRSR DOWN, bit 1 CRSR RIGHT)
+okpCount    ds 1               ; notes sounding (0-4)
+okpNotes    ds 4               ; [0, 1] this press, [2, 3] the last (RINGS ON)
+okpHit      ds 1               ; a press since the last voice update
+okpLen      ds 1               ; the phrase's length
+okpList     ds 16              ; the phrase's notes
+okpChord    ds 8               ; the chord (CHORD NOTES), from BuildHeld
+okpChordN   ds 1
+lastEff     ds 1
+numBuf      ds 16              ; the menu: a number to print               ; the tuning in use (scSound while the Synthcart is in use)
 dhAct       ds 1               ; the DH-100 portamento button's task while held
 brLvl       ds 1               ; breath / 8, last seen
 brVol       ds 1               ; the breath's jobs (BreathFlags)

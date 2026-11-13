@@ -6,6 +6,14 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.27:** FINE TUNE, chord changes that glide or wander, DRONE, One Key Play.
+- **FINE TUNE** (PLAYING): −50 … +50 cents, for tape loops. It moves every chip: the SID's note frequencies (the notes sounding move at once), the Game Boy's master tune, the NES's bends. It adds to the Synthcart's TUNE TO.
+- **Finer NES pitch:** Fat Chip now adds up the NES's pitch offsets (tuning, detune, vibrato, glide) in 1/64 semitone (about 1.6 cents) instead of 1/16, so the MidiNES's own fine bends get used: smoother vibrato and glides, and tuning within a few cents.
+- **CHORD CHANGE** (PLAYING) is how the voices move when the chord changes: **AS MODE** (DRONE wanders, the rest ATTACK), **ATTACK** (as before), **GLIDE** (every voice slides to its new note, from the last note it played, even if the patch has no glide), **SPLIT** (the SID and the bass glide, the Game Boy and NES pulses start again), **WANDER** (each voice moves at its own moment within **WANDER TIME**, 0.5–8 s, the bass late; some glide, some start again). The arp, MONO and One Key Play notes always move at once.
+- **DRONE** joins C= + Z (POLY → SMART CHORD → EXT → DRONE): the lowest key held is the root, and the voices play open fifths up from it (**DRONE VOICING**: FIFTHS, FIFTHS + 9TH, SUS4). A new key moves the drone, wandering by default. Latch it and play the root changes.
+- **ONE KEY PLAY** (on by default; its own page on the main menu): the **cursor keys** step through a phrase, your timing; alternate the two for fast runs. NOTES: **PENTATONIC PAIRS** (two notes of the key's pentatonic scale, one apart, like the SK-1; minor keys get the minor pentatonic) or **CHORD NOTES** (one note at a time of the chord you hold or latched, over two octaves). MOTION: DOWN, MOSTLY DOWN, **PING PONG**, RANDOM WALK; TURN: NEVER, A LITTLE, **SOME**, A LOT (how often it turns early); DIRECTION DOWN / UP; EACH PRESS **CUTS** the last step or lets it RING ON while you hold it. Its notes are never turned into chords.
+- Menu numbers (FINE TUNE, Synthcart TRIM) are a new kind of line, which saved about 1 KB.
+
 **v0.26:** the menu on the F keys, and a HELP page.
 - In the menu, **F1 / F3** move up / down a line and **F5 / F7** change the value back / forward (an effect: off / on; a page: opens it). The cursor keys still work. While the menu is open the F keys don't change octave, start the arp or open the visualizer; C= + F1 / F3 / F5 / F7 still turn the chips on and off and panic.
 - **HELP: THE KEYS** is the first line of the main menu: a page listing the keyboard shortcuts (plain, C=, RUN/STOP and the menu's). The play screen already shows RETURN: MENU top right.
@@ -218,6 +226,7 @@ lowest key (Q) starts at C3.
 | F1 / F3 | Octave up / down |
 | F5 | Arp on / off, in the type C= + A chose |
 | F7 | Visualizers |
+| CRSR DOWN / CRSR RIGHT | One Key Play (when it's on): the next step of the phrase |
 | RUN/STOP | Tapped: beat start / stop |
 | RETURN | The menu (SHIFT+RETURN backs out; F1 / F3 choose a line, F5 / F7 change it; HELP lists the keys) |
 | RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
@@ -229,7 +238,7 @@ lowest key (Q) starts at C3.
 |---|---|
 | A | Arp type: UNISON ↔ SPARKLE (doesn't start it; F5 and the ARP action use it) |
 | S / D / F | Arp pattern / speed / SPARKLE octave |
-| Z | POLY → SMART CHORD → EXT |
+| Z | POLY → SMART CHORD → EXT → DRONE |
 | X | Extensions 7TH → 9TH → 11TH → 13TH |
 | C | POLY ↔ MONO |
 | L | Latch style: SMART / HOLD / ADD |
@@ -339,6 +348,8 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
 | `src/menu.asm`, `tools/gen_menu.py` → `src/menutab.asm` | the menu (RETURN): its pages and lines, every patch setting's steps |
 | `src/patchedit.asm` | editing the live patch: settings, effects on / off, the dice, the envelope and Game Boy LFO kept in step |
+| `src/wander.asm` | CHORD CHANGE (glide, split, wander), DRONE, One Key Play |
+| `test/test_v027.py` | FINE TUNE, NES 1/64 semitones, DRONE, wander, GLIDE, One Key Play |
 | `src/devices.asm` | DEVICES: SHS-10 / DH-100 / Synthcart settings, the breath, Synthcart nudges and steps |
 | `test/test_v024.py` | the menu, PATCH pages, the dice, DEVICES, SHS-10 voice buttons, DH-100 breath and buttons, Synthcart tempo |
 | `src/viz.asm` | the visualizers (F7): BARS, GLITCH |
@@ -369,7 +380,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.25)
+## Not yet (v0.27)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.
