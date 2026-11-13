@@ -884,10 +884,8 @@ NesDuty:
 MidiNoteValue:
 	subroutine
 	ldx t0
-	ldy vBass,x
+	ldy vFat,x              ; (a bass voice playing Fat Bass)
 	beq .gb
-	ldy fatBass
-	beq .x
 .dn:
 	cmp #BASS_HI+1
 	bcc .up

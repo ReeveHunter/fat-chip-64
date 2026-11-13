@@ -189,6 +189,7 @@ InitState:
 	sta $C400,x
 	sta $C500,x
 	sta $C600,x
+	sta $C700,x             ; (v0.21: the variables reach into $C7xx)
 	inx
 	bne .ram
 	ldx #NUM_VOICES-1

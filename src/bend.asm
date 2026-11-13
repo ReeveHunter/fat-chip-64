@@ -534,7 +534,7 @@ GbBendVoice:
 	lda vOut,x
 	cmp #NO_NOTE
 	beq .go
-	jsr MidiNoteValue       ; (t0 = the voice)
+	lda vSent,x             ; (the note it sounds)
 	ldx t0
 	ldy #36                 ; pulses
 	pha

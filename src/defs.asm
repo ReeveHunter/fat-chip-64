@@ -624,3 +624,13 @@ sxBuf       ds 128             ; v0.20: a patch arriving over SysEx
 sxOn        ds 1               ; 1 = inside a SysEx
 sxPos       ds 1               ; data bytes so far
 sxCount     ds 1               ; patches received
+vFat        ds NUM_VOICES      ; v0.21: this bass voice plays Fat Bass now
+vDrum       ds NUM_VOICES      ; v0.21: held by the drums (none yet)
+allocFree   ds 1               ; voices spare after the notes and Fat Bass
+vSent       ds NUM_VOICES      ; v0.21: the note number each MIDI voice was sent
+mlNew       ds 1
+ramEnd      ds 0
+  if ramEnd > $C800
+    echo "RAM variables run past $C800: clear more in Start"
+    err
+  endif

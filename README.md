@@ -6,6 +6,13 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.21:** voice priority: Polyphony > Fat Bass > the patch's effects.
+- Every note you hold gets a voice first. Fat Bass then takes as many of the bass voices (Game Boy wave, NES triangle) as are spare, and REPEAT's echo voices come out of what's left; whatever is still spare stacks on the lowest notes as before.
+- Before, Fat Bass always took both bass voices, so with a chip off and a big chord a note could go silent (six notes with the SID off: now all six play, with one bass voice on Fat Bass). REPEAT now takes one echo voice when only one is spare, instead of none.
+- The Game Boy and NES always get the note-off for the note they were sent, even when a bass voice moves between Fat Bass and a chord note.
+- Voices can be marked as held by the drums; nothing uses that yet, it's ready for the beats overhaul (a sampled kit on the Game Boy wave channel, say).
+- **Fix:** the variables added in v0.20 and v0.21 sit past the memory Fat Chip clears at start, so they could start with leftover values (a patch arriving over SysEx right after power-on could be misread). Start now clears them too, and the build stops if they ever outgrow it.
+
 **v0.20:** patches over MIDI, for Chip Lab.
 - Fat Chip 64 takes a whole patch as a SysEx message on its MIDI in and plays it at once, notes held or not: its name shows as the sound. V or a program change goes back to the built-in patches.
 - The message is `F0 7D 46 43 01 <size>`, the patch's bytes as 4-bit halves, `F7`. Only a complete one with the right size is used; anything else is ignored.
@@ -308,7 +315,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.20)
+## Not yet (v0.21)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.

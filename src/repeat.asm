@@ -4,8 +4,9 @@
 ; REPEAT TIME, each one REPEAT LEVEL as loud as the one before (velocity:
 ; the Game Boy and MidiNES scale their level by it). The echoes play on one
 ; or two "echo voices" (Game Boy pulse 2 and NES pulse 2 first, then pulse
-; 1s), taken out of the chord while REPEAT is on - unless the notes held need
-; them (then held notes come first and the echoes wait). Each echo sounds for
+; 1s), taken out of the chord while REPEAT is on - from what's spare once
+; the notes and Fat Bass have theirs (v0.21: Polyphony > Fat Bass >
+; effects; with nothing spare the echoes wait). Each echo sounds for
 ; 3/4 of the time between echoes. The SID doesn't echo.
 ;
 ; REPEAT on / off: the sound's default, the menu's REPEAT (AS SOUND / ON /
@@ -35,24 +36,13 @@ RepeatSet:
 	bpl .c
 	jsr RepeatActive
 	beq .x
-	; enough voices for the notes and two echoes? (held notes first)
-	lda #0
-	sta t1
-	ldx #NUM_VOICES-1
+	lda allocFree           ; spare after the notes and Fat Bass: 1 or 2 echoes
+	beq .x
+	cmp #3
+	bcc .n
+	lda #2
 .n:
-	jsr VoiceEnabled
-	beq .nn
-	inc t1
-.nn:
-	dex
-	bpl .n
-	lda allocCount
-	clc
-	adc #2
-	cmp t1
-	beq .ok
-	bcs .x
-.ok:
+	sta t1
 	lda #0
 	sta t2                  ; echo voices taken
 	ldy #0
@@ -68,7 +58,7 @@ RepeatSet:
 	sta vEcho,x
 	inc t2
 	lda t2
-	cmp #2
+	cmp t1
 	beq .x
 .pn:
 	iny

@@ -90,8 +90,7 @@ NesSoftRelease:
 	lda vIdx,x
 	cmp #2
 	bne .no
-	lda vOut,x
-	jsr MidiNoteValue       ; the note actually sounding
+	lda vSent,x             ; the note actually sounding
 	cmp #TRI_FLOOR+1
 	bcc .no                 ; already at the bottom: just cut
 	sta triNote

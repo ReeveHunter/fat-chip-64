@@ -4,12 +4,18 @@
 ;   v0 SID 1   v1 GB pulse 1   v2 NES pulse 1
 ;   v3 SID 2   v4 GB pulse 2   v5 NES pulse 2
 ;   v6 SID 3   v7 GB wave*     v8 NES triangle*      (* bass voices)
-; Allocation, whenever the held notes change:
-;   1. bass voices play the lowest note, an octave down
-;   2. every other note gets one voice, lowest notes first
-;   3. leftover voices stack on the lowest two notes, alternating
+; Allocation, whenever the held notes change. Who comes first (v0.21):
+; Polyphony > Fat Bass > the patch's effects (REPEAT's echoes) > stacking.
+;   1. every note gets a voice (SPARKLE's arp pair is what you play, so it
+;      counts as notes and goes first)
+;   2. Fat Bass: as many bass voices as are spare play the lowest note,
+;      folded into the bass range (one note fewer needs a voice, so with
+;      Fat Bass the bottom of the chord is the bass)
+;   3. REPEAT's echo voices: one or two of what's still spare
+;   4. leftover voices stack on the lowest two notes, alternating
 ; So one note = a nine-voice unison across three chips, and in chords the
-; bottom of the chord is fattest. Disabled devices get no notes.
+; bottom of the chord is fattest. Disabled devices, and voices the drums
+; hold (vDrum), get no notes.
 
 ; ------------------------------------------------------------ SID
 SidInit:
@@ -355,7 +361,8 @@ Allocate:
 	sta allocCount
 .w0:
 	jsr ArpPairSet          ; SPARKLE: keep the arp pair out of the pad
-	jsr RepeatSet           ; REPEAT: the echo voices too
+	jsr FatBassVoices         ; how many bass voices Fat Bass can have (vFat)
+	jsr RepeatSet           ; REPEAT: echo voices from what's spare
 	; nothing wanted yet
 	ldx #NUM_VOICES-1
 	lda #NO_NOTE
@@ -373,13 +380,10 @@ Allocate:
 	sta covered,x
 	dex
 	bpl .c
-	; 1. bass voices -> lowest note
+	; 1. Fat Bass voices -> lowest note
 	ldx #0
 .p1:
-	jsr VoiceEnabled
-	beq .p1n
-	lda vBass,x
-	and fatBass             ; Fat Bass off: the bass voices join the rest
+	lda vFat,x
 	beq .p1n
 	lda allocList
 	sta vWant,x
@@ -394,8 +398,7 @@ Allocate:
 .p2:
 	jsr VoiceEnabled
 	beq .p2n
-	lda vBass,x
-	and fatBass
+	lda vFat,x              ; (busy with the bass)
 	bne .p2n
 	ldy #0
 .find:
@@ -446,6 +449,75 @@ Allocate:
 AllocDone:
 	jsr ArpPairNotes
 	jmp EchoKeep
+
+; Fat Bass: k = the bass voices it gets, as many as are spare once every
+; note has a voice: k = min(bass voices, E - N + 1) (E voices for N notes;
+; Fat Bass covers the lowest note, so it frees that note's voice). The
+; first k bass voices get vFat; allocFree = the voices still spare after
+; the notes and Fat Bass, for the effects.
+FatBassVoices:
+	subroutine
+	lda #0
+	sta t1                  ; E
+	sta t2                  ; bass voices
+	sta t3                  ; k
+	ldx #NUM_VOICES-1
+.c:
+	lda #0
+	sta vFat,x
+	jsr VoiceEnabled
+	beq .n
+	inc t1
+	lda vBass,x
+	beq .n
+	inc t2
+.n:
+	dex
+	bpl .c
+	lda t1
+	sec
+	sbc allocCount
+	bcs .some
+	lda #0                  ; more notes than voices
+	sta allocFree
+	rts
+.some:
+	sta allocFree           ; E - N (no Fat Bass)
+	lda fatBass
+	beq .x
+	lda allocCount
+	beq .x
+	lda allocFree
+	clc
+	adc #1
+	cmp t2
+	bcc .k
+	lda t2
+.k:
+	sta t3
+	beq .x
+	sec                     ; spare: E - N + 1 - k
+	lda allocFree
+	adc #0                  ; (+1)
+	sec
+	sbc t3
+	sta allocFree
+	ldx #0
+.m:
+	lda vBass,x
+	beq .mn
+	jsr VoiceEnabled
+	beq .mn
+	lda #1
+	sta vFat,x
+	dec t3
+	beq .x
+.mn:
+	inx
+	cpx #NUM_VOICES
+	bne .m
+.x:
+	rts
 
 ; SPARKLE's two arp voices: Game Boy pulses, else NES pulses, else SID 1+2.
 ; vSkip keeps them out of the pad.
@@ -535,6 +607,7 @@ ArpPairNotes:
 VoiceEnabled:
 	subroutine
 	lda vSkip,x
+	ora vDrum,x             ; (held by the drums: none yet)
 	bne .no
 	ldy vDev,x
 	lda devOn,y
@@ -854,7 +927,7 @@ MidiTo:
 	lda vOut,x
 	cmp #NO_NOTE
 	beq .on
-	jsr MidiNoteValue
+	lda vSent,x             ; the note the device got (Fat Bass may since differ)
 	sta mD1
 	lda t1
 	ora #$80
@@ -876,6 +949,7 @@ MidiTo:
 	lda mtTarget
 	jsr MidiNoteValue
 	sta mD1
+	sta vSent,x
 	lda t1
 	ora #$90
 	sta mS
@@ -937,11 +1011,14 @@ MidiLegato:
 	ldx t0
 	lda mtTarget
 	sta vOut,x
+	lda mlNew
+	sta vSent,x
 	rts
 .noteOn:
 	lda mtTarget
 	jsr MidiNoteValue
 	sta mD1
+	sta mlNew               ; (vSent gets it at the end: .noteOff needs the old)
 	lda t1
 	ora #$90
 	sta mS
@@ -950,8 +1027,7 @@ MidiLegato:
 	jmp DevPut
 .noteOff:
 	ldx t0
-	lda vOut,x
-	jsr MidiNoteValue
+	lda vSent,x
 	sta mD1
 	lda t1
 	ora #$80
