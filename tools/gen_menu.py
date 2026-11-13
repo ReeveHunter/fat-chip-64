@@ -278,6 +278,10 @@ def build_pages(params, effects):
     add_page("sc", "ATARI SYNTHCART", "TEMPO: , . NUDGE, SHIFT , . STEP", [
         enum("TEMPO", "scSync", ["OFF", "SYNC"], hook="SyncDerive"),
         enum("TRIM", "scTrim", [f"{v:+d}" if v else "0" for v in range(-8, 9)], hook="TempoHook"),
+        None,
+        enum("TUNE TO", "scSound", ["OFF", "SQUARE C -10", "LEAD F -10", "BASS C# -35", "PITFALL C# -30", "SAW C# +10"],
+             hook="SyncDerive"),
+        enum("MATCH KEY", "scKey", ["OFF", "ON"], hook="SyncDerive"),
     ], parent="main")
 
 

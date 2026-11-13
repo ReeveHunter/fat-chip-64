@@ -701,6 +701,9 @@ nudgeOn     ds 1               ; , . held with the Synthcart: the tempo before
 nudgeL      ds 1
 nudgeH      ds 1
 scIdx       ds 1               ; the Synthcart tempo chosen last
+scSound     ds 1               ; SYNTHCART TUNE TO: 0 OFF, 1 SQUARE .. 5 SAW
+scKey       ds 1               ;   MATCH KEY: 1 ON
+tuneNow     ds 1               ; the tuning in use (scSound while the Synthcart is in use)
 dhAct       ds 1               ; the DH-100 portamento button's task while held
 brLvl       ds 1               ; breath / 8, last seen
 brVol       ds 1               ; the breath's jobs (BreathFlags)

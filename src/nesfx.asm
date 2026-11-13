@@ -308,9 +308,14 @@ NesFxVal:
 	ror nfxL
 	dey
 	bne .g
+	ldy tuneNow             ; Synthcart TUNE TO: every channel
+	beq .tn
+	lda tune16,y
+	jsr .add
+.tn:
 	lda vIdx,x
 	cmp #2
-	beq .x                  ; the triangle: glide only
+	beq .x                  ; the triangle: glide only (and the tuning)
 	sta nfxK                ; pulse 0 / 1
 	; detune: (detNow + 4) / 8 sixteenths, pulse 1 down, pulse 2 up
 	lda detNow

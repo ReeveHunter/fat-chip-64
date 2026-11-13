@@ -798,6 +798,10 @@ VoiceSet:
 	sta ptr
 	lda sidFreqHi,x
 	sta ptr+1
+	lda tuneNow             ; (Synthcart TUNE TO)
+	beq .tuned
+	jsr SidTune
+.tuned:
 	; detune: SID 2 sharp, SID 3 flat by (high byte x det / 8); FAT's 8 is
 	; about 7 cents
 	cpy #0

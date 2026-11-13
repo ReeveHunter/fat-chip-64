@@ -60,7 +60,7 @@ def name(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.24", "V0.24" in c.screen_row(0), c.screen_row(0))
+check("header V0.25", "V0.25" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)
@@ -172,7 +172,8 @@ check("... the tone stays (SID wave, envelope)", all(x[:8] == p0[:8] for x in ro
 last = rolls[-2]
 c._raw_press("cbm", ms=8); c._raw_tap("/", ms=100); c._raw_release("cbm", ms=8)
 check("C= + /: back to the patch before the last roll", patch(c) == last)
-c.midi_in(0xC0, 0, ms=300)
+c.midi_in(0xC0, 1, ms=300)
+c.midi_in(0xC0, 0, ms=300)                   # (FAT afresh, no dice)
 
 # ---------------------------------------------------------------- the DH-100
 c.set("useShs", 0)
@@ -281,6 +282,63 @@ c.tap("return", ms=60); sel(c, "ATARI"); c.tap("return", ms=60); sel(c, "TRIM")
 c.tap("crsrright", ms=40); c.tap("crsrright", ms=60)
 check("TRIM +2: the beat a touch longer (2 x 1/1024)", "+2" in row_of(c, "TRIM") and b16(c) == 9600 + 2 * ((9600 >> 8) // 4),
       (row_of(c, "TRIM"), b16(c)))
+back(c, 2)
+
+# Synthcart tuning (the manual's table) and MATCH KEY
+def tune_ccs(c, t0):
+    return [b for t, st, a, b in c.midi() if t >= t0 and st & 0xF0 == 0xB0 and a == 103]
+
+
+def sid_f(c):
+    return c.raw[0xD400] | c.raw[0xD401] << 8
+
+
+def nes_bends(c, t0):
+    return [(st, a, b) for t, st, a, b in c.midi() if t >= t0 and st & 0xF0 == 0xE0]
+
+
+c.midi_in(0xC0, 1, ms=300)                   # (WHISTLE? no: voice 2 = FAT 2, RAW: no detune)
+c.tap("return", ms=60); sel(c, "ATARI"); c.tap("return", ms=60)
+r = rows(c)
+check("Synthcart page: TUNE TO SQUARE C -10, MATCH KEY ON (the defaults)", "SQUARE C -10" in row_of(c, "TUNE TO")
+      and "ON" in row_of(c, "MATCH KEY") and c.v("tuneNow") == 1 and c.v("keyRoot") == 0, r[2:8])
+back(c, 2)
+c.midi_in(0x90, 60, 100, ms=60)
+f_sq = sid_f(c)
+c.midi_in(0x80, 60, 0, ms=300)
+c.tap("return", ms=60); sel(c, "ATARI"); c.tap("return", ms=60); sel(c, "TUNE TO")
+t0 = c.cpu.processorCycles
+c.tap("crsrright", ms=40); c.tap("crsrright", ms=80)
+check("TUNE TO BASS C# -35: the Game Boy's master tune 19, the key's root C#", "BASS" in row_of(c, "TUNE TO")
+      and 19 in tune_ccs(c, t0) and c.v("keyRoot") == 1, (tune_ccs(c, t0), c.v("keyRoot")))
+back(c, 2)
+t0 = c.cpu.processorCycles
+c.midi_in(0x90, 60, 100, ms=80)
+f_bass = sid_f(c)
+bends = nes_bends(c, t0)
+c.midi_in(0x80, 60, 0, ms=300)
+c.set("tuneNow", 0)
+c.midi_in(0x90, 60, 100, ms=80)
+f_0 = sid_f(c)
+c.midi_in(0x80, 60, 0, ms=300)
+c.set("tuneNow", 3)
+check("... the SID 35 cents flat (SQUARE was 10)", 0.9785 < f_bass / f_0 < 0.9815 and 0.9935 < f_sq / f_0 < 0.9955,
+      (f_0, f_sq, f_bass))
+check("... the NES bent flat before its notes", any((b << 7 | a) < 8192 for st, a, b in bends), bends[:4])
+c.tap("return", ms=60); sel(c, "ATARI"); c.tap("return", ms=60); sel(c, "MATCH KEY")
+c.tap("crsrright", ms=40)
+sel(c, "TUNE TO")
+c._raw_press("lshift", ms=8); c._raw_tap("crsrright", ms=60); c._raw_release("lshift", ms=8)
+check("MATCH KEY OFF, TUNE TO LEAD F -10: tuned, the key left alone", "LEAD" in row_of(c, "TUNE TO") and c.v("tuneNow") == 2
+      and c.v("keyRoot") == 1, (c.v("tuneNow"), c.v("keyRoot")))
+sel(c, "MATCH KEY")
+c.tap("crsrright", ms=60)
+check("MATCH KEY ON again: F", c.v("keyRoot") == 5)
+back(c)
+sel(c, "DEVICES"); c.tap("return", ms=60); sel(c, "ATARI")
+t0 = c.cpu.processorCycles
+c.tap("crsrright", ms=80)
+check("Synthcart NOT USED: no tuning (master tune 64)", c.v("tuneNow") == 0 and 64 in tune_ccs(c, t0), tune_ccs(c, t0))
 back(c, 2)
 
 print(f"\n{fails} failure(s)")

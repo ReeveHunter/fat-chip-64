@@ -229,6 +229,9 @@ InitState:
 	sta useShs
 	lda #8                  ; Synthcart TRIM 0
 	sta scTrim
+	lda #1                  ; Synthcart: TUNE TO SQUARE, MATCH KEY ON (once in use)
+	sta scSound
+	sta scKey
 	lda #127                ; full breath until the DH-100 says otherwise
 	sta breath
 	lda #1                  ; BREATH FEEL NORMAL

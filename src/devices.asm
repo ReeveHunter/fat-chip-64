@@ -27,6 +27,10 @@
 ;   TEMPO           OFF / SYNC: tempos snap to Synthcart's ten; , . nudge
 ;                   about 3% while held, SHIFT + , . step through the ten
 ;   TRIM            -8..+8: about 0.1% a step, for clock drift
+;   TUNE TO         OFF / one of its five sounds: Fat Chip moves by that
+;                   sound's cents (the Synthcart manual's table: each Atari
+;                   sound plays its scales in its own key, a little off)
+;   MATCH KEY       ON / OFF: the key's root goes to that sound's key
 
 BREATH_HI   equ 64              ; a held action: on at this breath, off under BREATH_LO
 BREATH_LO   equ 40
@@ -67,6 +71,7 @@ SyncDerive:
 .d:
 	sta syncDrums
 	jsr BreathFlags
+	jsr ScTune              ; (Synthcart: tuning and key)
 	jsr ApplySettings       ; (DH-100 NOTES)
 	lda #1
 	sta reallocFlag
@@ -432,3 +437,81 @@ ScBeat:
 	lda t0
 	ldx t1
 	jmp SetBeat16
+
+; ------------------------------------------------------------ Synthcart tuning
+; tuneNow = the TUNE TO sound while the Synthcart is in use (else 0): the
+; Game Boy gets it as master tune (CC 103), the NES in its bends, the SID in
+; its note frequencies. MATCH KEY sets the key's root once, when it changes.
+ScTune:
+	subroutine
+	lda #0
+	ldx useSc
+	beq .t
+	lda scSound
+.t:
+	cmp tuneNow
+	beq .k
+	sta tuneNow
+	tax
+	lda tuneCC,x
+	tax
+	lda #GCC_TUNE
+	jsr GbGlobal
+	lda #1
+	sta nfxRun              ; (the NES bends again)
+.k:
+	ldx tuneNow
+	beq .x
+	lda scKey
+	beq .x
+	lda tuneRoot,x
+	cmp keyRoot
+	beq .x
+	sta keyRoot
+	jmp SettingChanged
+.x:
+	rts
+
+; the SID frequency in ptr, moved by tuneNow's cents (keeps Y)
+SidTune:
+	subroutine
+	ldx tuneNow
+	lda tuneKL,x
+	sta mulB
+	lda tuneKH,x
+	sta mulB+1
+	lda tuneUp,x
+	pha
+	lda ptr
+	sta mulA
+	lda ptr+1
+	sta mulA+1
+	jsr Mul16               ; f x k / 65536
+	pla
+	bne .up
+	lda ptr
+	sec
+	sbc mulR+2
+	sta ptr
+	lda ptr+1
+	sbc mulR+3
+	sta ptr+1
+	rts
+.up:
+	lda ptr
+	clc
+	adc mulR+2
+	sta ptr
+	lda ptr+1
+	adc mulR+3
+	sta ptr+1
+	rts
+
+;            OFF SQUARE LEAD BASS PITFALL SAW
+;                C -10  F -10 C# -35 C# -30 C# +10
+tuneRoot:   .byte 0,0,5,1,1,1
+tuneCC:     .byte 64,51,51,19,26,77         ; 64 + cents / 0.78
+tuneKL:     .byte <0,<378,<378,<1312,<1126,<380   ; |2^(c/1200) - 1| x 65536
+tuneKH:     .byte >0,>378,>378,>1312,>1126,>380
+tuneUp:     .byte 0,0,0,0,0,1
+tune16:     .byte 0,<-2,<-2,<-6,<-5,2       ; 1/16 semitones (the NES)

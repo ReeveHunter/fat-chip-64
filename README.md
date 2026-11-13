@@ -6,6 +6,11 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.25:** Fat Chip tunes itself to the Synthcart.
+- The SYNTHCART page has **TUNE TO**: OFF or one of Synthcart's five sounds, with the key and tuning its manual gives for the major / minor scales (SQUARE C −10 cents, LEAD F −10, BASS C# −35, PITFALL C# −30, SAW C# +10). While the Synthcart is in use, Fat Chip moves by those cents on every chip: the SID's note frequencies, the Game Boy's master tune (CC 103), and the NES's bends (to the nearest 1/16 semitone, about 6 cents).
+- **MATCH KEY** (ON by default): choosing a sound also sets the key's root to its key (the scale stays), so SMART CHORD, EXT and the arp land on notes the Atari plays. OFF leaves the key to you (K) for experimenting.
+- Defaults: TUNE TO SQUARE, MATCH KEY ON; nothing changes until DEVICES says the Synthcart is in use. Synthcart's ten tempos were already right (they agree with the manual's table to 0.01 BPM).
+
 **v0.24:** the new menu, and the devices on MIDI IN.
 - **The menu (RETURN)** starts with SID / GAME BOY / MIDINES on or off, then **PATCH**, **PLAYING**, **DEVICES**, and a page for each device that's in use. CRSR DOWN (SHIFT: up) chooses a line and skips the gaps, CRSR RIGHT (SHIFT: back) changes it, RETURN opens a page, SHIFT+RETURN backs out. Every other key keeps its job, so you can play while you change things.
 - **PATCH** edits the live patch: MONO, FAT BASS, then the effects. CRSR RIGHT turns an effect on or off; RETURN opens its settings (TONE and ENVELOPE are always on, so RIGHT opens them too). Each setting steps through ready-made values in the shared units (cents, Hz, ms, %), heard at once, and the name gets a `*`. The envelope's Game Boy and NES parts follow the SID's as you change it, and the Game Boy's one LFO goes to VIBRATO when it's on, else PWM.
@@ -16,7 +21,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
   - BREATH: VOLUME (blow harder, louder: the SID and NES; the Game Boy is left alone, it would click), VOLUME+FILTER, FILTER (the SID's cutoff opens with the breath; a patch without the filter gets the low-pass), or OFF.
   - BREATH FX1 / FX2: a depth that follows the breath (VIBRATO, WARBLE, DETUNE: the patch's, or the ADVANCED amount when it has none; or FILTER), or HELD: an action, on while you blow hard (with a little slack so it doesn't flutter).
   - BREATH FEEL: SOFT / NORMAL / HARD. NOTES: AS PLAYED (the C= + Z mode), CHORD (SMART CHORD) or HARMONY (a third above in the key). PORTAMENTO BUTTON: an action (GLIDE). TONE BUTTONS: the first five pick the banks, the sixth rolls the dice.
-- **Synthcart:** TEMPO SYNC snaps tempos to Synthcart's ten. Then **, .** nudge about 3% slower / faster while held (to line up with it by ear), and SHIFT + **, .** step through its ten tempos. TRIM (−8 … +8, about 0.1% a step) makes up for the two machines' clocks drifting apart. (Matching its tuning waits for data on its pitches.)
+- **Synthcart:** TEMPO SYNC snaps tempos to Synthcart's ten. Then **, .** nudge about 3% slower / faster while held (to line up with it by ear), and SHIFT + **, .** step through its ten tempos. TRIM (−8 … +8, about 0.1% a step) makes up for the two machines' clocks drifting apart.
 - The old SOUND switches and ADVANCED SOUND page are gone; their job is the PATCH pages now. The ADVANCED amounts stay as what held VIBRATO, GLIDE, TREMOLO and REPEAT use on a patch with none of its own.
 - `tools/gen_menu.py` builds the menu and every patch setting's steps from `patch/effects.json` (→ `src/menutab.asm`); `src/patchedit.asm` edits the patch, `src/devices.asm` handles the devices.
 
@@ -360,7 +365,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.24)
+## Not yet (v0.25)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.
