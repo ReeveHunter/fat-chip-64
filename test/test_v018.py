@@ -6,6 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 ROOT = os.path.join(os.path.dirname(__file__), "..")
@@ -19,10 +20,10 @@ def check(name, cond, info=""):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.21", "V0.21" in c.screen_row(0), c.screen_row(0))
+check("header V0.22", "V0.22" in c.screen_row(0), c.screen_row(0))
 size = c.sym["PATCH_SIZE"] if "PATCH_SIZE" in c.sym else None
 n = c.sym.get("NUM_SOUNDS", 19)
-names = [l.split('"')[1].rstrip() for l in open(os.path.join(ROOT, "src", "soundtab.asm")) if '.byte "' in l]
+names = [l.split('"')[1].rstrip() for l in open(os.path.join(ROOT, "src", "soundtab.asm")) if l.startswith('        .byte "')]
 check("19 built-in patches", len(names) == 19, len(names))
 check("at start: FAT in the live patch", c.v("livePatch", size) == c.v("patch0", size))
 

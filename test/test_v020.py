@@ -9,6 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 from sim import C64  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 import gen_patches  # noqa: E402
 
 fails = 0
@@ -24,7 +25,7 @@ P = gen_patches.PATCHES
 size = json.load(open(os.path.join(os.path.dirname(__file__), "..", "patch", "c64-layout.json")))["patchSize"]
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.21", "V0.21" in c.screen_row(0), c.screen_row(0))
+check("header V0.22", "V0.22" in c.screen_row(0), c.screen_row(0))
 
 # a built-in patch sent whole matches what choosing it loads
 for i in (1, 13):
@@ -65,8 +66,9 @@ c.midi_in(0x80, 60, 0, ms=100)
 c.midi_in(0xC0, 1, ms=200)
 check("then a program change loads PADS again", c.v("soundMode") == 1 and c.v("sndCut") == 0x10 and "PADS" in c.screen_row(2))
 c.midi_in(*good, ms=200)
-c.tap("v", ms=200)
-check("V after a received patch: FAT", c.v("soundMode") == 0 and "FAT" in c.screen_row(2), c.screen_row(2))
+c._raw_tap("z", ms=100)
+c._raw_tap("a", ms=200)
+check("v0.22: Z (and A) after a received patch: the bank's patch, FAT", c.v("soundMode") == 0 and "FAT" in c.screen_row(2), c.screen_row(2))
 c.midi_in(*good, ms=200)
 c.midi_in(0xC0, 1, ms=200)
 check("a program change to the number it had before still loads (PADS)", c.v("soundMode") == 1 and c.v("sndCut") == 0x10)

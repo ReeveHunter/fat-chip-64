@@ -7,6 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 GB = (10, 11, 12)
@@ -42,7 +43,7 @@ c = C64(channels=None)
 c.run_ms(400)
 c.set("detLock", 2)                          # (no detune on top: exact sums)
 c.set("detNow", 0)
-check("header V0.21", "V0.21" in c.screen_row(0), c.screen_row(0))
+check("header V0.22", "V0.22" in c.screen_row(0), c.screen_row(0))
 check("Game Boy bend range 24 sent at start (CC 85 = 127)",
       all((0xB0 | ch, 85, 127) in [(s, a, b) for _, s, a, b in c.midi()] for ch in GB))
 

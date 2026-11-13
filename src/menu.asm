@@ -405,7 +405,7 @@ mI5:     .byte "DETUNE ............. ",0
 mI6:     .byte "WARBLE (GAME BOY) .. ",0
 mI7:     .byte "REPEAT ............. ",0
 mI8:     .byte "ADVANCED SOUND ..... ",0
-mI9:     .byte "LATCH STYLE (=) .... ",0
+mI9:     .byte "LATCH STYLE (C= L) . ",0
 mV3:     .word mV3_0,mV3_1,mV3_2
 mV3_0:   .byte "SMART           ",0
 mV3_1:   .byte "HOLD            ",0

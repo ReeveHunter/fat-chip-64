@@ -9,6 +9,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from sim import C64, CYCLES_PER_MS  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 from teensy import forward  # noqa: E402
 
 GB_REPO = os.environ.get("FATCHIP_GB", os.path.join(HERE, "..", "..", "fat-chip-gb"))

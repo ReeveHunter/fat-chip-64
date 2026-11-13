@@ -47,6 +47,22 @@ SoundSet:
 	tax
 SoundSetX:
 	stx soundMode
+	lda #0
+	sta undoOk              ; (a roll on the old patch can't be undone now)
+	lda patchSlot,x         ; its bank and slot, for the A-G / Z-B keys
+	cmp #$FF
+	beq .nb
+	ldy #0
+.b5:
+	cmp #5
+	bcc .bs
+	sbc #5
+	iny
+	bne .b5
+.bs:
+	sta curSlot
+	sty curBank
+.nb:
 	jsr PatchLoad
 	jsr SoundVars
 	jsr SoundApply          ; ...and come back with the new one
@@ -1522,3 +1538,103 @@ SidVib:
 	sbc mt16+1
 	sta bT3
 	rts
+
+; ------------------------------------------------------------ the dice (v0.22)
+; SHIFT + /: each effect in DICE_FX (soundtab.asm) goes on with its chance and
+; gets one of DICE_ROWS ready-made settings, or off. The tone, envelope,
+; levels and octaves stay. The name gets a * at the end. C= + / undoes it.
+DiceRoll:
+	subroutine
+	ldy #127                ; the live patch as it was, for C= + /
+.u:
+	lda livePatch,y
+	sta diceUndo,y
+	dey
+	bpl .u
+	lda #1
+	sta undoOk
+	ldx #0
+.e:
+	stx dcE
+	jsr Random              ; on? (0-127 under the chance)
+	ldx dcE
+	cmp diceProb,x
+	bcs .off
+	jsr Random
+	and #DICE_ROWS-1
+	clc
+	adc #1
+	ldx dcE
+	ldy diceNF,x
+	bne .row
+.off:
+	ldx dcE
+	ldy diceOffNF,x
+	lda #0
+.row:
+	sty dcN                 ; fields to write
+	sta dcR                 ; row
+	lda diceFLo,x
+	sta .f+1
+	lda diceFHi,x
+	sta .f+2
+	lda diceRLo,x           ; row address = rows + row x fields
+	sta .v+1
+	lda diceRHi,x
+	sta .v+2
+	ldy dcR
+	beq .w
+.m:
+	lda .v+1
+	clc
+	adc diceNF,x
+	sta .v+1
+	bcc .mc
+	inc .v+2
+.mc:
+	dey
+	bne .m
+.w:
+	ldy #0
+.wl:
+	cpy dcN
+	beq .next
+.f:
+	ldx $FFFF,y             ; the field
+.v:
+	lda $FFFF,y             ; its value
+	sta livePatch,x
+	iny
+	bne .wl
+.next:
+	ldx dcE
+	inx
+	cpx #DICE_FX
+	bne .e
+	lda #"*"                ; rolled: a * at the end of the name
+	sta patchName+NAME_LEN-1
+	jmp PatchApply
+
+; C= + /: back to the patch before the last roll
+DiceUndo:
+	subroutine
+	lda undoOk
+	beq .x
+	lda #0
+	sta undoOk
+	ldy #127
+.c:
+	lda diceUndo,y
+	sta livePatch,y
+	dey
+	bpl .c
+	jmp PatchApply
+.x:
+	rts
+
+; the live patch changed (dice, undo, SysEx): heard at once
+PatchApply:
+	jsr SoundRelease
+	jsr SoundVars
+	jsr SoundApply
+	jmp Dirty

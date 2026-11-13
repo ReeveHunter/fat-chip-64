@@ -22,9 +22,9 @@ keymap:
 	; col 5: + P L - . : @ ,
 	.byte N_,16,K_L,18,K_PERIOD,K_COLON,17,K_COMMA
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
-	.byte 20,19,K_SEMI,22,K_RSHIFT,K_EQUALS,21,N_
+	.byte 20,19,K_SEMI,22,K_RSHIFT,K_EQUALS,21,K_SLASH
 	; col 7: 1 <- CTRL 2 SPACE C= Q RUN/STOP
-	.byte N_,N_,K_CTRL,1,K_SPACE,N_,0,N_
+	.byte N_,N_,K_CTRL,1,K_SPACE,K_CBM,0,K_STOP
 
 ; SID voice register offsets
 sidOfs:     .byte 0,7,14
@@ -35,8 +35,8 @@ vIdx:       .byte 0,0,0, 1,1,1, 2,2,2      ; SID voice / channel offset from the
 vBass:      .byte 0,0,0, 0,0,0, 0,1,1      ; GB wave and NES triangle: bass, octave down
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64  V0.21        RETURN: MENU ",0
-txtSoundLn: .byte "SOUND",0
+txtHeader:  .byte " FAT CHIP 64  V0.22        RETURN: MENU ",0
+txtBlank6:  .byte "       ",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
 txtNes:     .byte "MIDINES",0
@@ -44,13 +44,13 @@ txtOn:      .byte "ON   ",0
 txtOff:     .byte "OFF  ",0
 txtOverlap: .byte "!! GAME BOY AND NES CHANNELS OVERLAP !!",0
 txtBlank:   .byte "                                       ",0
-txtKeyLn:   .byte "KEY                        LATCH",0
+txtKeyLn:   .byte "KEY                         LATCH",0
 txtHeld:    .byte "HELD                                    ",0
 txtTempo:   .byte "TEMPO     BPM  BEAT",0
 txtSpaceLn: .byte "SPACE           OCTAVE",0
 txtMute:    .byte "MUTE",0
 txtNoMute:  .byte "    ",0
-txtHelp:    .byte "F1/F3 OCTAVE   F5 BEAT   F7 VISUALIZER",0
+txtHelp:    .byte "F1/F3 OCTAVE  F5 ARP  F7 VIZ  STOP BEAT",0
 txtLatchLo: .byte <txtLOff,<txtLSmart,<txtLHold,<txtLAdd,<txtLNext
 txtLatchHi: .byte >txtLOff,>txtLSmart,>txtLHold,>txtLAdd,>txtLNext
 txtLNext:   .byte "NEXT ",0
@@ -116,8 +116,6 @@ tMEx7:      .byte "EXT 7TH   ",0
 tMEx9:      .byte "EXT 9TH   ",0
 tMEx11:     .byte "EXT 11TH  ",0
 tMEx13:     .byte "EXT 13TH  ",0
-txtMajor:   .byte "MAJOR",0
-txtMinor:   .byte "MINOR",0
 txtPoly:    .byte "POLY",0
 txtMono:    .byte "MONO",0
 txtFatBass: .byte "FAT BASS",0
@@ -132,7 +130,27 @@ tO2:        .byte "+2 OCT",0
 txtNoIn:    .byte "         ",0
 
 ; scale steps, three octaves (Expand)
-scaleMajor: .byte 0,2,4,5,7,9,11,12,14,16,17,19,21,23,24,26,28,29,31,33,35
-scaleMinor: .byte 0,2,3,5,7,8,10,12,14,15,17,19,20,22,24,26,27,29,31,32,34
+; v0.22: the scales K picks (K, then a note or a shape: keys.asm). Each
+; table: 21 steps up from the root (the scale repeated an octave higher).
+scale0:     .byte 0,2,4,5,7,9,11,12,14,16,17,19,21,23,24,26,28,29,31,33,35   ; MAJOR
+scale1:     .byte 0,2,3,5,7,8,10,12,14,15,17,19,20,22,24,26,27,29,31,32,34   ; MINOR
+scale2:     .byte 0,2,3,5,7,9,10,12,14,15,17,19,21,22,24,26,27,29,31,33,34   ; DORIAN
+scale3:     .byte 0,1,3,5,7,8,10,12,13,15,17,19,20,22,24,25,27,29,31,32,34   ; PHRYGIAN
+scale4:     .byte 0,2,4,6,7,9,11,12,14,16,18,19,21,23,24,26,28,30,31,33,35   ; LYDIAN
+scale5:     .byte 0,2,4,5,7,9,10,12,14,16,17,19,21,22,24,26,28,29,31,33,34   ; MIXOLYDIAN
+scale6:     .byte 0,2,3,5,7,8,11,12,14,15,17,19,20,23,24,26,27,29,31,32,35   ; HARM MINOR
+scale7:     .byte 0,2,4,7,9,12,14,16,19,21,24,26,28,31,33,36,38,40,43,45,48   ; PENTATONIC
+scale8:     .byte 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40   ; WHOLE TONE
+scale9:     .byte 0,1,3,4,6,7,9,10,12,13,15,16,18,19,21,22,24,25,27,28,30   ; DIMINISHED
+scaleLo:    .byte <scale0,<scale1,<scale2,<scale3,<scale4,<scale5,<scale6,<scale7,<scale8,<scale9
+scaleHi:    .byte >scale0,>scale1,>scale2,>scale3,>scale4,>scale5,>scale6,>scale7,>scale8,>scale9
+scaleLen:   .byte 7,7,7,7,7,7,7,5,6,8
+scaleName:  .byte "MAJOR     ",0, "MINOR     ",0, "DORIAN    ",0, "PHRYGIAN  ",0, "LYDIAN    ",0, "MIXOLYDIAN",0, "HARM MINOR",0, "PENTATONIC",0, "WHOLE TONE",0, "DIMINISHED",0
+; K shapes: the intervals above the lowest note (bit n = n semitones) and their scale
+shapeLo:    .byte $01,$11,$91,$81,$09,$89,$89,$09,$03,$41,$51,$01,$11,$91,$09,$89,$A1,$85,$11,$49,$49
+shapeHi:    .byte $00,$00,$00,$00,$00,$00,$02,$02,$00,$00,$00,$04,$04,$04,$08,$08,$00,$00,$01,$00,$02
+shapeScale: .byte 0,0,0,0,1,1,2,2,3,4,4,5,5,5,6,6,7,7,8,9,9
+NUM_SHAPES  equ 21
+pcBit:      .byte $01,$02,$04,$08,$10,$20,$40,$80
 ; a note outside the key: major triad, b7, 9, 11, 13
 chromTones: .byte 0,4,7,10,14,17,21

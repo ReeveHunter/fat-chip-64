@@ -6,6 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64, CYCLES_PER_MS, OVERLAY  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 from teensy import forward  # noqa: E402
 
 fails = 0
@@ -208,7 +209,7 @@ def sounding():
 
 
 c.tap("=", ms=60)
-check("= : latch SMART", c.screen_row(9)[27:38] == "LATCH SMART", c.screen_row(9))
+check("= : latch SMART", c.screen_row(9)[28:39] == "LATCH SMART", c.screen_row(9))
 c.press("q", "t", ms=40); c.release("q", "t", ms=40)
 check("smart: chord keeps sounding after release", {48, 55} <= sounding())
 c.run_ms(200)
@@ -219,22 +220,13 @@ c.tap("e", ms=40)                           # after a pause: new chord
 check("smart: after a pause the next note starts a new chord", sounding() <= {52, 40} and 52 in sounding(), sounding())
 c.tap("w", ms=40)
 check("smart: ...and builds on quickly", {50, 52} <= sounding() and 57 not in sounding(), sounding())
-c.tap("=", ms=150)
-check("= with a chord latched: NEXT, the chord keeps sounding", {50, 52} <= sounding() and c.screen_row(9)[27:38] == "LATCH NEXT ",
-      c.screen_row(9))
-c.tap("u", ms=150)                          # within the window, but NEXT said new
-check("after NEXT the next note starts a new chord, latch back to SMART", sounding() <= {59, 35} and 59 in sounding()
-      and c.screen_row(9)[33:38] == "SMART", (sounding(), c.screen_row(9)))
-c.tap("=", ms=20); c.tap("=", ms=150)
+c.tap("=", ms=150)                          # (v0.22: L, latch off; no NEXT any more)
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
-check("= twice: NEXT, then latch off: silent", sounding() == set() and c.v("latch") == 0
-      and c.screen_row(9)[27:38] == "LATCH OFF  ", c.screen_row(9))
-c.tap("=", ms=40)
-c.tap("=", ms=150)
-check("= on, = with nothing sounding: straight off", c.v("latch") == 0 and c.v("newPending") == 0)
+check("L with a chord latched: latch off, silent", sounding() == set() and c.v("latch") == 0
+      and c.screen_row(9)[28:39] == "LATCH OFF  ", c.screen_row(9))
 # HOLD and ADD stay in the code for a menu later: set them directly
 c.set("latch", 2); c.set("screenDirty", 1); c.run_ms(150)
-check("HOLD (set directly)", c.screen_row(9)[33:38] == "HOLD ", c.screen_row(9))
+check("HOLD (set directly)", c.screen_row(9)[34:39] == "HOLD ", c.screen_row(9))
 c.press("q", "t", ms=60)
 c.release("q", "t", ms=60)
 check("hold: chord keeps sounding after release", {48, 55} <= sounding())
@@ -243,12 +235,12 @@ check("hold: a fresh press starts a new chord", sounding() <= {52, 40}, sounding
 c.press("q", ms=40); c.press("t", ms=40)
 c.release("q", "t", ms=40)
 check("hold: notes pressed together add up", {48, 55} <= sounding(), sounding())
-c.tap("=", ms=20); c.tap("=", ms=60)
+c.tap("=", ms=60)
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
-check("hold: = = latch off, silent", c.v("latch") == 0 and sounding() == set())
+check("hold: L latch off, silent", c.v("latch") == 0 and sounding() == set())
 
 c.set("latch", 3); c.set("screenDirty", 1); c.run_ms(150)
-check("ADD (set directly)", c.screen_row(9)[33:38] == "ADD  ", c.screen_row(9))
+check("ADD (set directly)", c.screen_row(9)[34:39] == "ADD  ", c.screen_row(9))
 for k in ("q", "e", "t"):                   # one at a time, slowly
     c.tap(k, ms=40)
     c.run_ms(700)
@@ -257,23 +249,19 @@ c.tap("e", ms=40)
 check("add: pressing a latched note takes it out", 52 not in sounding() and {48, 55} <= sounding(), sounding())
 c.tap("y", ms=40)
 check("add: and adding goes on", 57 in sounding())
-c.tap("=", ms=40)
-check("add: NEXT waits for the next note", {48, 55, 57} <= sounding())
-c.tap("q", ms=60)
-check("add: after NEXT, the next key starts again", sounding() <= {48, 36} and 48 in sounding(), sounding())
-c.tap("=", ms=20); c.tap("=", ms=60)
+c.tap("=", ms=60)
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
-check("add: = = clears", sounding() == set() and c.v("latch") == 0)
+check("add: L clears", sounding() == set() and c.v("latch") == 0)
 
 c.set("latch", 3)
 c.press("w", ms=60)                         # held while latch goes off
-c.tap("=", ms=30); c.tap("=", ms=60)        # NEXT, then off
+c.tap("=", ms=60)                           # off
 on = notes_on(c.midi())
 check("latch off: only the key still down sounds", set(on.values()) <= {50, 38} and on, on)
 c.release("w", ms=60)
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("latch off: release stops it", notes_on(c.midi()) == {})
-check("latch OFF on screen", c.screen_row(9)[33:38] == "OFF  ", c.screen_row(9))
+check("latch OFF on screen", c.screen_row(9)[34:39] == "OFF  ", c.screen_row(9))
 
 # ---------------------------------------------------------------- phantom keys
 c.press("q", "2", ms=40)

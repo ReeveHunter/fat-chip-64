@@ -7,6 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64, CYCLES_PER_MS  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 ROOT = os.path.join(os.path.dirname(__file__), "..")
@@ -26,7 +27,7 @@ check("soundtab.asm is up to date with patches.json", open(os.path.join(ROOT, "s
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.21", "V0.21" in c.screen_row(0), c.screen_row(0))
+check("header V0.22", "V0.22" in c.screen_row(0), c.screen_row(0))
 
 
 def gb_ccs(c, t0):

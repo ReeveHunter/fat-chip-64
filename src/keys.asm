@@ -131,6 +131,10 @@ IsModifier:
 	beq .y
 	cmp #K_CTRL
 	beq .y
+	cmp #K_CBM
+	beq .y
+	cmp #K_STOP
+	beq .y
 	cmp #K_K
 .y:
 	rts
@@ -178,24 +182,22 @@ Suspect:
 	clc
 	rts
 
-; A = key code
-;   overlay        notes (K held + a note: set the key)
-;   F1 / F3        octave up / down            F5  beat start / stop
-;   F7             visualizer on / off         RETURN  the menu
-;   SHIFT+F1/F3/F5 SID / Game Boy / MidiNES on-off     SHIFT+F7 panic
-;   CTRL+F3/F5     Game Boy / MidiNES: next channel block
-;   M              mute everything        SPACE  its action
-;   =              latch on (the menu's LATCH STYLE); latched with notes:
-;                  NEXT (the next key starts a new chord); again: off
-;   Z / X          notes mode (POLY, CHORD, EXT) / extensions (7 9 11 13)
-;   K + note / L   key root / major-minor
-;   V / SHIFT+V    next / previous sound           C  POLY / MONO
-;   G              next beat (and drum kit)
-;   A / S / D / F  arp mode / pattern / speed / SPARKLE octave
-;   ; / :          free arp speed            B  tap tempo
-;   , / .          SPACE mode (MUTES / BENDS)
-;   H / J          MIDI in octave down / up
-;   (the phantom-key filter stays off: GhostKey is kept for a setup menu)
+; A = key code (v0.22 layout)
+;   overlay        notes
+;   A S D F G      bank (FAT PADS LEADS BASS FX): switches at once, same slot
+;   Z X C V B      patch 1-5 in the bank
+;   L              latch on / off            K, then a note or a shape: key + scale
+;   =              tap tempo                 , / .  tempo -1 / +1 (SHIFT: 10)
+;   /              mute                      SHIFT+/  the dice
+;   ; / :          free arp speed            SPACE  its action
+;   F1 / F3        octave up / down          F5  arp on / off    F7  visualizer
+;   RETURN         the menu                  CTRL+F3/F5  GB / NES channel block
+;   C= +  A S D F  arp type / pattern / speed / SPARKLE octave
+;         Z X C    notes mode / extensions / POLY-MONO     L  latch style
+;         , .      SPACE's action            ; :  MIDI in octave down / up
+;         /        undo the dice             F1 F3 F5  SID / GB / NES on-off
+;         F7       panic                     (SHIFT + F keys too, as before)
+;   RUN/STOP       tapped: beat start / stop; held + A S D F G H: pick a beat
 KeyDown:
 	subroutine
 	cmp #24
@@ -203,9 +205,9 @@ KeyDown:
 	jmp .cmd
 NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24-31)
 	tax
-	lda kDown
+	lda kArm
 	beq .note
-	jmp SetKeyRoot
+	jmp KeyShapeNote        ; (K tapped: this note picks the key, it doesn't play)
 .note:
 	lda #1
 	sta physKey,x
@@ -285,6 +287,7 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 	beq KeyCmdPlay
 	jmp MenuKey
 KeyCmdPlay:                     ; (A = a command key: its usual job)
+	sta keyCodeNow
 	cmp #K_F1
 	bcc .table
 	cmp #K_F7+1
@@ -295,14 +298,15 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	tax                     ; 0-3 = F1 F3 F5 F7
 	lda ctrlDown
 	bne .ctrlF
-	lda shiftDown
+	lda cbmDown
+	ora shiftDown
 	bne .shiftF
 	cpx #2
 	bcc .oct
-	beq .beat
+	beq .arp
 	jmp VizKey              ; F7
-.beat:
-	jmp BeatRunKey          ; F5
+.arp:
+	jmp ArpToggle           ; F5
 .oct:
 	lda octBase             ; F1 up, F3 down: an octave (C0 .. C6 on the lowest key)
 	cpx #0
@@ -337,32 +341,214 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	bne .x
 	jmp NextNesChannel
 .table:
-	ldx #0
-.t:
-	ldy cmdCode,x
-	beq .x                  ; end of the table
-	cmp cmdCode,x
-	beq .go
-	inx
-	bne .t
+	ldx #0                  ; the keys every layer shares
+	jsr .find
+	bcc .go
+	ldx #CMD_CBM            ; C= held, or RUN/STOP held, or neither
+	ldy cbmDown
+	bne .layer
+	ldx #CMD_STOP
+	ldy stopDown
+	beq .plain
+	sty stopUsed            ; (RUN/STOP was a modifier: no start / stop)
+	bne .layer
+.plain:
+	ldx #CMD_PLAIN
+.layer:
+	jsr .find
+	bcs .x
 .go:
 	lda cmdLo,x
 	sta ptr
 	lda cmdHi,x
 	sta ptr+1
+	lda keyCodeNow
 	jmp (ptr)
 .x:
 	rts
+; X = where a list starts -> carry clear and X = the key's entry
+.find:
+	lda keyCodeNow
+.t:
+	ldy cmdCode,x
+	beq .no                 ; the end of this list
+	cmp cmdCode,x
+	beq .yes
+	inx
+	bne .t
+.no:
+	sec
+	rts
+.yes:
+	clc
+	rts
 
-; key -> handler (KeyDown)
-cmdCode:    .byte K_CTRL,K_M,K_SPACE,K_EQUALS,K_A,K_S,K_D,K_F,K_SEMI,K_COLON,K_B,K_Z,K_X,K_K,K_L,K_V,K_COMMA,K_PERIOD,K_H,K_J,K_C,K_G,K_RETURN,0
-cmdLo:      .byte <CtrlDown,<MuteKey,<MomentDown,<LatchKey,<ArpModeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ArpFaster,<ArpSlower,<TapTempo,<ModeKey,<SpiceKey,<KeyKeyDown,<ScaleKey,<SoundKey,<SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<MonoKey,<BeatKey,<ReturnKey
-cmdHi:      .byte >CtrlDown,>MuteKey,>MomentDown,>LatchKey,>ArpModeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ArpFaster,>ArpSlower,>TapTempo,>ModeKey,>SpiceKey,>KeyKeyDown,>ScaleKey,>SoundKey,>SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>MonoKey,>BeatKey,>ReturnKey
+; key -> handler: four lists, each ending in 0
+cmdCode:    .byte K_CTRL,K_CBM,K_STOP,K_SPACE,K_RETURN,K_K,0
+CMD_PLAIN   equ 7
+	.byte K_A,K_S,K_D,K_F,K_G,K_Z,K_X,K_C,K_V,K_B,K_L,K_EQUALS,K_COMMA,K_PERIOD,K_SLASH,K_SEMI,K_COLON,0
+CMD_CBM     equ CMD_PLAIN+18
+	.byte K_A,K_S,K_D,K_F,K_Z,K_X,K_C,K_L,K_COMMA,K_PERIOD,K_SEMI,K_COLON,K_SLASH,0
+CMD_STOP    equ CMD_CBM+14
+	.byte K_A,K_S,K_D,K_F,K_G,K_H,0
+cmdLo:      .byte <CtrlDown,<CbmDown,<StopDown,<MomentDown,<ReturnKey,<KeyArm,0
+	.byte <BankKey,<BankKey,<BankKey,<BankKey,<BankKey,<SlotKey,<SlotKey,<SlotKey,<SlotKey,<SlotKey
+	.byte <LatchKey,<TapTempo,<TempoDown,<TempoUp,<SlashKey,<ArpFaster,<ArpSlower,0
+	.byte <ArpTypeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ModeKey,<SpiceKey,<MonoKey,<LatchStyleKey
+	.byte <SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<DiceUndo,0
+	.byte <BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,0
+cmdHi:      .byte >CtrlDown,>CbmDown,>StopDown,>MomentDown,>ReturnKey,>KeyArm,0
+	.byte >BankKey,>BankKey,>BankKey,>BankKey,>BankKey,>SlotKey,>SlotKey,>SlotKey,>SlotKey,>SlotKey
+	.byte >LatchKey,>TapTempo,>TempoDown,>TempoUp,>SlashKey,>ArpFaster,>ArpSlower,0
+	.byte >ArpTypeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ModeKey,>SpiceKey,>MonoKey,>LatchStyleKey
+	.byte >SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>DiceUndo,0
+	.byte >BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,0
+
+; the bank keys (A S D F G) and slot keys (Z X C V B), in order; H = beat 6
+bankKeys:   .byte K_A,K_S,K_D,K_F,K_G,K_H
+slotKeys:   .byte K_Z,K_X,K_C,K_V,K_B
+
+; A = key code -> X = its place in bankKeys, else in slotKeys
+KeyIndex:
+	subroutine
+	ldx #5
+.l:
+	cmp bankKeys,x
+	beq .x
+	dex
+	bpl .l
+	ldx #4
+.s:
+	cmp slotKeys,x
+	beq .x
+	dex
+	bpl .s
+	ldx #0
+.x:
+	rts
 
 CtrlDown:
+	subroutine
 	lda #1
 	sta ctrlDown
 	rts
+
+CbmDown:
+	lda #1
+	sta cbmDown
+	rts
+
+StopDown:
+	lda #1
+	sta stopDown
+	lda #0
+	sta stopUsed
+	rts
+
+; RUN/STOP + A S D F G H: that beat (and its kit)
+BeatPickKey:
+	subroutine
+	jsr KeyIndex
+	cpx #NUM_BEATS
+	bcs .x
+	txa
+	jmp BeatChoose
+.x:
+	rts
+
+; A S D F G: that bank, the same slot (or its first patch if that's empty)
+BankKey:
+	subroutine
+	jsr KeyIndex
+	stx t3                  ; bank
+	txa
+	asl
+	asl
+	adc t3                  ; x 5
+	sta t2
+	adc curSlot
+	tay
+	ldx bankSlot,y
+	cpx #$FF
+	bne .go
+	ldy t2                  ; the slot's empty: the bank's first patch
+	ldx #0
+.f:
+	lda bankSlot,y
+	cmp #$FF
+	bne .first
+	iny
+	inx
+	cpx #5
+	bne .f
+	rts                     ; (an empty bank)
+.first:
+	stx curSlot
+	tax
+.go:
+	lda t3
+	sta curBank
+	jmp SoundSet
+
+; Z X C V B: that patch in the bank (an empty slot does nothing)
+SlotKey:
+	subroutine
+	jsr KeyIndex
+	stx t3
+	lda curBank
+	asl
+	asl
+	adc curBank
+	adc t3
+	tay
+	ldx bankSlot,y
+	cpx #$FF
+	beq .x
+	lda t3
+	sta curSlot
+	jmp SoundSet
+.x:
+	rts
+
+; , / . : tempo down / up 1 BPM (SHIFT: 10), 30-250
+TempoDown:
+	subroutine
+	lda #1
+	ldx shiftDown
+	beq .d
+	lda #10
+.d:
+	sta t3
+	lda bpm
+	sec
+	sbc t3
+	cmp #30
+	bcs .s
+	lda #30
+	bcc .s
+TempoUp:
+	lda #1
+	ldx shiftDown
+	beq .u
+	lda #10
+.u:
+	clc
+	adc bpm
+	bcs .top
+	cmp #250
+	bcc .s
+.top:
+	lda #250
+.s:
+	ldx #0
+	stx beatFresh           ; (a tempo of your own: a beat starting keeps it)
+	jmp SetBpm
+
+; / : mute; SHIFT + / : the dice
+SlashKey:
+	lda shiftDown
+	beq MuteKey
+	jmp DiceRoll
 
 ; RETURN: the menu (SHIFT+RETURN closes it again)
 ReturnKey:
@@ -399,15 +585,60 @@ GhostKey:
 	sta ghostFilter
 	jmp Dirty
 
-KeyKeyDown:
+; K tapped: the next note, or notes played together, set the key and scale
+; (when they're all let go: the lowest is the key, the shape the scale - see
+; shapeLo / shapeScale). They don't play. K again first: never mind.
+KeyArm:
+	subroutine
+	lda kArm
+	eor #1
+	sta kArm
+	lda #0
+	sta kCount
+	sta kMaskL
+	sta kMaskH
+	lda #$FF
+	sta kLow
+	jmp Dirty
+
+; note index X pressed while K is armed
+KeyShapeNote:
+	subroutine
 	lda #1
-	sta kDown
+	sta kNote,x
+	sta physKey,x           ; (so a MIDI note-off finds its slot)
+	inc kCount
+	jsr IdxNote
+	cmp kLow
+	bcs .m
+	sta kLow
+.m:
+	cmp #12
+	bcc .pc
+	sbc #12
+	bcs .m
+.pc:
+	cmp #8
+	bcs .hi
+	tay
+	lda pcBit,y
+	ora kMaskL
+	sta kMaskL
+	rts
+.hi:
+	sbc #8
+	tay
+	lda pcBit,y
+	ora kMaskH
+	sta kMaskH
 	rts
 
-; K held + note X: that note is the key's root
-SetKeyRoot:
+; the shape's last key let go: key = the lowest note, scale = the shape's
+KeyShapeDone:
 	subroutine
-	jsr IdxNote
+	lda #0
+	sta kArm
+	lda kLow
 .m:
 	cmp #12
 	bcc .r
@@ -415,12 +646,42 @@ SetKeyRoot:
 	bcs .m
 .r:
 	sta keyRoot
-	jmp SettingChanged
-
-ScaleKey:
-	lda keyMinor
-	eor #1
-	sta keyMinor
+	tax                     ; turn the pitch classes so the root is bit 0
+	beq .look
+.rot:
+	lsr kMaskH
+	ror kMaskL
+	bcc .rn
+	lda kMaskH
+	ora #$08
+	sta kMaskH
+.rn:
+	dex
+	bne .rot
+.look:
+	ldx #NUM_SHAPES-1
+.s:
+	lda kMaskL
+	cmp shapeLo,x
+	bne .sn
+	lda kMaskH
+	cmp shapeHi,x
+	beq .found
+.sn:
+	dex
+	bpl .s
+	lda kMaskL              ; not a shape we know: a minor third -> minor
+	and #$08
+	beq .maj
+	lda #1
+	bne .set
+.maj:
+	lda #0
+	beq .set
+.found:
+	lda shapeScale,x
+.set:
+	sta keyScale
 	jmp SettingChanged
 
 ModeKey:
@@ -477,41 +738,43 @@ ApplySettings:
 	sta effSpice
 	lda keyRoot
 	sta effRoot
-	lda keyMinor
-	sta effMinor
+	lda keyScale
+	sta effScale
 	rts
 
-; = : latch on, in the menu's LATCH STYLE (SMART / HOLD / ADD). Latched
-; with notes sounding: NEXT (the next key starts a new chord, the latch goes
-; on). = again before that (or latched with nothing sounding): latch off.
+; L: latch on (in the LATCH STYLE: SMART / HOLD / ADD) or off
 LatchKey:
 	subroutine
 	lda latch
-	bne .on
+	bne .off
 	ldx latchStyle          ; (0-2: SMART, HOLD, ADD)
 	inx
 	stx latch
 	lda #0
 	sta newPending
 	jmp Dirty
-.on:
-	lda newPending
-	bne .off                ; NEXT already: off
-	ldx #NIDX-1
-.c:
-	lda noteHeld,x
-	bne .next
-	dex
-	bpl .c
 .off:
 	lda #0
 	sta latch
 	sta newPending
 	jsr Dirty
 	jmp KeepPhysical        ; latch off: only keys still down keep sounding
-.next:
-	lda #1
-	sta newPending
+
+; C= + L: the next latch style (and the latch takes it at once if it's on)
+LatchStyleKey:
+	subroutine
+	ldx latchStyle
+	inx
+	cpx #3
+	bcc .s
+	ldx #0
+.s:
+	stx latchStyle
+	lda latch
+	beq .d
+	inx
+	stx latch
+.d:
 	jmp Dirty
 
 ; Only the keys still down keep sounding (the settings catch up)
@@ -549,6 +812,17 @@ KeyUp:
 	bcs .cmd
 NoteUp:                         ; A = note index
 	tax
+	lda kNote,x             ; part of a K shape: never played
+	beq .play
+	lda #0
+	sta kNote,x
+	sta physKey,x
+	dec kCount
+	bne .kw
+	jmp KeyShapeDone
+.kw:
+	rts
+.play:
 	lda #0
 	sta physKey,x
 	lda physCount
@@ -566,9 +840,27 @@ NoteUp:                         ; A = note index
 	rts
 .cmd:
 	cmp #K_CTRL
-	bne .s
+	bne .cb
 	lda #0
 	sta ctrlDown
+	rts
+.cb:
+	cmp #K_CBM
+	bne .st
+	lda #0
+	sta cbmDown
+	rts
+.st:
+	cmp #K_STOP
+	bne .s
+	lda #0
+	sta stopDown
+	lda stopUsed            ; tapped on its own: beat start / stop
+	bne .su
+	lda menuOn
+	bne .su
+	jmp BeatRunKey
+.su:
 	rts
 .s:
 	cmp #K_SPACE
@@ -583,11 +875,6 @@ NoteUp:                         ; A = note index
 .k0:
 	rts
 .k:
-	cmp #K_K
-	bne .sh
-	lda #0
-	sta kDown
-	rts
 .sh:
 	cmp #K_LSHIFT
 	beq .shift

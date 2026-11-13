@@ -6,6 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 from teensy import forward  # noqa: E402
 
 fails = 0

@@ -8,6 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64, CYCLES_PER_MS  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 GB = (10, 11, 12)
@@ -54,12 +55,12 @@ c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.21") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.22") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])
-check("key, mode, latch on one line", rows[9].rstrip() == "KEY C  MAJOR  POLY         LATCH OFF", rows[9])
-check("help line: F keys", rows[24].startswith("F1/F3 OCTAVE   F5 BEAT   F7 VISUALIZER"), rows[24])
+check("key, mode, latch on one line", rows[9].rstrip() == "KEY C  MAJOR      POLY      LATCH OFF", rows[9])
+check("help line: F keys", rows[24].startswith("F1/F3 OCTAVE  F5 ARP  F7 VIZ  STOP BEAT"), rows[24])
 check("no N / NEW CHORD left on the screen", not any("NEW" in r or "N NEXT" in r for r in rows), rows)
 c.press("q", "e", "t", ms=200)
 check("SID line: its three notes", c.screen_row(4)[16:].split() == ["G", "3", "E", "3", "C", "3"]

@@ -426,7 +426,7 @@ sxHead:     .byte $7D, $46, $43, $01, PATCH_SIZE   ; (the size: a Chip Lab with 
 ; the received patch -> the live patch, heard at once
 PatchReceived:
 	subroutine
-	jsr SoundRelease
+	jsr SoundRelease        ; (the held notes end with the old patch)
 	ldy #PATCH_SIZE-1
 .c:
 	lda sxBuf,y
@@ -436,6 +436,6 @@ PatchReceived:
 	lda #$FF                ; no built-in patch: V and program changes load one again
 	sta soundMode
 	inc sxCount
-	jsr SoundVars
-	jsr SoundApply
-	jmp Dirty
+	lda #0
+	sta undoOk
+	jmp PatchApply

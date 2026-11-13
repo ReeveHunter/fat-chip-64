@@ -7,6 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64, CYCLES_PER_MS  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 GB = (10, 11, 12)          # pulse 1, pulse 2, wave
@@ -39,7 +40,7 @@ def since(c, t0):
 def sound(c, name):
     """V (or SHIFT+V) until the sound line shows `name`."""
     for _ in range(20):
-        if c.screen_row(2)[6:22].rstrip() == name:
+        if c.screen_row(2)[8:24].rstrip() == name:
             return True
         c.tap("v", ms=300)
     return False
@@ -76,8 +77,8 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
-check("screen: header V0.21, sound line, tempo / beat line",
-      "V0.21" in c.screen_row(0) and c.screen_row(2).startswith("SOUND FAT ") and "POLY" in c.screen_row(2)
+check("screen: header V0.22, sound line, tempo / beat line",
+      "V0.22" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
       and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  BEAT ELECTRO  STOP",
       (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles
@@ -105,14 +106,14 @@ check("all off", notes_on(c.midi()) == {}, notes_on(c.midi()))
 names = []
 for i in range(19):
     c.run_ms(300)
-    names.append(c.screen_row(2)[6:22].rstrip())
+    names.append(c.screen_row(2)[8:24].rstrip())
     c.tap("v", ms=20)
 c.run_ms(200)
-check("V steps through 19 sounds and back to FAT", len(set(names)) == 19 and c.screen_row(2).startswith("SOUND FAT "), names)
+check("V steps through 19 sounds and back to FAT", len(set(names)) == 19 and c.screen_row(2).startswith("FAT   1 FAT "), names)
 c.press("lshift", ms=12)
 c.tap("v", ms=150)
 c.release("lshift", ms=12)
-check("SHIFT+V: previous (TREMOLO GATE)", c.screen_row(2)[6:22].rstrip() == "TREMOLO GATE", c.screen_row(2))
+check("SHIFT+V: previous (TREMOLO GATE)", c.screen_row(2)[8:24].rstrip() == "TREMOLO GATE", c.screen_row(2))
 
 # whistle: mono default, no Fat Bass: the wave and triangle play the tune
 check("WHISTLE", sound(c, "WHISTLE"), c.screen_row(2))
@@ -177,7 +178,7 @@ c.release("q", ms=300)
 check("ELECTRIC PIANO", sound(c, "ELECTRIC PIANO"), c.screen_row(2))
 c.press("q", ms=1200)
 t0 = c.cpu.processorCycles
-c.run_ms(400)
+c.run_ms(800)                                # (a slow, shallow tremolo at sustain 6: give it time)
 lv = [b for _, s, a, b in since(c, t0) if s == 0xB0 and a == 7]
 check("ELECTRIC PIANO: NES tremolo keeps moving CC7 while held", len(set(lv)) >= 2 and len(lv) >= 4, lv)
 c.release("q", ms=1500)

@@ -225,7 +225,7 @@ Expand:
 .rel:
 	sta exV                 ; semitones above the key root
 	jsr ScalePtr
-	ldy #6
+	ldy exLenM1
 .d:
 	lda (ptr),y
 	cmp exV
@@ -243,7 +243,9 @@ Expand:
 	beq .nextRaw
 	ldy exD
 	bmi .chrom
-	; diatonic: scale[d + 2k] - scale[d]
+	; in the scale: scale[d + 2k] - scale[d] (stacked "thirds": every
+	; other note of the scale, so whole tone gives augmented chords,
+	; diminished diminished ones)
 	lda exK
 	asl
 	clc
@@ -269,20 +271,17 @@ Expand:
 .x:
 	rts
 
-; ptr = the key's scale table (21 steps, three octaves)
+; ptr = the key's scale table (21 steps), exLenM1 = its notes - 1
 ScalePtr:
-	lda effMinor
-	beq .maj
-	lda #<scaleMinor
+	ldx effScale
+	lda scaleLo,x
 	sta ptr
-	lda #>scaleMinor
+	lda scaleHi,x
 	sta ptr+1
-	rts
-.maj:
-	lda #<scaleMajor
-	sta ptr
-	lda #>scaleMajor
-	sta ptr+1
+	lda scaleLen,x
+	sec
+	sbc #1
+	sta exLenM1
 	rts
 
 ; Insert note A into heldList (ascending, no repeats, at most 8: the

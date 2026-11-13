@@ -50,7 +50,7 @@ def load_symbols(path):
 
 
 class C64:
-    def __init__(self, prg=None, sym=None, seed=1, channels=(0, 5), acia_irq=True):
+    def __init__(self, prg=None, sym=None, seed=1, channels=(0, 5), acia_irq=True, legacy_keys=None):
         """channels = (Game Boy base, NES base) set before the devices start:
         (0, 5) is v0.11's layout (Game Boy on 1-5, MidiNES on 6-10), which the
         older tests assume; None keeps the program's own (11-15, 1-5)."""
@@ -228,15 +228,101 @@ class C64:
             self.step()
 
     # ------------------------------------------------------------ input
-    def press(self, *keys, ms=12):
+    # legacy_keys: the tests written before v0.22's keyboard (V next sound,
+    # = latch, Z X C A S D F , . H J with no C=, M mute, G next beat, B tap,
+    # F5 beat, L major/minor, K held + a note) press the v0.22 keys that do
+    # the same job. New tests leave it off.
+    legacy_keys = False
+    LEG_CBM = {"z": "z", "x": "x", "c": "c", "s": "s", "d": "d", "f": "f", ",": ",", ".": ".", "h": ";", "j": ":"}
+    LEG_SAME = {"m": "/", "=": "l", "b": "=", "f5": "runstop"}
+    OVERLAY = ["q", "2", "w", "3", "e", "r", "5", "t", "6", "y", "7", "u"]
+
+    def _legacy_action(self, k):
+        """keys whose old job is a sequence now (done on press)"""
+        if k == "v":
+            n = self.v("soundMode")
+            n = (n - 1) % 19 if "lshift" in self.pressed or "rshift" in self.pressed else (n + 1) % 19
+            self.midi_in(0xC0, n, ms=2)
+        elif k == "a":                           # OFF -> UNISON -> SPARKLE -> OFF
+            m = self.v("arpMode")
+            if m == 0:
+                if self.v("arpLast") != 1:
+                    self._mod("a")
+                self._raw_tap("f5")
+            elif m == 1:
+                self._mod("a")
+            else:
+                self._raw_tap("f5")              # (SPARKLE stays the type, as A left it)
+        elif k == "g":
+            nxt = (self.v("beatSel") + 1) % 6
+            self._raw_press("runstop")
+            self._raw_tap("asdfgh"[nxt])
+            self._raw_release("runstop")
+        elif k == "l":                           # major <-> minor
+            root = self.OVERLAY[self.v("keyRoot")]
+            shape = [root] if self.v("keyScale") else [root, self.OVERLAY[(self.v("keyRoot") + 3) % 12]]
+            self._raw_tap("k")
+            self._raw_press(*shape)
+            self._raw_release(*shape)
+        elif k == "k":                           # K held + a note: the next note sets the root
+            self._raw_tap("k")
+
+    def _raw_press(self, *keys, ms=12):
         for k in keys:
             self.pressed.add(k)
         self.run_ms(ms)
 
-    def release(self, *keys, ms=12):
+    def _raw_release(self, *keys, ms=12):
         for k in keys:
             self.pressed.discard(k)
         self.run_ms(ms)
+
+    def _raw_tap(self, *keys, ms=12):
+        self._raw_press(*keys, ms=ms)
+        self._raw_release(*keys, ms=ms)
+
+    def _mod(self, k):
+        self._raw_press("cbm", ms=6)
+        self._raw_tap(k)
+        self._raw_release("cbm", ms=6)
+
+    def press(self, *keys, ms=12):
+        if not self.legacy_keys:
+            return self._raw_press(*keys, ms=ms)
+        plain = []
+        for k in keys:
+            if k in self.LEG_CBM:
+                self._raw_press("cbm", ms=4)
+                self.pressed.add(self.LEG_CBM[k])
+            elif k == "f5" and self.pressed & {"ctrl", "lshift", "rshift"}:
+                plain.append(k)                  # (CTRL / SHIFT + F5 kept their jobs)
+            elif k in self.LEG_SAME:
+                plain.append(self.LEG_SAME[k])
+            elif k in ("v", "a", "g", "l", "k"):
+                self._legacy_action(k)
+            else:
+                plain.append(k)
+        self._raw_press(*plain, ms=ms)
+
+    def release(self, *keys, ms=12):
+        if not self.legacy_keys:
+            return self._raw_release(*keys, ms=ms)
+        plain, cbm = [], False
+        for k in keys:
+            if k in self.LEG_CBM:
+                self.pressed.discard(self.LEG_CBM[k])
+                cbm = True
+            elif k == "f5" and "runstop" not in self.pressed:
+                plain.append(k)
+            elif k in self.LEG_SAME:
+                plain.append(self.LEG_SAME[k])
+            elif k in ("v", "a", "g", "l", "k"):
+                pass
+            else:
+                plain.append(k)
+        if cbm:
+            self.pressed.discard("cbm")
+        self._raw_release(*plain, ms=ms)
 
     def tap(self, *keys, ms=12):
         self.press(*keys, ms=ms)

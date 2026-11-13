@@ -22,7 +22,9 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 NAME_LEN = 16                      # the name as the screen shows it
 
 DEF = json.load(open(os.path.join(ROOT, "patch", "effects.json")))
-PATCHES = json.load(open(os.path.join(ROOT, "patch", "patches.json")))["patches"]
+_PJ = json.load(open(os.path.join(ROOT, "patch", "patches.json")))
+PATCHES = _PJ["patches"]
+BANKS = _PJ.get("banks", [])
 EFFECTS = {e["id"]: e for e in DEF["effects"]}
 SID_ATK = DEF["lists"]["sidAttackMs"]
 SID_DR = DEF["lists"]["sidDecayReleaseMs"]
@@ -235,6 +237,7 @@ def build():
         out.append(f";  {i:2d} {p['name']}")
     out.append(f"NUM_SOUNDS  equ {len(PATCHES)}")
     out.append(f"PATCH_SIZE  equ {size}")
+    out.append(f"NAME_LEN    equ {NAME_LEN}")
     out.append("  if PATCH_SIZE > 128\n    err\n  endif")
     out.append("; the live patch's fields")
     for k, name in enumerate(names):
@@ -246,6 +249,7 @@ def build():
         assert len(p["name"]) <= NAME_LEN, p["name"]
         out.append(f"patch{i}:" + " " * (4 - len(str(i))) + ".byte " + ",".join(f"${rows[i][n] & 255:02X}" for n in names))
         out.append(f'        .byte "{p["name"]:{NAME_LEN}s}",0')
+    out += banks_asm() + dice_asm(names)
     open(os.path.join(ROOT, "src", "soundtab.asm"), "w").write("\n".join(out) + "\n")
     # for Chip Lab: the live patch's layout and the bytes of each built-in patch
     lay = {"format": "fat-chip-64-layout", "doc": "Fat Chip 64's live patch: these fields in this order, then the name "
@@ -271,6 +275,90 @@ def patch_bytes(p):
 def sysex(p):
     b = patch_bytes(p)
     return [0xF0] + SYSEX_HEAD + [len(b)] + [x for v in b for x in (v >> 4, v & 15)] + [0xF7]
+
+
+def banks_asm():
+    """The A S D F G banks and their Z X C V B slots: bankSlot = patch number
+    or $FF (empty); patchSlot = each patch's bank * 5 + slot, or $FF."""
+    idx = {p["name"]: i for i, p in enumerate(PATCHES)}
+    assert len(BANKS) == 5 and all(len(b["slots"]) == 5 for b in BANKS)
+    slots = [idx[n] if n else 255 for b in BANKS for n in b["slots"]]
+    back = [255] * len(PATCHES)
+    for k, v in enumerate(slots):
+        if v != 255:
+            back[v] = k
+    return ["; the banks (A S D F G) and slots (Z X C V B)",
+            "bankName:   .byte " + ",".join(f'"{b["name"]:5s}"' for b in BANKS),
+            "bankSlot:   .byte " + ",".join(f"${v:02X}" for v in slots),
+            "patchSlot:  .byte " + ",".join(f"${v:02X}" for v in back)]
+
+
+# The dice (SHIFT + /) on Fat Chip 64. It can't run gen_patches' maths, so
+# for each effect it rolls, the build makes DICE_ROWS ready-made settings
+# from the effect's dice ranges, worked out here exactly as a patch would be.
+# Row 0 is the effect off. The C64 turns each effect on with its randOn
+# chance and picks a row. Envelope, tone and levels aren't rolled.
+DICE_FX = ["detune", "glide", "warble", "filter", "pwm", "tremolo", "vibrato"]
+DICE_ROWS = 8
+GB_LFO = ["gbLDest", "gbLShape", "gbLRate", "gbLDepth", "gbLDelay"]
+
+
+def dice_asm(names):
+    import random
+    rnd = random.Random(64)
+    base = {"name": "X", "fx": {}}
+    b0 = fields(base)
+    out = ["; the dice: per effect, its fields (live patch offsets), how many of them",
+           "; the off row writes, its chance (of 128) and DICE_ROWS + 1 rows (0 = off)",
+           f"DICE_FX     equ {len(DICE_FX)}", f"DICE_ROWS   equ {DICE_ROWS}"]
+    ptrs = []
+    for eid in DICE_FX:
+        e = EFFECTS[eid]
+        rows = []
+        for _ in range(DICE_ROWS):
+            vals = {}
+            for q in e["params"]:
+                if q["id"] == "drift":
+                    continue
+                if "rand" not in q:
+                    if q["type"] == "enum" and q["id"] in ("time", "shape", "pattern"):
+                        vals[q["id"]] = rnd.randrange(len(q["values"]))
+                    continue
+                lo, hi = q["rand"]
+                if q["type"] == "hz":
+                    vals[q["id"]] = round(math.exp(rnd.uniform(math.log(lo), math.log(hi))), 2)
+                elif q["type"] == "ms" and "values" in q:
+                    vals[q["id"]] = rnd.choice([v for v in q["values"] if lo <= v <= hi])
+                elif q.get("blend") == "log" and lo > 0:
+                    vals[q["id"]] = int(round(math.exp(rnd.uniform(math.log(lo), math.log(hi)))))
+                else:
+                    vals[q["id"]] = rnd.randint(lo, hi)
+            if eid == "filter":
+                vals["envAmount"] = max(0, vals.get("envAmount", 0))
+            rows.append(fields({"name": "X", "fx": {eid: vals}}))
+        touched = [n for n in names if any(r[n] != b0[n] for r in rows)]
+        if eid == "pwm":
+            touched = [n for n in touched if n not in GB_LFO] + GB_LFO     # (pwm moves the GB LFO when vibrato doesn't)
+        if eid == "vibrato":
+            touched = [n for n in touched if n not in GB_LFO] + GB_LFO
+            off_n = len(touched) - len(GB_LFO)                              # off: leave the LFO to PWM
+        else:
+            off_n = len(touched)
+        prob = round(e.get("randOn", 0.3) * 128)
+        lab = "dice_" + eid
+        out.append(f"{lab}F:  .byte " + ",".join(str(names.index(n)) for n in touched))
+        out.append(f"{lab}R:  .byte " + ",".join(f"${b0[n] & 255:02X}" for n in touched) + "   ; off")
+        for r in rows:
+            out.append(f"        .byte " + ",".join(f"${r[n] & 255:02X}" for n in touched))
+        ptrs.append((lab, len(touched), off_n, prob))
+    out.append("diceNF:     .byte " + ",".join(str(n) for _, n, _, _ in ptrs))
+    out.append("diceOffNF:  .byte " + ",".join(str(o) for _, _, o, _ in ptrs))
+    out.append("diceProb:   .byte " + ",".join(str(pr) for _, _, _, pr in ptrs))
+    out.append("diceFLo:    .byte " + ",".join(f"<{l}F" for l, *_ in ptrs))
+    out.append("diceFHi:    .byte " + ",".join(f">{l}F" for l, *_ in ptrs))
+    out.append("diceRLo:    .byte " + ",".join(f"<{l}R" for l, *_ in ptrs))
+    out.append("diceRHi:    .byte " + ",".join(f">{l}R" for l, *_ in ptrs))
+    return out
 
 
 def read_old(path):

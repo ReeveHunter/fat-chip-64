@@ -6,6 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 
@@ -32,8 +33,8 @@ def chord(*keys, ms=80):
     return h
 
 
-check("key line: key C MAJOR, POLY; sound line: FAT", c.screen_row(9).startswith("KEY C  MAJOR  POLY")
-      and c.screen_row(2).startswith("SOUND FAT "), (c.screen_row(9), c.screen_row(2)))
+check("key line: key C MAJOR, POLY; sound line: FAT", c.screen_row(9).startswith("KEY C  MAJOR      POLY")
+      and c.screen_row(2).startswith("FAT   1 FAT "), (c.screen_row(9), c.screen_row(2)))
 check("POLY: one key, one note", chord("w") == [50])
 
 c.tap("z", ms=60)
@@ -64,7 +65,7 @@ check("in G: F# -> F# diminished", chord("5") == [54, 57, 60])
 check("in G: F (outside) -> F major", chord("r") == [53, 57, 60])
 check("K + note doesn't play the note", c.v("heldCount") == 0)
 c.tap("l", ms=60)
-check("L: G MINOR", c.v("keyMinor") == 1 and "MINOR" in c.screen_row(9), c.screen_row(9))
+check("L: G MINOR", c.v("keyScale") == 1 and "MINOR" in c.screen_row(9), c.screen_row(9))
 check("in G minor: G -> G minor", chord("t") == [55, 58, 62])
 check("in G minor: D -> D minor (natural minor)", chord("w") == [50, 53, 57])
 c.tap("l", ms=30)
@@ -103,7 +104,7 @@ c.tap("=", ms=30)                           # latch SMART
 c.press("q", "t", ms=60); c.release("q", "t", ms=60)
 check("latched in POLY: C G", held() == [48, 55], held())
 c.tap("z", ms=80)                           # -> SMART CHORD
-check("mode change while latched: the chord stays as it was", held() == [48, 55] and c.screen_row(9)[27:37] == "LATCH NEXT",
+check("mode change while latched: the chord stays as it was", held() == [48, 55] and c.screen_row(9)[28:38] == "LATCH NEXT",
       (held(), c.screen_row(9)))
 check("...but the screen shows the new mode", "SMART CHRD" in c.screen_row(9))
 c.tap("w", ms=80)                           # next press: new chord, new mode (even though quick)
@@ -145,7 +146,7 @@ c.tap("a", ms=40)                           # arp off
 # ---------------------------------------------------------------- PADS sound
 t0 = c.cpu.processorCycles
 c.tap("v", ms=150)
-check("V: PADS on screen", c.screen_row(2).startswith("SOUND PADS "), c.screen_row(2))
+check("V: PADS on screen", c.screen_row(2).startswith("PADS  1 PADS "), c.screen_row(2))
 check("PADS: SID slow attack, long release, pulse wave", c.raw[0xD405] == 0xA0 and c.raw[0xD406] == 0xFB
       and c.sid(0)[1] & 0xF0 == 0x40, (hex(c.raw[0xD405]), hex(c.raw[0xD406])))
 check("PADS: SID low-pass filter on all voices", c.raw[0xD417] == 0x77 and c.raw[0xD418] == 0x1F, hex(c.raw[0xD418]))
@@ -169,7 +170,7 @@ check("muted in PADS: volume 0, filter mode kept", c.raw[0xD418] == 0x10, hex(c.
 c.tap("m", ms=60)
 t0 = c.cpu.processorCycles
 c.tap("v", ms=150)
-check("V again: RAW on screen", c.screen_row(2).startswith("SOUND RAW "), c.screen_row(2))
+check("V again: RAW on screen", c.screen_row(2).startswith("FAT   2 RAW "), c.screen_row(2))
 regs = [(c.raw[0xD405 + 7 * v], c.raw[0xD406 + 7 * v], c.raw[0xD403 + 7 * v], c.sid(v)[1] & 0xF0) for v in range(3)]
 check("RAW: SID pulse, instant attack, full sustain, instant release, widths 50/25/12.5%",
       regs == [(0x00, 0xF0, 8, 0x40), (0x00, 0xF0, 4, 0x40), (0x00, 0xF0, 2, 0x40)], regs)

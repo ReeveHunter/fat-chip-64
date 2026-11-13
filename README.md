@@ -6,6 +6,14 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.22:** the keyboard, redone (the tables under Playing).
+- **Patches in banks:** A S D F G pick a bank (FAT, PADS, LEADS, BASS, FX) and switch at once; Z X C V B pick patch 1–5 in it. 19 of the 25 slots are filled; Chip Lab favourites fill the rest. V's step-through is gone (the NEXT SOUND action still steps).
+- **C= is the "how you play" layer** (arp type and settings, notes mode, extensions, MONO, latch style, SPACE's action, MIDI-in octave, undo the dice, chips on / off, panic) and **RUN/STOP the beats** (tap: start / stop; held + A–H: pick a beat).
+- **L** is just latch on / off (NEXT is gone); **=** taps the tempo; **, .** change it by 1 BPM (SHIFT: 10); **/** mutes; **F5** turns the arp on and off in the type you chose with C= + A.
+- **K, then a note or a shape** sets key and scale: ten scales, from major and minor to the modes, pentatonic, whole tone and diminished. SMART CHORD and EXT stack "thirds" in whichever scale (whole tone gives augmented chords).
+- **The dice (SHIFT + /)** roll the patch's effects; C= + / undoes the last roll. Locks come with the effect menus.
+- C= and RUN/STOP count as modifiers like SHIFT, so pressing one together with its key in the same instant still works.
+
 **v0.21:** voice priority: Polyphony > Fat Bass > the patch's effects.
 - Every note you hold gets a voice first. Fat Bass then takes as many of the bass voices (Game Boy wave, NES triangle) as are spare, and REPEAT's echo voices come out of what's left; whatever is still spare stacks on the lowest notes as before.
 - Before, Fat Bass always took both bass voices, so with a chip off and a big chord a note could go silent (six notes with the SID off: now all six play, with one bass voice on Fat Bass). REPEAT now takes one echo voice when only one is spare, instead of none.
@@ -165,54 +173,70 @@ message queues froze for another 33 s, filled up and dropped messages
 The Incredible Musical Keyboard overlay plays two octaves (C to A#); the
 lowest key (Q) starts at C3.
 
+**Plain keys (v0.22)**
+
 | Key | Does |
 |---|---|
 | Overlay keys | Play notes (through the notes mode) |
-| F1 / F3 | Octave up / down (Q from C0 to C6; held notes move with it) |
-| F5 | Beat start / stop |
-| F7 | Visualizers: BARS → GLITCH → the play screen |
+| A S D F G | Bank: FAT, PADS, LEADS, BASS, FX. Switches at once, keeping the slot (an empty slot: the bank's first patch) |
+| Z X C V B | Patch 1–5 in the bank (an empty slot does nothing). The sound line shows bank, slot and patch: `PADS  3 BREATHING PAD` |
+| L | Latch on / off (in the LATCH STYLE) |
+| K, then a note or a shape | Key and scale, when you let go (the notes don't play): one note or a major triad = major; root + minor third / minor triad = minor; minor triad + 6th = dorian; root + flat 2nd = phrygian; root + sharp 4th = lydian; root + flat 7th = mixolydian; minor triad + major 7th = harmonic minor; root + 4th + 5th = pentatonic; augmented triad = whole tone; diminished triad = diminished. K again first: never mind. SMART CHORD and EXT build in the scale |
+| = | Tap tempo |
+| , / . (< >) | Tempo −1 / +1 BPM; with SHIFT −10 / +10 |
+| / | Mute everything (border red) |
+| SHIFT + / (?) | The dice: the effects (detune, glide, warble, filter, PWM, tremolo, vibrato) roll, each on with its chance; tone, envelope and levels stay. The name gets a * |
+| ; / : | FREE arp speed faster / slower |
+| SPACE | Its action while held |
+| F1 / F3 | Octave up / down |
+| F5 | Arp on / off, in the type C= + A chose |
+| F7 | Visualizers |
+| RUN/STOP | Tapped: beat start / stop |
 | RETURN | The menu (SHIFT+RETURN backs out) |
-| **Notes mode** | |
-| Z | POLY (smart stacking) → SMART CHORD (each key plays its chord in the key) → EXT (the chord plus 7th, 9th, 11th or 13th) |
-| X | Extensions: 7TH → 9TH → 11TH → 13TH |
-| K + a note | Set the key (hold K, press the key's root; the note doesn't play) |
-| L | Major / minor (natural minor) |
-| **Sound** | |
-| V / SHIFT+V | Next / previous sound (19: FAT, PADS, RAW, the Chip Lab demos, REPEAT LEAD and ECHO PLUCK). Each sets POLY / MONO and Fat Bass |
-| C | POLY ↔ MONO (legato, last key pressed) |
-| | PADS: SID swells through a sweeping low-pass filter with pulse-width wobble, Game Boy slow attack and release with pulse 2 gliding, NES pulses swell and fade (software envelope via CC7), NES triangle just stops. RAW: the classic raw chip sound, FAT's stacking with everything square and instant: SID pulses at 50 / 25 / 12.5%, Game Boy pulses 50 / 25% and the wave channel as a third pulse, NES pulses 50 / 25%, no warble, no filter |
-| **Drums** | |
-| G | Next beat demo (and the drum kit the keytar uses): ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK, 6/8; sets its tempo (menu BEAT TEMPO DEFAULT) |
-| (MIDI in ch 16) | The keytar's rhythm plays the MidiNES drums |
-| **Latch** | |
-| = | Latch on, in the menu's LATCH STYLE. Latched with notes sounding: NEXT (the next key starts a new chord); = again: latch off. Styles: SMART (default: notes pressed within half a second of the last, or while another key is down, build the chord; after a pause the next note starts a new one), HOLD (a fresh press after letting go of everything starts a new chord) or ADD (every press adds a note; pressing a latched note takes it out) |
-| **Arp** | |
-| A | OFF → UNISON (all nine voices step together) → SPARKLE (two voices arpeggiate over the chord as a pad) |
-| S | Pattern: UP, DOWN, UPDOWN, RANDOM, PLAYED (the order you pressed or built the chord) |
-| D | Speed: FREE (default, 30 ms), 1/4, 1/8, 1/8T, 1/16, 1/32 of the tempo |
-| ; / : | FREE speed faster / slower (10–1000 ms per step); either one also picks FREE |
-| F | SPARKLE arp octave: +0, +1 (default), +2 |
-| B | Tap tempo (average of the last four taps; a gap over 2 s starts over). Sent to the Game Boy (CC 107/108) |
-| **Sound control** | |
-| M | Mute everything: SID volume 0, Game Boy and NES note-offs (their release tails ring out). Border goes red. Notes come back on unmute |
-| , / . (< >) | What SPACE does: steps through the actions (default BEND DOWN; also in the menu). Shown on the SPACE line |
-| SPACE | Its action while held (see Actions in v0.13): BEND DOWN by default — everything bends down BEND RANGE (2 semitones) over about 1 s, back over 0.5 s |
 | RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
-| **Setup-ish (for now)** | |
-| SHIFT + F1 / F3 / F5 | SID / Game Boy / NES on or off. Off = silent |
-| SHIFT + F7 | Panic: every voice off, latch off, devices set up again |
-| CTRL + F3 / F5 | Game Boy / NES to the next block of channels (1–5, 2–6 … 12–16) |
-| **MIDI in** | |
-| H / J | Incoming MIDI notes an octave down / up (−4 to +4). A held note keeps its pitch until its note-off |
+| CTRL + F3 / F5 | Game Boy / NES to the next block of channels |
+
+**C= held: how you play**
+
+| C= + | Does |
+|---|---|
+| A | Arp type: UNISON ↔ SPARKLE (doesn't start it; F5 and the ARP action use it) |
+| S / D / F | Arp pattern / speed / SPARKLE octave |
+| Z | POLY → SMART CHORD → EXT |
+| X | Extensions 7TH → 9TH → 11TH → 13TH |
+| C | POLY ↔ MONO |
+| L | Latch style: SMART / HOLD / ADD |
+| , / . | What SPACE does |
+| ; / : | Incoming MIDI notes an octave down / up (−4 to +4) |
+| / | Undo the last dice roll |
+| F1 / F3 / F5 | SID / Game Boy / NES on or off (SHIFT + F1/F3/F5 too) |
+| F7 | Panic (SHIFT + F7 too) |
+
+**RUN/STOP held: beats** (more after the beats overhaul)
+
+| RUN/STOP + | Does |
+|---|---|
+| A S D F G H | Pick a beat: ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK, 6/8 (and its drum kit) |
+
+**Banks**
+
+| | Z | X | C | V | B |
+|---|---|---|---|---|---|
+| A: FAT | FAT | RAW | COMBO ORGAN | | |
+| S: PADS | PADS | WARM SID PAD | BREATHING PAD | DUTY SHIMMER PAD | TREMOLO GATE |
+| D: LEADS | DUTY LEAD | WHISTLE | SCREAMER | REPEAT LEAD | |
+| F: BASS | GLIDE BASS | WAVE BASS | | | |
+| G: FX | ECHO PLUCK | ELECTRIC PIANO | VIBRAPHONE | WARBLE PAD | SEASICK CHORUS |
+
+The banks are in `patch/patches.json`. Program changes 0–18 still pick the patches by number.
 
 **Smart stacking:** nine voices (3 SID, Game Boy pulse 1, pulse 2, wave, NES
 pulse 1, pulse 2, triangle). The Game Boy wave and NES triangle play the
-lowest held note folded into E1–E2 (Fat Bass; when the sound has it off they
-join the rest); every other note gets a voice, lowest
-first; leftover voices stack on the lowest two notes. One note = a nine-voice
-unison across three chips. The screen shows which voice plays what. The two
-Game Boy pulses are detuned about ±5 cents with a little warble, the SID
-voices ±7 cents.
+lowest held note folded into E1–E2 (Fat Bass, when the patch has it and
+there are voices to spare: every note gets a voice first); leftover voices
+stack on the lowest two notes. One note = a nine-voice unison across three
+chips. The screen shows which voice plays what. In FAT the voices are
+detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 
 ## How it works
 
@@ -315,7 +339,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.21)
+## Not yet (v0.22)
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.

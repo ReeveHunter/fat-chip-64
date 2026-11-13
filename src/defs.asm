@@ -105,6 +105,9 @@ K_SEMI      equ $9E           ; ; arp faster (the rightmost)
 K_COMMA     equ $9F           ; , (<) SPACE mode back
 K_PERIOD    equ $A0           ; . (>) SPACE mode on
 K_C         equ $A1           ; C: POLY / MONO
+K_CBM       equ $A2           ; v0.22: C= (a modifier: how you play)
+K_STOP      equ $A3           ; v0.22: RUN/STOP (tap: beat; held: beat keys)
+K_SLASH     equ $A4           ; v0.22: / mute, SHIFT+/ dice
 GCC_CHANNELS equ 113          ; Fat Chip GB v0.08: 64 + n moves its voices to channels n+1..n+5 (any channel)
 GB_BASE_DEFAULT equ 10        ; Game Boy on channels 11-15
 NES_BASE_DEFAULT equ 0        ; MidiNES on channels 1-5 (its power-on default)
@@ -287,13 +290,12 @@ vArpHit     ds NUM_VOICES
 allocList   ds 8
 allocCount  ds 1
 ; v0.06
-kDown       ds 1               ; K held: notes set the key
 newPending  ds 1               ; latch NEXT (=): the next note starts a new chord
 lastPress   ds 2
 moment      ds 1               ; SPACE held
 muteNow     ds 1               ; mute (M) xor momentary (SPACE)
 keyRoot     ds 1               ; 0-11, C = 0
-keyMinor    ds 1
+keyScale    ds 1               ; v0.22: 0 major .. 9 diminished (scaleLen)
 playMode    ds 1               ; 0 poly, 1 smart chord, 2 extensions
 spice       ds 1               ; extensions: 0 = 7th, 1 = 9th, 2 = 11th, 3 = 13th
 soundMode   ds 1               ; 0 FAT, 1 PADS, 2 RAW
@@ -305,7 +307,7 @@ chordTmp    ds 8
 effMode     ds 1               ; settings the chord builder uses (a latched
 effSpice    ds 1               ;  chord keeps the old ones until the next note)
 effRoot     ds 1
-effMinor    ds 1
+effScale    ds 1
 exCount     ds 1               ; Expand / InsertNote
 exTones     ds 1
 exI         ds 1
@@ -629,8 +631,26 @@ vDrum       ds NUM_VOICES      ; v0.21: held by the drums (none yet)
 allocFree   ds 1               ; voices spare after the notes and Fat Bass
 vSent       ds NUM_VOICES      ; v0.21: the note number each MIDI voice was sent
 mlNew       ds 1
+cbmDown     ds 1               ; v0.22: C= held
+stopDown    ds 1               ; v0.22: RUN/STOP held
+stopUsed    ds 1               ;   ... and used with another key (no beat start/stop)
+keyCodeNow  ds 1               ; the command key being handled
+kArm        ds 1               ; v0.22: K tapped: the next notes pick key and scale
+kCount      ds 1               ;   notes still down in that shape
+kLow        ds 1               ;   its lowest note
+kMaskL      ds 1               ;   its pitch classes (bit = C .. B)
+kMaskH      ds 1
+kNote       ds NIDX            ;   1 = this key is part of the shape (not played)
+exLenM1     ds 1               ; the scale's length - 1 (Expand)
+curBank     ds 1               ; v0.22: the bank (A S D F G) and slot (Z X C V B) chosen
+curSlot     ds 1
+dcE         ds 1               ; DiceRoll: effect, fields, row
+dcN         ds 1
+dcR         ds 1
+undoOk      ds 1               ; v0.22: a dice roll can be undone (C= + /)
+diceUndo    ds 128             ;   the live patch before the roll
 ramEnd      ds 0
-  if ramEnd > $C800
-    echo "RAM variables run past $C800: clear more in Start"
+  if ramEnd > $C900
+    echo "RAM variables run past $C900: clear more in Start"
     err
   endif

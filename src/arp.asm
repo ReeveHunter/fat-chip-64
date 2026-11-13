@@ -313,6 +313,44 @@ ArpModeApply:
 	sta screenDirty
 	rts
 
+; F5: the arp on (in the type C= + A chose) or off
+ArpToggle:
+	subroutine
+	lda arpMode
+	beq .on
+	lda #0
+	beq .s
+.on:
+	lda arpLast
+	bne .s
+	lda #ARP_UNISON
+.s:
+	sta arpMode
+	lda #0
+	sta arpTemp
+	jmp ArpModeApply
+
+; C= + A: the arp type, UNISON <-> SPARKLE (doesn't start it; F5 and the ARP
+; action use it). While it runs, it changes at once.
+ArpTypeKey:
+	subroutine
+	lda arpLast
+	cmp #ARP_UNISON
+	beq .sp
+	lda #ARP_UNISON
+	bne .s
+.sp:
+	lda #ARP_SPARKLE
+.s:
+	sta arpLast
+	lda arpMode
+	beq .x
+	lda arpLast
+	sta arpMode
+	jmp ArpModeApply
+.x:
+	jmp Dirty
+
 ArpPatKey:
 	subroutine
 	ldx arpPat

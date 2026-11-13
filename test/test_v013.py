@@ -8,6 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64, CYCLES_PER_MS  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 GB = (10, 11, 12)
@@ -110,7 +111,7 @@ check("ADVANCED SOUND defaults", [rows[r][23:].rstrip() for r in range(4, 16)] =
       "6 HZ", "SMOOTH", "FAT", "MEDIUM", "1/8 DOTTED", "3", "70 PERCENT"], [rows[r][23:].rstrip() for r in range(4, 16)])
 c.press("lshift", ms=10); c.tap("return", ms=60); c.tap("return", ms=60); c.release("lshift", ms=250)
 check("SHIFT+RETURN twice: back to play, the screen redrawn", c.v("menuOn") == 0 and "FAT CHIP 64" in c.screen_row(0)
-      and c.screen_row(2).startswith("SOUND FAT") and c.screen_row(24).startswith("F1/F3"), (c.screen_row(0), c.screen_row(2)))
+      and c.screen_row(2).startswith("FAT   1 FAT") and c.screen_row(24).startswith("F1/F3"), (c.screen_row(0), c.screen_row(2)))
 
 # ---------------------------------------------------------------- keytar clock: tempo
 c.run_ms(100)
@@ -334,7 +335,7 @@ c.set("spaceAct", 1)
 # ---------------------------------------------------------------- REPEAT
 def sound_to(name):
     for _ in range(25):
-        if c.screen_row(2)[6:22].rstrip() == name:
+        if c.screen_row(2)[8:24].rstrip() == name:
             return True
         c.tap("v", ms=250)
     return False

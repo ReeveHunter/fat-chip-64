@@ -6,6 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sim import C64  # noqa: E402
+C64.legacy_keys = True                       # (the keys before v0.22: sim.py translates)
 
 fails = 0
 
@@ -125,7 +126,7 @@ check("SMART latch: a MIDI chord keeps sounding after release", {60, 64, 67} <= 
 c.run_ms(700)
 c.midi_in(0x90, 62, 64, ms=40); c.midi_in(0x80, 62, 0, ms=60)
 check("SMART latch: after a pause the next MIDI note starts a new chord", 62 in sounding(c) and 60 not in sounding(c), sounding(c))
-c.tap("=", ms=20); c.tap("=", ms=60)       # NEXT, then OFF
+c.tap("=", ms=60)                           # latch off
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("latch off", c.v("latch") == 0 and sounding(c) == set())
 c.tap("z", ms=60)                           # SMART CHORD

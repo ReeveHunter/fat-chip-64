@@ -141,7 +141,7 @@ ScreenStatic:
 	PRINT 0, 0, txtHeader
 	lda #0
 	sta t2
-	PRINT 2, 0, txtSoundLn
+
 	PRINT 4, 0, txtSid
 	PRINT 5, 0, txtGb
 	PRINT 6, 0, txtNes
@@ -222,11 +222,54 @@ ScrSound:
 	subroutine
 	lda #0
 	sta t2
+	lda #<txtBlank6         ; the bank and slot (v0.22): FAT  1, LEADS 4
+	sta ptr
+	lda #>txtBlank6
+	sta ptr+1
+	ldx #0
+	ldy #2
+	jsr PrintAt
+	ldx soundMode
+	cpx #NUM_SOUNDS
+	bcs .nob                ; (a patch from Chip Lab: no bank)
+	lda patchSlot,x
+	cmp #$FF
+	beq .nob
+	ldy #0
+.b5:
+	cmp #5
+	bcc .bs
+	sbc #5
+	iny
+	bne .b5
+.bs:
+	sta t3                  ; slot
+	tya
+	asl
+	asl
+	sty t0
+	adc t0                  ; bank x 5: its name
+	sta t0
+	ldx #0
+.bn:
+	ldy t0
+	lda bankName,y
+	jsr PutChar             ; (uses Y)
+	inc t0
+	inx
+	cpx #5
+	bne .bn
+	lda t3
+	clc
+	adc #"1"
+	ldx #6
+	jsr PutChar
+.nob:
 	lda #<patchName
 	sta ptr
 	lda #>patchName
 	sta ptr+1
-	ldx #6
+	ldx #8
 	ldy #2
 	jsr PrintAt
 	lda #<txtPoly
@@ -238,7 +281,7 @@ ScrSound:
 .pm:
 	sta ptr
 	sty ptr+1
-	ldx #24
+	ldx #25
 	ldy #2
 	jsr PrintAt
 	lda #<txtNoBass
@@ -424,18 +467,34 @@ ScrKey:
 	ldy t0
 	lda noteNames+1,y
 	jsr PutChar
-	lda #<txtMajor
-	ldy #>txtMajor
-	ldx keyMinor
-	beq .mj
-	lda #<txtMinor
-	ldy #>txtMinor
-.mj:
+	lda keyScale            ; the scale's name (11 bytes each)
+	asl
+	asl
+	asl
+	clc
+	adc keyScale
+	adc keyScale
+	adc keyScale            ; x 11
+	adc #<scaleName
 	sta ptr
-	sty ptr+1
+	lda #>scaleName
+	adc #0
+	sta ptr+1
 	ldx #7
 	ldy #9
 	jsr PrintAt
+	lda kArm                ; K tapped: waiting for the note or shape
+	beq .ka
+	ldx #0
+	ldy #9
+	jsr ScreenAddr
+	ldx #4
+	lda #"?"
+	jsr PutChar
+	ldx #5
+	lda #" "
+	jsr PutChar
+.ka:
 	ldx playMode
 	cpx #MODE_EXT
 	bne .m1
@@ -448,7 +507,7 @@ ScrKey:
 	sta ptr
 	lda modeTxtHi,x
 	sta ptr+1
-	ldx #14
+	ldx #18
 	ldy #9
 	jsr PrintAt
 	ldy latch
@@ -462,7 +521,7 @@ ScrKey:
 	sta ptr
 	lda txtLatchHi,y
 	sta ptr+1
-	ldx #33
+	ldx #34
 	ldy #9
 	jmp PrintAt
 
