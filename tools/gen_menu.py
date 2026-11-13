@@ -228,6 +228,7 @@ HELP = [
     "F1 F3 OCTAVE  F5 ARP  F7 VISUALS",
     "RUN/STOP BEAT (HELD + A-H: PICK ONE)",
     "CRSR DOWN / RIGHT: ONE KEY PLAY",
+    "SHIFT + ASDFG / ZXCVB: THE LEAD'S PATCH",
     "",
     "C= + A ARP TYPE   S D F PATTERN,",
     "      SPEED, OCTAVE",
@@ -235,7 +236,6 @@ HELP = [
     "C= + L LATCH STYLE  , . SPACE'S ACTION",
     "C= + ; : MIDI IN OCTAVE  / UNDO DICE",
     "C= + F1 F3 F5 CHIPS  F7 PANIC",
-    "",
     "IN THE MENU: F1 F3 LINE  F5 F7 VALUE",
     "RETURN OPEN  SHIFT+RETURN BACK",
     "SHIFT+/ ON A SETTING: ROLL JUST IT",
@@ -294,6 +294,8 @@ def build_pages(params, effects):
         enum("CHORD CHANGE", "chgMode", ["AS MODE", "ATTACK", "GLIDE", "SPLIT", "WANDER"], hook="SoundVarsHook"),
         enum("WANDER TIME", "wanderT", [f"{t} S" for t in WANDER_S]),
         enum("DRONE VOICING", "droneVc", ["FIFTHS", "FIFTHS + 9TH", "SUS4"], hook="SettingChanged"),
+        None,
+        enum("CHORD + LEAD", "clMode", ["OFF", "LOW NOTE", "LATCH 3"], hook="ClHook"),
     ], parent="main")
     add_page("okp", "ONE KEY PLAY", "THE CURSOR KEYS PLAY", [
         enum("ONE KEY PLAY", "okpOn", ["OFF", "ON"], hook="OkpHook"),

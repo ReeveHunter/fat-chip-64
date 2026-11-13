@@ -46,7 +46,7 @@ c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.27") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.28") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])
@@ -179,27 +179,18 @@ cy = [a for _, s, a, b in since(c, t0) if s == 0x93 and b]
 check("... let go: a crash, and it stops", 48 in cy and c.v("beatRun") == 0, (cy, c.v("beatRun")))
 c.set("spaceAct", 1)
 
-# ---------------------------------------------------------------- visualizer
+# ---------------------------------------------------------------- visualizer (v0.28: GLITCH only; test_v015.py)
 c.tap("f7", ms=150)
-check("F7: the visualizer", c.v("vizOn") == 1 and "VISUALIZER" in c.screen_row(0) and "SID" in c.screen_row(23), c.screen_row(0))
-c.press("q", ms=150)
-col = [c.raw[0x0400 + r * 40 + 1] for r in range(2, 22)]
-check("a note: SID 1's bar up (full blocks from the bottom)", col[-1] == 160 and col.count(160) >= 8, col)
-check("... in C's colour (red)", c.raw[0xD800 + 21 * 40 + 1] & 15 == 2)
-check("... its note under it", c.screen_row(22)[1:4] == "C 3", c.screen_row(22))
-c.release("q", ms=1500)
-col = [c.raw[0x0400 + r * 40 + 1] for r in range(2, 22)]
-check("let go: the bar falls away", col.count(160) == 0, col)
+check("F7: the visualizer (GLITCH)", c.v("vizOn") == 2)
 c.tap("return", ms=60)
 check("RETURN: the menu from the visualizer", c.v("menuOn") == 1 and "MENU" in c.screen_row(0))
 c.tap("f7", ms=60)
-check("F7 in the menu (v0.26: changes the line): HELP opens, the visualizer stays", c.v("vizOn") == 1 and c.v("menuOn") == 1
+check("F7 in the menu (v0.26: changes the line): HELP opens, the visualizer stays", c.v("vizOn") == 2 and c.v("menuOn") == 1
       and "HELP" in c.screen_row(0))
 c.press("lshift", ms=10); c.tap("return", ms=100); c.tap("return", ms=100); c.release("lshift", ms=100)
-check("closing the menu: back to the visualizer", "VISUALIZER" in c.screen_row(0), c.screen_row(0))
-c.tap("f7", ms=100)
+check("closing the menu: back to the visualizer", c.v("menuOn") == 0 and c.v("vizOn") == 2)
 c.tap("f7", ms=200)
-check("F7 (GLITCH), F7: the play screen again", c.v("vizOn") == 0 and c.screen_row(4).startswith("SID") and c.raw[0xD800 + 4 * 40] & 15 == 13)
+check("F7: the play screen again", c.v("vizOn") == 0 and c.screen_row(4).startswith("SID") and c.raw[0xD800 + 4 * 40] & 15 == 13)
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

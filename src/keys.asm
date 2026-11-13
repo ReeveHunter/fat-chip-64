@@ -215,6 +215,12 @@ NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24
 	jsr RepeatPress         ; REPEAT: its echoes (keeps X)
 	jsr GetTicks
 	jsr ApplySettings       ; (changes waiting for this note)
+	lda clMode              ; CHORD + LEAD: the chord's key, or the lead
+	beq .ncl
+	jsr ClPress
+	bcc .ncl
+	jmp .add                ; (the lead: no latch styles)
+.ncl:
 	lda newPending          ; NEXT or a setting change: this note starts a new chord
 	beq .styles
 	lda #0
@@ -471,6 +477,11 @@ BeatPickKey:
 ; A S D F G: that bank, the same slot (or its first patch if that's empty)
 BankKey:
 	jsr KeyIndex
+	lda clMode              ; CHORD + LEAD: SHIFT picks the lead's bank
+	beq BankPick
+	lda shiftDown
+	beq BankPick
+	jmp LeadBank
 ; X = bank (the DH-100's tone buttons too)
 BankPick:
 	subroutine
@@ -508,6 +519,12 @@ BankPick:
 SlotKey:
 	subroutine
 	jsr KeyIndex
+	lda clMode              ; CHORD + LEAD: SHIFT picks the lead's patch
+	beq .n
+	lda shiftDown
+	beq .n
+	jmp LeadSlot
+.n:
 	stx t3
 	lda curBank
 	asl
@@ -794,6 +811,15 @@ ApplySettings:
 ; L: latch on (in the LATCH STYLE: SMART / HOLD / ADD) or off
 LatchKey:
 	subroutine
+	lda clMode              ; CHORD + LEAD LATCH 3: L lets the chord go
+	cmp #2
+	bne .l
+	lda #0
+	sta clChordN
+	lda #1
+	sta reallocFlag
+	rts
+.l:
 	lda latch
 	bne .off
 	ldx latchStyle          ; (0-2: SMART, HOLD, ADD)
@@ -878,9 +904,12 @@ NoteUp:                         ; A = note index
 	beq .n
 	dec physCount
 .n:
+	lda clMode              ; (CHORD + LEAD: no latch, it has its own)
+	bne .clr
 	lda latch
 	ora sustainOn           ; (the keytar's sustain button, held)
 	bne .x                  ; latched: keeps sounding
+.clr:
 	lda #0
 	sta noteHeld,x
 	lda #1

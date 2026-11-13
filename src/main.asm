@@ -191,6 +191,7 @@ InitState:
 	sta $C600,x
 	sta $C700,x             ; (v0.21: the variables reach into $C7xx)
 	sta $C800,x             ; (v0.22: and $C8xx)
+	sta $C900,x             ; (v0.28: and $C9xx)
 	inx
 	bne .ram
 	ldx #NUM_VOICES-1
@@ -244,6 +245,12 @@ InitState:
 	sta wanderT
 	lda #$FF
 	sta okpPos
+	sta clChordIdx          ; CHORD + LEAD: nothing yet; the lead's patch LEADS 1
+	sta clLeadIdx
+	lda #2
+	sta leadBank
+	lda bankSlot+10
+	jsr LeadLoad
 	lda #127                ; full breath until the DH-100 says otherwise
 	sta breath
 	lda #1                  ; BREATH FEEL NORMAL
@@ -466,6 +473,7 @@ Nmi:
 	include "patchedit.asm"
 	include "devices.asm"
 	include "wander.asm"
+	include "lead.asm"
 	include "screen.asm"
 	include "viz.asm"
 	include "nesfx.asm"

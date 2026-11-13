@@ -33,7 +33,7 @@ def ons(c, t0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.27", "V0.27" in c.screen_row(0), c.screen_row(0))
+check("header V0.28", "V0.28" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- OCTAVE UP
 c.set("spaceAct", A_OCTUP)
@@ -123,8 +123,7 @@ c.midi_in(0xC0, 0, ms=300)
 
 # ---------------------------------------------------------------- GLITCH
 c.tap("f7", ms=100)
-c.tap("f7", ms=100)
-check("F7 F7: GLITCH, no text", c.v("vizOn") == 2 and "VISUALIZER" not in "".join(c.screen_row(r) for r in range(25)))
+check("F7: GLITCH, no text", c.v("vizOn") == 2 and "VISUALIZER" not in "".join(c.screen_row(r) for r in range(25)))
 c.tap("f5", ms=100)
 for chord in (("q", "e", "t"), ("w", "r", "y")):
     c.press(*chord, ms=700)

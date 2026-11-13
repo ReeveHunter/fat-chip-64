@@ -739,7 +739,21 @@ okpList     ds 16              ; the phrase's notes
 okpChord    ds 8               ; the chord (CHORD NOTES), from BuildHeld
 okpChordN   ds 1
 lastEff     ds 1
-numBuf      ds 16              ; the menu: a number to print               ; the tuning in use (scSound while the Synthcart is in use)
+numBuf      ds 16              ; the menu: a number to print
+; v0.28: Chord + Lead
+clMode      ds 1               ; CHORD + LEAD: 0 OFF, 1 LOW NOTE, 2 LATCH 3
+clChordIdx  ds 1               ; LOW NOTE: the chord's key ($FF: none)
+clLeadIdx   ds 1               ; the lead's key ($FF: none)
+clBurst     ds 1               ; LATCH 3: keys pressed close together
+clLastL     ds 2               ;   when the last one was
+clChordN    ds 1               ; LATCH 3: the chord's notes
+clChord     ds 8
+leadNote    ds 1               ; the lead's note now (NO_NOTE: none)
+vLead       ds NUM_VOICES      ; the voice plays the lead
+vPat        ds NUM_VOICES      ; the patch on its channel now: 0 chord, 1 lead ($FF: not sure)
+leadBank    ds 1
+leadSlot    ds 1
+leadPatch   ds 128             ; the lead's patch               ; the tuning in use (scSound while the Synthcart is in use)
 dhAct       ds 1               ; the DH-100 portamento button's task while held
 brLvl       ds 1               ; breath / 8, last seen
 brVol       ds 1               ; the breath's jobs (BreathFlags)
@@ -749,7 +763,7 @@ brDet       ds 1
 brFilt      ds 1
 brAtt       ds 1               ; BREATH VOLUME's drop, 0-15
 ramEnd      ds 0
-  if ramEnd > $C900
-    echo "RAM variables run past $C900: clear more in Start"
+  if ramEnd > $CA00
+    echo "RAM variables run past $CA00: clear more in Start"
     err
   endif

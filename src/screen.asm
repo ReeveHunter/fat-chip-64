@@ -295,7 +295,8 @@ ScrSound:
 	sty ptr+1
 	ldx #30
 	ldy #2
-	jmp PrintAt
+	jsr PrintAt
+	jmp ScrLead             ; (row 3: CHORD + LEAD's lead)
 
 ; ---- rows 4-6: a chip, its on / off or channels, the notes its three
 ; voices play (voices X, X+3, X+6)

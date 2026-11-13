@@ -650,16 +650,24 @@ SoundApply:
 	subroutine
 	jsr SoundSid
 	jsr SoundGb
-	jmp SoundNes
+	jsr SoundNes
+	jmp LeadReapply         ; (CHORD + LEAD: the lead's voices keep theirs)
 
 ; ------------------------------------------------------------ SID
 SoundSid:
 	subroutine
 	ldx #2
 .v:
+	jsr SidVoiceRegs
+	dex
+	bpl .v
+	jmp SidFilterSet
+
+; SID voice X's registers from the patch (keeps X)
+SidVoiceRegs:
+	subroutine
 	ldy sidOfs,x
 	stx t1
-	ldx soundMode
 	lda sndAD
 	sta SID+5,y
 	lda sndSR
@@ -683,9 +691,10 @@ SoundSid:
 	ora t0
 	sta sidGate,x
 	sta SID+4,y
-	dex
-	bpl .v
-	ldx soundMode
+	rts
+
+SidFilterSet:
+	subroutine
 	lda sndCut
 	beq .noFilt
 	sta SID+$16
@@ -715,6 +724,17 @@ SoundGb:
 	lda #0
 	sta t3                  ; channel 0-2: pulse 1, pulse 2, wave
 .ch:
+	jsr GbChan
+	inc t3
+	lda t3
+	cmp #3
+	bne .ch
+	jsr GbLegato
+	jmp WarbleSend
+
+; Game Boy channel t3 (0-2: pulse 1, pulse 2, wave): the patch's CCs
+GbChan:
+	subroutine
 	lda gbBase
 	clc
 	adc t3
@@ -765,18 +785,13 @@ SoundGb:
 	tay
 	lda #94
 	jsr .put
-	jsr SoundGbLfo
-	inc t3
-	jmp .ch
+	jmp SoundGbLfo
 .wave:
 	lda #71
 	ldy gbWMode
 	jsr .put
 	lda #70
 	ldy gbWShape
-	jsr .put
-	jsr GbLegato
-	jmp WarbleSend
 .put:
 	jmp SoundGbPut
 
@@ -909,21 +924,18 @@ NesDuty:
 	subroutine
 	lda devOn+DEV_NES
 	beq .x
+	ldx #0
+	jsr NesDutyCh
+	ldx #1
+; NES pulse X (0, 1): its duty from the patch
+NesDutyCh:
 	lda #1
 	sta mD1
-	ldx soundMode
-	lda nesDuty1
+	lda nesDuty1,x
 	sta mD2
-	lda nesBase
-	ora #$B0
-	sta mS
-	jsr NesPut
-	ldx soundMode
-	lda nesDuty2
-	sta mD2
-	lda nesBase
+	txa
 	clc
-	adc #1
+	adc nesBase
 	and #15
 	ora #$B0
 	sta mS

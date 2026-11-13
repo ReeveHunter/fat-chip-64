@@ -145,6 +145,11 @@ SidRetrig:
 ; in, so the same note from both counts once)
 BuildHeld:
 	subroutine
+	lda clMode              ; CHORD + LEAD: the chord and the lead apart
+	beq .h0
+	jsr ClBuild
+	jmp .exp
+.h0:
 	ldx #0
 	ldy #0
 .h:
@@ -172,6 +177,7 @@ BuildHeld:
 	inx
 	cpx #NIDX
 	bne .m
+.exp:
 	lda effMode
 	beq .o
 	jsr Expand
@@ -339,6 +345,7 @@ InsertNote:
 Allocate:
 	subroutine
 	jsr BuildHeld
+	jsr LeadVoices          ; (CHORD + LEAD: one voice per chip, while it plays)
 	; what the stacker spreads: the chord, or in UNISON arp just the arp note
 	ldy heldCount
 	sty allocCount
@@ -378,6 +385,7 @@ Allocate:
 	sta vWant,x
 	dex
 	bpl .w
+	jsr LeadWant
 	lda allocCount
 	bne .go
 	jmp AllocDone
@@ -616,6 +624,7 @@ VoiceEnabled:
 	subroutine
 	lda vSkip,x
 	ora vDrum,x             ; (held by the drums: none yet)
+	ora vLead,x             ; (playing the lead)
 	bne .no
 	ldy vDev,x
 	lda devOn,y
@@ -671,6 +680,16 @@ ApplyVoices:
 	bne .change
 	lda #0
 	sta vWaitOn,x
+	lda vWant,x             ; (CHORD + LEAD: the same note, the other part's
+	cmp #NO_NOTE            ;  patch: play it again with its own)
+	beq .same
+	lda vLead,x
+	cmp vPat,x
+	beq .same
+	lda #1
+	sta t3
+	bne .chg2
+.same:
 	lda t3
 	beq .next
 	bne .chg2
@@ -690,6 +709,7 @@ ApplyVoices:
 	sta applyRetry          ;  this voice catches up on a later pass
 	bne .next
 .set:
+	jsr LeadPatchFor        ; (CHORD + LEAD: the channel's patch)
 	jsr VoiceSet
 	ldx t0
 	lda vWant,x
@@ -866,8 +886,7 @@ VoiceSet:
 ; tuning, the detune (SID 2 sharp, SID 3 flat). Keeps Y.
 SidPitch:
 	subroutine
-	clc                     ; the patch may play the SID an octave off
-	adc sndOct
+	jsr SidOct              ; the patch may play the SID an octave off
 	bpl .o1
 	clc
 	adc #12

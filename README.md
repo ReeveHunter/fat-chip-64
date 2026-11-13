@@ -6,6 +6,12 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.28:** CHORD + LEAD, two sounds at once. The visualizer is GLITCH only.
+- **CHORD + LEAD** (PLAYING): **LOW NOTE**: the first key you press is the chord's root (POLY: root and fifth; SMART CHORD, EXT and DRONE: their chord), and every other key is the lead while you hold it. Let go of the chord key and the next key is the new chord. **LATCH 3**: three keys pressed together (within 100 ms) latch as the chord and keep sounding; every other key is the lead; three more together make a new chord; L lets the chord go. The ordinary latch doesn't apply in CHORD + LEAD (each mode has its own).
+- **The lead** is one note, the last key pressed, on one voice per chip (SID 3, Game Boy pulse 1, NES pulse 1; fewer chips, fewer voices), and only while it plays: otherwise those voices fatten the chord as before.
+- **Its own patch:** SHIFT + A S D F G / Z X C V B pick it from the banks (LEADS 1, DUTY LEAD, to start); row 3 of the play screen shows it. It brings the SID voice's waveform, width, envelope and octave, the Game Boy pulse's CCs (envelope, duty, glide, detune, LFO) and the NES pulse's duty. Shared with the chord's patch for now: the effects (vibrato, glide on the SID, PWM, filter, tremolo, warble, repeat) and the NES envelope. A voice that changes part plays again with the other patch, so it never keeps the wrong sound.
+- **The visualizer** is GLITCH only (F7 on / off); the BARS are gone (about 650 bytes back).
+
 **v0.27:** FINE TUNE, chord changes that glide or wander, DRONE, One Key Play.
 - **FINE TUNE** (PLAYING): −50 … +50 cents, for tape loops. It moves every chip: the SID's note frequencies (the notes sounding move at once), the Game Boy's master tune, the NES's bends. It adds to the Synthcart's TUNE TO.
 - **Finer NES pitch:** Fat Chip now adds up the NES's pitch offsets (tuning, detune, vibrato, glide) in 1/64 semitone (about 1.6 cents) instead of 1/16, so the MidiNES's own fine bends get used: smoother vibrato and glides, and tuning within a few cents.
@@ -225,7 +231,7 @@ lowest key (Q) starts at C3.
 | SPACE | Its action while held |
 | F1 / F3 | Octave up / down |
 | F5 | Arp on / off, in the type C= + A chose |
-| F7 | Visualizers |
+| F7 | The visualizer (GLITCH) on / off |
 | CRSR DOWN / CRSR RIGHT | One Key Play (when it's on): the next step of the phrase |
 | RUN/STOP | Tapped: beat start / stop |
 | RETURN | The menu (SHIFT+RETURN backs out; F1 / F3 choose a line, F5 / F7 change it; HELP lists the keys) |
@@ -348,6 +354,8 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
 | `src/menu.asm`, `tools/gen_menu.py` → `src/menutab.asm` | the menu (RETURN): its pages and lines, every patch setting's steps |
 | `src/patchedit.asm` | editing the live patch: settings, effects on / off, the dice, the envelope and Game Boy LFO kept in step |
+| `src/lead.asm` | CHORD + LEAD: the chord and lead keys, the lead's voices and patch |
+| `test/test_v028.py` | CHORD + LEAD (LOW NOTE, LATCH 3), the lead's patch and voices |
 | `src/wander.asm` | CHORD CHANGE (glide, split, wander), DRONE, One Key Play |
 | `test/test_v027.py` | FINE TUNE, NES 1/64 semitones, DRONE, wander, GLIDE, One Key Play |
 | `src/devices.asm` | DEVICES: SHS-10 / DH-100 / Synthcart settings, the breath, Synthcart nudges and steps |
@@ -380,7 +388,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.27)
+## Not yet (v0.28)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.
