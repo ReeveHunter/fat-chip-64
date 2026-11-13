@@ -155,6 +155,7 @@ SMART_WINDOW equ 500           ; ms: SMART latch adds notes pressed within this
 MODE_POLY   equ 0
 MODE_CHORD  equ 1
 MODE_EXT    equ 2
+MODE_HARM   equ 3             ; v0.24: DH-100 HARMONY (root + a third)
 SND_FAT     equ 0
 SND_PADS    equ 1
 SND_RAW     equ 2
@@ -646,12 +647,68 @@ curBank     ds 1               ; v0.22: the bank (A S D F G) and slot (Z X C V B
 curSlot     ds 1
 dcE         ds 1               ; DiceRoll: effect, fields, row
 dcN         ds 1
-dcR         ds 1
+dcP         ds 1
 undoOk      ds 1               ; v0.22: a dice roll can be undone (C= + /)
 diceUndo    ds 128             ;   the live patch before the roll
 sxCmd       ds 1               ; v0.23: the SysEx's command (1 patch, 2 chips)
 sxArg       ds 1
 sxI         ds 1
+; v0.24: editing the patch (patchedit.asm)
+pnP         ds 1
+pnN         ds 1
+pnI         ds 1
+pnBI        ds 1
+pnVL        ds 1
+pnVH        ds 1
+pnDL        ds 1
+pnDH        ds 1
+pnBL        ds 1
+pnBH        ds 1
+peS         ds 1
+peQ         ds 1
+peN         ds 1
+peRow       ds 1
+peMode      ds 1
+peE         ds 1
+peP         ds 1
+peCnt       ds 1
+peSet       ds 1
+peSP        ds 1
+peSE        ds 1
+mvRow       ds 1               ; the menu line's screen row
+; v0.24: the devices
+useShs      ds 1               ; DEVICES: 1 = in use
+useDh       ds 1
+useSc       ds 1
+shsTempo    ds 1               ; SHS-10 TEMPO: 0 FOLLOW, 1 IGNORE
+shsRhythm   ds 1               ;   SHS-10 RHYTHM: 0 IGNORE, 1 PLAY ON MIDINES
+shsStart    ds 1               ;   START/STOP: 0 BUILT-IN BEATS, 1 IGNORE
+dhBreath    ds 1               ; DH-100 BREATH: 0 VOLUME, 1 VOLUME+FILTER, 2 FILTER, 3 OFF
+dhFx1       ds 1               ;   BREATH FX 1, 2 (BREATH_FX)
+dhFx2       ds 1
+dhFeel      ds 1               ;   0 SOFT, 1 NORMAL, 2 HARD
+dhNotes     ds 1               ;   0 AS PLAYED, 1 CHORD, 2 HARMONY
+dhPort      ds 1               ;   PORTAMENTO BUTTON's task
+dhTone      ds 1               ;   TONE BUTTONS: 0 PICK BANK, 1 IGNORE
+scSync      ds 1               ; SYNTHCART: 0 OFF, 1 SYNC
+scTrim      ds 1               ;   TRIM: 0-16 (8 = none)
+breath      ds 1               ; the DH-100's breath, 0-127 (after FEEL)
+breathRaw   ds 1
+breathHeld  ds 2               ; FX 1, 2's held task is on
+breathOn    ds 1               ; a breath arrived since DH-100 went in use
+dhCC65      ds 1               ; the DH-100's portamento button is down
+nudgeOn     ds 1               ; , . held with the Synthcart: the tempo before
+nudgeL      ds 1
+nudgeH      ds 1
+scIdx       ds 1               ; the Synthcart tempo chosen last
+dhAct       ds 1               ; the DH-100 portamento button's task while held
+brLvl       ds 1               ; breath / 8, last seen
+brVol       ds 1               ; the breath's jobs (BreathFlags)
+brVib       ds 1
+brWarb      ds 1
+brDet       ds 1
+brFilt      ds 1
+brAtt       ds 1               ; BREATH VOLUME's drop, 0-15
 ramEnd      ds 0
   if ramEnd > $C900
     echo "RAM variables run past $C900: clear more in Start"

@@ -7,6 +7,7 @@ mkdir -p bin
 python3 tools/gen_tables.py >/dev/null
 python3 tools/check_effects.py >/dev/null
 python3 tools/gen_patches.py >/dev/null
+python3 tools/gen_menu.py >/dev/null
 python3 tools/gen_beats.py >/dev/null
 python3 tools/gen_bend.py >/dev/null
 cd src

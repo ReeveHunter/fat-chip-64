@@ -53,65 +53,36 @@ def sid_freq(c, v):
 c = C64(channels=None)
 c.run_ms(400)
 
-# ---------------------------------------------------------------- menu
+# ---------------------------------------------------------------- menu (v0.24's: test_v024.py has more)
 c.tap("return", ms=60)
 check("RETURN: the menu", c.v("menuOn") == 1 and "MENU" in c.screen_row(0), c.screen_row(0))
 rows = [c.screen_row(r) for r in range(25)]
-check("menu: SOUND, PLAYING; ADVANCED SOUND and DEVICE SYNC open from it",
-      rows[1].startswith("SOUND") and rows[12].startswith("PLAYING") and "ADVANCED SOUND" in rows[10]
-      and "DEVICE SYNC" in rows[18] and "RETURN: OPEN" in rows[10] and "RETURN: OPEN" in rows[18], rows[10])
-check("menu: defaults", all(rows[r][23:].startswith("AS SOUND") for r in range(2, 10)) and "SMART" in rows[13]
-      and "BEND DOWN" in rows[14] and "2 SEMITONES" in rows[15] and "DEFAULT" in rows[16], [rows[r][2:] for r in range(2, 17)])
-check("menu: the cursor on MONO/POLY", rows[2].startswith("> MONO/POLY"), rows[2])
-c.tap("return", ms=40)
-check("RETURN doesn't change a value", c.v("monoLock") == 0 and c.v("menuOn") == 1)
-c.tap("crsrdown", ms=40)
-c.tap("crsrright", ms=40)
-check("CRSR RIGHT: FAT BASS ALWAYS", c.v("fbLock") == 1 and "ALWAYS" in c.screen_row(3), c.screen_row(3))
-c.tap("crsrright", ms=40)
-check("CRSR RIGHT again: NEVER (and Fat Bass off in FAT)", c.v("fbLock") == 2 and c.v("fatBass") == 0, c.screen_row(3))
-c.press("lshift", ms=10); c.tap("crsrright", ms=40); c.tap("crsrright", ms=40); c.release("lshift", ms=10)
-check("SHIFT+CRSR RIGHT twice: back to AS SOUND", c.v("fbLock") == 0 and c.v("fatBass") == 1, c.screen_row(3))
-for _ in range(8):
-    c.tap("crsrdown", ms=40)
-check("CRSR DOWN x8: LATCH STYLE", c.screen_row(13).startswith(">") and not c.screen_row(3).startswith(">"))
-c.tap("crsrright", ms=40)
-check("CRSR RIGHT: HOLD", c.v("latchStyle") == 1 and "HOLD" in c.screen_row(13), c.screen_row(13))
-c.tap("=", ms=40)
-check("= in the menu turns latch on as HOLD", c.v("latch") == 2)
-c.tap("=", ms=40)
-for _ in range(4):
-    c.tap("crsrdown", ms=40)
+check("menu: the chips on top, PATCH, PLAYING, DEVICES, the SHS-10 (in use)",
+      rows[2].startswith("> SID") and rows[3][2:].startswith("GAME BOY") and rows[4][2:].startswith("MIDINES")
+      and rows[6][2:].startswith("PATCH") and rows[7][2:].startswith("PLAYING") and rows[8][2:].startswith("DEVICES")
+      and rows[10][2:].startswith("YAMAHA SHS-10") and rows[11].strip() == "", rows[2:12])
+c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40)
+check("CRSR DOWN x4 (past the gap): PLAYING", c.screen_row(7).startswith("> PLAYING"), c.screen_row(7))
 c.tap("return", ms=60)
 rows = [c.screen_row(r) for r in range(25)]
-check("RETURN on DEVICE SYNC: its page, the cursor on TEMPO FROM", c.v("menuPage") == 2 and "DEVICE SYNC" in rows[0]
-      and rows[3].startswith("> TEMPO FROM"), rows[0])
-check("DEVICE SYNC defaults", "KEYTAR" in rows[3] and "KEYTAR" in rows[4] and "PICK BEAT" in rows[5] and "IGNORE" in rows[6]
-      and "PICK SOUND" in rows[7] and "BEND" in rows[8] and "VIBRATO" in rows[9] and "GLIDE" in rows[10]
-      and "SUSTAIN" in rows[11], [rows[r][23:] for r in range(3, 12)])
-c.press("lshift", ms=10)
-c.tap("crsrdown", ms=40)
-c.release("lshift", ms=10)
-check("SHIFT+CRSR DOWN: up, wraps to SUSTAIN BUTTON", c.screen_row(11).startswith("> SUSTAIN BUTTON"), c.screen_row(11))
+check("PLAYING: its page and defaults", "PLAYING" in rows[0] and rows[2].startswith("> LATCH STYLE") and "SMART" in rows[2]
+      and "BEND DOWN" in rows[3] and "2 SEMITONES" in rows[4] and "DEFAULT" in rows[5], rows[2:6])
+c.tap("crsrright", ms=40)
+check("CRSR RIGHT: HOLD", c.v("latchStyle") == 1 and "HOLD" in c.screen_row(2), c.screen_row(2))
+c.tap("=", ms=40)
+check("L in the menu turns latch on as HOLD", c.v("latch") == 2)
+c.tap("=", ms=40)
 t0 = c.cpu.processorCycles
 c.press("q", ms=100)
 check("notes play while the menu is up", 60 - 12 in [a for _, s, a, b in since(c, t0) if (s & 0xF0) == 0x90 and b])
 c.release("q", ms=100)
 c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=40)
-check("SHIFT+RETURN: back to the main page, on DEVICE SYNC", c.v("menuPage") == 0 and c.screen_row(18).startswith("> DEVICE SYNC"),
-      c.screen_row(18))
-c.press("lshift", ms=10)
-for _ in range(5):
-    c.tap("crsrdown", ms=40)
-c.release("lshift", ms=10)
-c.tap("crsrright", ms=60)                   # (CRSR RIGHT opens a page too)
-rows = [c.screen_row(r) for r in range(25)]
-check("ADVANCED SOUND: its page", c.v("menuPage") == 1 and "ADVANCED SOUND" in rows[0] and rows[4].startswith("> VIBRATO DEPTH"), rows[4])
-check("ADVANCED SOUND defaults", [rows[r][23:].rstrip() for r in range(4, 16)] == ["1/4 SEMITONE", "6 HZ", "NONE", "MEDIUM", "DEEP",
-      "6 HZ", "SMOOTH", "FAT", "MEDIUM", "1/8 DOTTED", "3", "70 PERCENT"], [rows[r][23:].rstrip() for r in range(4, 16)])
-c.press("lshift", ms=10); c.tap("return", ms=60); c.tap("return", ms=60); c.release("lshift", ms=250)
-check("SHIFT+RETURN twice: back to play, the screen redrawn", c.v("menuOn") == 0 and "FAT CHIP 64" in c.screen_row(0)
+check("SHIFT+RETURN: back to the main page, on PLAYING", c.v("menuPage") == 0 and c.screen_row(7).startswith("> PLAYING"),
+      c.screen_row(7))
+c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=250)
+check("SHIFT+RETURN again: back to play, the screen redrawn", c.v("menuOn") == 0 and "FAT CHIP 64" in c.screen_row(0)
       and c.screen_row(2).startswith("FAT   1 FAT") and c.screen_row(24).startswith("F1/F3"), (c.screen_row(0), c.screen_row(2)))
+c.set("latchStyle", 0)
 
 # ---------------------------------------------------------------- keytar clock: tempo
 c.run_ms(100)
@@ -371,11 +342,6 @@ check("REPEAT LEAD: three echoes at full volume (1/8)", ech == [100, 100, 100], 
 
 # held notes come first
 check("FAT", sound_to("FAT"), c.screen_row(2))
-c.set("menuRow", 7)                          # REPEAT
-c.tap("return", ms=60)
-c.tap("crsrright", ms=30); c.tap("crsrright", ms=30); c.tap("crsrright", ms=60)   # AS SOUND -> ON -> OFF -> AS SOUND
-c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=100)
-check("menu REPEAT: round the values back to AS SOUND (off in FAT)", c.v("rpLock") == 0 and c.v("repeatOn") == 0, c.v("rpLock"))
 c.set("rpLock", 1)
 c.set("repeatOn", 1)
 c.set("reallocFlag", 1)

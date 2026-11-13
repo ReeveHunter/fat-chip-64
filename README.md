@@ -6,6 +6,20 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.24:** the new menu, and the devices on MIDI IN.
+- **The menu (RETURN)** starts with SID / GAME BOY / MIDINES on or off, then **PATCH**, **PLAYING**, **DEVICES**, and a page for each device that's in use. CRSR DOWN (SHIFT: up) chooses a line and skips the gaps, CRSR RIGHT (SHIFT: back) changes it, RETURN opens a page, SHIFT+RETURN backs out. Every other key keeps its job, so you can play while you change things.
+- **PATCH** edits the live patch: MONO, FAT BASS, then the effects. CRSR RIGHT turns an effect on or off; RETURN opens its settings (TONE and ENVELOPE are always on, so RIGHT opens them too). Each setting steps through ready-made values in the shared units (cents, Hz, ms, %), heard at once, and the name gets a `*`. The envelope's Game Boy and NES parts follow the SID's as you change it, and the Game Boy's one LFO goes to VIBRATO when it's on, else PWM.
+- **The dice:** SHIFT + / anywhere rolls the patch (as before, now through the same settings and ranges Chip Lab uses); SHIFT + / on a setting in the menu rolls just that setting. C= + / undoes either. No locks.
+- **DEVICES:** YAMAHA SHS-10, CASIO DH-100, ATARI SYNTHCART, each IN USE or NOT USED (the SHS-10 starts in use, as before). A device not in use is ignored on MIDI IN.
+- **SHS-10:** TEMPO (FOLLOW / IGNORE), SHS-10 RHYTHM (its drum notes on the MidiNES, or IGNORE), START/STOP (its Start / Stop run the built-in beats, or IGNORE), then VOICE BUTTONS, RHYTHM BUTTONS, WHEEL and its three buttons as before. Its rhythm and the built-in beats can play together. RUN/STOP always starts and stops the built-in beats. **Its 25 voice buttons now pick the 25 bank slots** (voice 1–5 = FAT 1–5, 6–10 = PADS 1–5 …; an empty slot does nothing), not the patches by number.
+- **DH-100** (MIDI out only: notes, its breath as channel pressure, the portamento button as CC 65, the tone selector as program changes 0–5):
+  - BREATH: VOLUME (blow harder, louder: the SID and NES; the Game Boy is left alone, it would click), VOLUME+FILTER, FILTER (the SID's cutoff opens with the breath; a patch without the filter gets the low-pass), or OFF.
+  - BREATH FX1 / FX2: a depth that follows the breath (VIBRATO, WARBLE, DETUNE: the patch's, or the ADVANCED amount when it has none; or FILTER), or HELD: an action, on while you blow hard (with a little slack so it doesn't flutter).
+  - BREATH FEEL: SOFT / NORMAL / HARD. NOTES: AS PLAYED (the C= + Z mode), CHORD (SMART CHORD) or HARMONY (a third above in the key). PORTAMENTO BUTTON: an action (GLIDE). TONE BUTTONS: the first five pick the banks, the sixth rolls the dice.
+- **Synthcart:** TEMPO SYNC snaps tempos to Synthcart's ten. Then **, .** nudge about 3% slower / faster while held (to line up with it by ear), and SHIFT + **, .** step through its ten tempos. TRIM (−8 … +8, about 0.1% a step) makes up for the two machines' clocks drifting apart. (Matching its tuning waits for data on its pitches.)
+- The old SOUND switches and ADVANCED SOUND page are gone; their job is the PATCH pages now. The ADVANCED amounts stay as what held VIBRATO, GLIDE, TREMOLO and REPEAT use on a patch with none of its own.
+- `tools/gen_menu.py` builds the menu and every patch setting's steps from `patch/effects.json` (→ `src/menutab.asm`); `src/patchedit.asm` edits the patch, `src/devices.asm` handles the devices.
+
 **v0.23:** the chips on and off from Chip Lab.
 - A SysEx `F0 7D 46 43 02 m F7` turns the SID (bit 0), Game Boy (bit 1) and NES (bit 2) on or off, as C= + F1 / F3 / F5 do. Chip Lab's new SID / GB / NES buttons in its top bar send it, so you can hear a patch on one chip at a time.
 - Chip Lab: the note keys (A W S E D …) keep playing after you've touched a slider (before, a slider kept the keyboard until you clicked elsewhere), and a slider being dragged is sent every 120 ms as it moves.
@@ -15,7 +29,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 - **C= is the "how you play" layer** (arp type and settings, notes mode, extensions, MONO, latch style, SPACE's action, MIDI-in octave, undo the dice, chips on / off, panic) and **RUN/STOP the beats** (tap: start / stop; held + A–H: pick a beat).
 - **L** is just latch on / off (NEXT is gone); **=** taps the tempo; **, .** change it by 1 BPM (SHIFT: 10); **/** mutes; **F5** turns the arp on and off in the type you chose with C= + A.
 - **K, then a note or a shape** sets key and scale: ten scales, from major and minor to the modes, pentatonic, whole tone and diminished. SMART CHORD and EXT stack "thirds" in whichever scale (whole tone gives augmented chords).
-- **The dice (SHIFT + /)** roll the patch's effects; C= + / undoes the last roll. Locks come with the effect menus.
+- **The dice (SHIFT + /)** roll the patch's effects; C= + / undoes the last roll.
 - C= and RUN/STOP count as modifiers like SHIFT, so pressing one together with its key in the same instant still works.
 
 **v0.21:** voice priority: Polyphony > Fat Bass > the patch's effects.
@@ -187,16 +201,16 @@ lowest key (Q) starts at C3.
 | L | Latch on / off (in the LATCH STYLE) |
 | K, then a note or a shape | Key and scale, when you let go (the notes don't play): one note or a major triad = major; root + minor third / minor triad = minor; minor triad + 6th = dorian; root + flat 2nd = phrygian; root + sharp 4th = lydian; root + flat 7th = mixolydian; minor triad + major 7th = harmonic minor; root + 4th + 5th = pentatonic; augmented triad = whole tone; diminished triad = diminished. K again first: never mind. SMART CHORD and EXT build in the scale |
 | = | Tap tempo |
-| , / . (< >) | Tempo −1 / +1 BPM; with SHIFT −10 / +10 |
+| , / . (< >) | Tempo −1 / +1 BPM; with SHIFT −10 / +10. With SYNTHCART SYNC: about 3% slower / faster while held; with SHIFT, Synthcart's next tempo |
 | / | Mute everything (border red) |
-| SHIFT + / (?) | The dice: the effects (detune, glide, warble, filter, PWM, tremolo, vibrato) roll, each on with its chance; tone, envelope and levels stay. The name gets a * |
+| SHIFT + / (?) | The dice: the effects (detune, glide, warble, filter, PWM, tremolo, vibrato) roll, each on with its chance; tone, envelope and levels stay. The name gets a *. In the menu, on a patch setting: just that setting |
 | ; / : | FREE arp speed faster / slower |
 | SPACE | Its action while held |
 | F1 / F3 | Octave up / down |
 | F5 | Arp on / off, in the type C= + A chose |
 | F7 | Visualizers |
 | RUN/STOP | Tapped: beat start / stop |
-| RETURN | The menu (SHIFT+RETURN backs out) |
+| RETURN | The menu (SHIFT+RETURN backs out; CRSR DOWN / RIGHT choose and change) |
 | RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
 | CTRL + F3 / F5 | Game Boy / NES to the next block of channels |
 
@@ -232,7 +246,7 @@ lowest key (Q) starts at C3.
 | F: BASS | GLIDE BASS | WAVE BASS | | | |
 | G: FX | ECHO PLUCK | ELECTRIC PIANO | VIBRAPHONE | WARBLE PAD | SEASICK CHORUS |
 
-The banks are in `patch/patches.json`. Program changes 0–18 still pick the patches by number.
+The banks are in `patch/patches.json`. The SHS-10's voice buttons 1–25 pick the slots in this order (A1–A5, S1–S5 …); the DH-100's tone buttons pick the banks.
 
 **Smart stacking:** nine voices (3 SID, Game Boy pulse 1, pulse 2, wave, NES
 pulse 1, pulse 2, triangle). The Game Boy wave and NES triangle play the
@@ -314,7 +328,10 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/bend.asm`, `tools/gen_bend.py` → `src/bendtab.asm` | bends (actions, wheel, VINYL STOP), SPACE's action keys |
 | `patch/effects.json`, `patch/patches.json`, `tools/gen_patches.py` → `src/soundtab.asm`; `src/sounds.asm` | the patch definition, the built-in patches (V) and what each becomes on each chip; MONO (C), Fat Bass, SID effects, duty steps |
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
-| `src/menu.asm` | the menu (RETURN): main, ADVANCED SOUND, DEVICE SYNC pages |
+| `src/menu.asm`, `tools/gen_menu.py` → `src/menutab.asm` | the menu (RETURN): its pages and lines, every patch setting's steps |
+| `src/patchedit.asm` | editing the live patch: settings, effects on / off, the dice, the envelope and Game Boy LFO kept in step |
+| `src/devices.asm` | DEVICES: SHS-10 / DH-100 / Synthcart settings, the breath, Synthcart nudges and steps |
+| `test/test_v024.py` | the menu, PATCH pages, the dice, DEVICES, SHS-10 voice buttons, DH-100 breath and buttons, Synthcart tempo |
 | `src/viz.asm` | the visualizers (F7): BARS, GLITCH |
 | `src/nesfx.asm` | MidiNES vibrato, glide, detune (pitch bend) |
 | `test/test_v015.py` | VINYL STOP, OCTAVE UP, GLITCH, MidiNES effects |
@@ -343,7 +360,10 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.23)
+## Not yet (v0.24)
+
+- Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
+- The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.
 
 - The Game Boy has no tremolo of its own yet (it needs a Fat Chip GB feature); in the tremolo sounds the NES does it and the Game Boy holds steady. The SID doesn't take over the tremolo when it's alone.
 - The patches' "jobs" (Combo organ's octave-up voice, Bright stack's octave sparkle), a Fat Bass range per patch, and blending are for later.

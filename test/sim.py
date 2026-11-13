@@ -292,7 +292,7 @@ class C64:
         plain = []
         for k in keys:
             if k in self.LEG_CBM:
-                self._raw_press("cbm", ms=4)
+                self._raw_press("cbm", ms=12)          # (C= well before the key, as hands do)
                 self.pressed.add(self.LEG_CBM[k])
             elif k == "f5" and self.pressed & {"ctrl", "lshift", "rshift"}:
                 plain.append(k)                  # (CTRL / SHIFT + F5 kept their jobs)
@@ -331,6 +331,12 @@ class C64:
     def midi_in(self, *data, ms=0):
         """Bytes arriving at MIDI IN, back to back at 31250 baud from now."""
         t = max(self.cpu.processorCycles, self.rx_last)
+        if self.legacy_keys:                     # (v0.24: voice buttons pick bank slots;
+            data = list(data)                    #  the old tests meant patch numbers)
+            slots = self.v("patchSlot", 19)
+            for i in range(len(data) - 1):
+                if 0xC0 <= data[i] <= 0xCA and data[i + 1] < 19:
+                    data[i + 1] = slots[data[i + 1]]
         for b in data:
             t += BYTE_CYCLES
             self.rx_q.append((t, b))

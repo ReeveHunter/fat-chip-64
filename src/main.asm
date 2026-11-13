@@ -225,6 +225,16 @@ InitState:
 	sta btnTask+1
 	lda #A_SUS
 	sta btnTask+2
+	lda #1                  ; v0.24: the SHS-10 in use, as before
+	sta useShs
+	lda #8                  ; Synthcart TRIM 0
+	sta scTrim
+	lda #127                ; full breath until the DH-100 says otherwise
+	sta breath
+	lda #1                  ; BREATH FEEL NORMAL
+	sta dhFeel
+	lda #A_GLIDE            ; the DH-100's portamento button: GLIDE
+	sta dhPort
 	lda #A_BENDDN           ; SPACE bends down
 	sta spaceAct
 	lda #ARP_UNISON         ; ARP (held) uses UNISON until A picks another
@@ -438,6 +448,8 @@ Nmi:
 	include "drums.asm"
 	include "sync.asm"
 	include "menu.asm"
+	include "patchedit.asm"
+	include "devices.asm"
 	include "screen.asm"
 	include "viz.asm"
 	include "nesfx.asm"
@@ -445,5 +457,6 @@ Nmi:
 	include "tables.asm"
 	include "nestables.asm"
 	include "soundtab.asm"
+	include "menutab.asm"
 	include "beats.asm"
 	include "bendtab.asm"

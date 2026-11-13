@@ -175,6 +175,10 @@ MidiInMsg:
 	bne .pb
 	jmp KeytarVoice         ; its voice buttons
 .pb:
+	cmp #$D0
+	bne .pw
+	jmp Breath              ; channel pressure: the DH-100's breath
+.pw:
 	cmp #$E0
 	bne .nt
 	jmp KeytarWheel

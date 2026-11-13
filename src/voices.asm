@@ -193,8 +193,11 @@ Expand:
 .cpd:
 	lda #0
 	sta heldCount
-	ldx #3                  ; tones: triad
+	ldx #2                  ; tones: HARMONY two
 	lda effMode
+	cmp #MODE_HARM
+	beq .tn
+	ldx #3                  ; triad
 	cmp #MODE_EXT
 	bne .tn
 	lda effSpice

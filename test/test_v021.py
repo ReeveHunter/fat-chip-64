@@ -42,7 +42,7 @@ def state(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.23", "V0.23" in c.screen_row(0), c.screen_row(0))
+check("header V0.24", "V0.24" in c.screen_row(0), c.screen_row(0))
 c.set("detLock", 2)
 c.set("latch", 0)                            # (no latch: each chord on its own)
 
@@ -71,7 +71,7 @@ check("SID off, five notes: both bass voices are Fat Bass", held <= set(out) and
 unchord(c, 5)
 
 # ECHO PLUCK with Fat Bass: the echoes get what's spare after notes and bass
-c.midi_in(0xC0, 17, ms=300)
+c.midi_in(0xC0, 20, ms=300)   # (voice 20: ECHO PLUCK, FX 1)
 c.set("sndFat", 1)
 c.set("fatBass", 1)
 c.set("latch", 0)

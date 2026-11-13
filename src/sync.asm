@@ -360,9 +360,8 @@ TempoChosen:
 	cpy #10
 	bne .f
 	ldy exK
-	lda scBeatL,y
-	ldx scBeatH,y
-	jmp SetBeat16
+	sty scIdx
+	jmp ScBeat              ; (with TRIM: devices.asm)
 
 ; Synthcart (NTSC): a beat is N Atari frames, N = 16, 20 .. 52; in 1/16 of a
 ; Fat Chip tick (1024 C64 cycles): N x 17067.43 x 16 / 1024
@@ -405,6 +404,8 @@ KeytarStop:
 ; Program Change rxD1 on channel 16: a rhythm style
 KeytarStyle:
 	subroutine
+	lda useShs
+	beq .x
 	lda syncRhythm
 	bne .x
 	ldx rxD1
@@ -418,12 +419,20 @@ KeytarStyle:
 ; Program Change rxD1 on a key channel: a voice button
 KeytarVoice:
 	subroutine
+	lda useShs
+	bne .shs
+	lda useDh
+	beq .x
+	jmp DhTone              ; (the DH-100's tone buttons)
+.shs:
 	lda syncVoice
 	bne .x
-	ldx rxD1
+	ldx rxD1                ; voice n: bank n / 5, slot n mod 5
 	cpx #25
 	bcs .x
-	lda voiceSound,x
+	lda bankSlot,x
+	cmp #$FF
+	beq .x                  ; (an empty slot)
 	cmp soundMode
 	beq .x
 	tax
@@ -437,12 +446,33 @@ KeytarVoice:
 ;   Jazz Waltz, R'n'R 1/2, Rock-a-Ballad, Hard Rock, Reggae, Bossa Nova,
 ;   Samba, Tango, Country, Bluegrass, March 1/2, Lullaby, Baroque, Fanfare
 styleBeat:  .byte 3,3,0,2,5,3,1,4,4,5,4,4,5,4,3,0,1,0,4,2,4,4,5,0,4
-; the keytar's 25 voices -> sounds (19 so far; the last six repeat favourites)
-voiceSound: .byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18, 3,4,6,7,10,11
 
 ; Control change rxD1 = rxD2 on a key channel: the three buttons
 KeytarCC:
 	subroutine
+	lda rxD1
+	cmp #65
+	bne .shs
+	lda useDh
+	beq .shs
+	lda rxD2                ; the DH-100's portamento button: its own task
+	cmp #64
+	lda #0
+	rol
+	cmp dhCC65
+	beq .x
+	sta dhCC65
+	sta t3
+	beq .dup
+	lda dhPort
+	sta dhAct
+	jmp DoAction
+.dup:
+	lda dhAct
+	jmp DoAction
+.shs:
+	lda useShs
+	beq .x
 	ldx #2
 .f:
 	lda btnCC,x
@@ -761,6 +791,8 @@ StutterTick:
 ; Pitch Bend rxD1 / rxD2 on a key channel: the wheel
 KeytarWheel:
 	subroutine
+	lda useShs
+	beq .x
 	lda syncWheel
 	bne .x
 	lda rxD2

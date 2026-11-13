@@ -41,21 +41,12 @@ def taps(c, gap, n=4):
         c.release("b", ms=gap - gap // 2)
 
 
-def menu_set(c, row, steps):
-    """Menu item `row` (index), CRSR RIGHT `steps` times, then back to play."""
-    c.set("menuRow", row)
-    c.tap("return", ms=60)
-    for _ in range(steps):
-        c.tap("crsrright", ms=40)
-    c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=150)
-
-
 c = C64(channels=None)
 c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.23") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.24") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])
@@ -99,79 +90,10 @@ c.set("beatTempo", 0)
 c.tap("g", ms=20); c.tap("g", ms=20); c.tap("g", ms=20); c.tap("g", ms=150)   # DNB -> round to ELECTRO
 check("back to ELECTRO, 124", c.v("beatSel") == 0 and c.v("bpm") == 124, (c.v("beatSel"), c.v("bpm")))
 
-# ---------------------------------------------------------------- sound switches
-# FAT has no vibrato: the menu's VIBRATO ON gives the ADVANCED SOUND one
-t0 = c.cpu.processorCycles
-menu_set(c, 2, 1)                            # VIBRATO -> ON
-check("VIBRATO ON: SID vibrato from ADVANCED SOUND (1/4 semitone, 6 Hz)",
-      c.v("vibLock") == 1 and c.v("vibDepth") == 61 and c.v("vibRL") | c.v("vibRH") << 8 == 1572, c.v("vibDepth"))
-lfo = [x for x in ccs(c, t0, 1) if x[0] in GB]
-rate = [x for x in ccs(c, t0, 76) if x[0] in GB]
-check("VIBRATO ON: Game Boy pulses LFO to pitch, depth CC 24, rate CC 92", (10, 24) in lfo and (11, 24) in lfo
-      and (10, 92) in rate, (lfo, rate))
-c.press("q", ms=50)
-f = []
-for _ in range(40):
-    c.run_ms(10)
-    f.append(sid_freq(c, 0))
-check("VIBRATO ON: the SID wobbles", max(f) - min(f) > 20, (min(f), max(f)))
-c.release("q", ms=50)
-c.set("uVibDep", 3)                          # 1/2 semitone (ADVANCED SOUND, set as its hook would)
-c.set("menuRow", 14)
-c.tap("return", ms=60)
-check("RETURN on a closed page's line? (menuRow 14 is on ADVANCED SOUND: MenuOpen goes to the main page)", c.v("menuPage") == 0)
-c.press("lshift", ms=10); c.tap("return", ms=100); c.release("lshift", ms=100)
-c.set("menuRow", 8); c.tap("return", ms=60); c.tap("return", ms=80)       # main page -> ADVANCED SOUND
-c.tap("crsrright", ms=60)                    # VIBRATO DEPTH: 1/2 -> 1/8 (wraps)
-check("ADVANCED SOUND: VIBRATO DEPTH 1/8 applies at once (VIBRATO is ON)", c.v("uVibDep") == 0 and c.v("vibDepth") == 30,
-      (c.v("uVibDep"), c.v("vibDepth")))
-c.press("lshift", ms=10); c.tap("return", ms=60); c.tap("return", ms=60); c.release("lshift", ms=150)
-c.set("uVibDep", 1)
-menu_set(c, 2, 1)                            # VIBRATO -> OFF
-check("VIBRATO OFF", c.v("vibLock") == 2 and c.v("vibDepth") == 0)
-c.set("vibBtn", 1); c.set("menuRow", 2); c.tap("return", ms=40)
-c.tap("crsrright", ms=40); c.tap("crsrright", ms=40)     # OFF -> AS SOUND -> ON -> (OFF again below)
-c.press("lshift", ms=10); c.tap("crsrright", ms=40); c.release("lshift", ms=10)
-c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=100)
-check("(VIBRATO back to AS SOUND)", c.v("vibLock") == 0, c.v("vibLock"))
-c.set("vibBtn", 0)
-
-# WHISTLE has vibrato on the SID and the Game Boy: OFF takes both away
-c.midi_in(0xC0, 4, ms=300)
-check("WHISTLE (sound vibrato)", c.v("soundMode") == 4 and c.v("vibDepth") > 0)
-t0 = c.cpu.processorCycles
-menu_set(c, 2, 2)                            # VIBRATO -> OFF
-lfo = [x for x in ccs(c, t0, 1) if x[0] in GB]
-check("WHISTLE + VIBRATO OFF: no SID vibrato, the Game Boy's pitch LFO depth 0", c.v("vibDepth") == 0 and (10, 0) in lfo
-      and (11, 0) in lfo, lfo)
-menu_set(c, 2, 1)                            # -> AS SOUND
-check("VIBRATO AS SOUND: WHISTLE's own again", c.v("vibDepth") == 61, c.v("vibDepth"))
-
-# GLIDE ON on FAT
-t0 = c.cpu.processorCycles
+# (v0.24: the old menu's VIBRATO / GLIDE / DETUNE / TREMOLO / MONO / WARBLE
+# switches are gone: the PATCH pages edit the patch itself, test_v024.py)
 c.midi_in(0xC0, 0, ms=300)
-menu_set(c, 3, 1)                            # GLIDE -> ON
-gl = [x for x in ccs(c, t0, 5) if x[0] in GB]
-check("GLIDE ON: SID glide (MEDIUM), Game Boy CC 5 = 32", c.v("glideK") == 4 and (10, 32) in gl and (12, 32) in gl, gl)
-menu_set(c, 3, 2)                            # -> AS SOUND
-check("GLIDE AS SOUND: FAT has none", c.v("glideK") == 0)
-
-# DETUNE
 c.press("q", ms=200)
-f = [sid_freq(c, v) for v in range(3)]
-check("FAT: SID voices detuned apart", f[1] > f[0] > f[2], f)
-t0 = c.cpu.processorCycles
-menu_set(c, 5, 2)                            # DETUNE -> OFF
-f = [sid_freq(c, v) for v in range(3)]
-det = [x for x in ccs(c, t0, 94) if x[0] in GB]
-check("DETUNE OFF: the held SID notes retuned together, Game Boy CC 94 = 64", f[0] == f[1] == f[2] and (10, 64) in det
-      and (11, 64) in det, (f, det))
-c.set("uDet", 3)                             # HUGE
-menu_set(c, 5, 2)                            # -> AS SOUND -> ON
-f = [sid_freq(c, v) for v in range(3)]
-check("DETUNE ON (HUGE): twice FAT's spread", c.v("detNow") == 16 and f[1] - f[0] > 0, (c.v("detNow"), f))
-menu_set(c, 5, 2)                            # -> OFF -> AS SOUND
-check("DETUNE AS SOUND", c.v("detNow") == 8)
 c.set("uDet", 1)
 
 # WIDE held
@@ -232,34 +154,6 @@ check("let go: back down, PADS's filter stays on", c.raw[0xD416] < 140 and c.raw
 c.release("q", ms=60)
 c.press("lshift", ms=10); c.tap("v", ms=300); c.release("lshift", ms=10)
 c.press("q", ms=100)
-
-# TREMOLO ON (FAT has none): the SID's volume moves
-menu_set(c, 4, 1)
-c.press("q", ms=50)
-vol = []
-for _ in range(30):
-    c.run_ms(10)
-    vol.append(c.raw[0xD418] & 15)
-check("TREMOLO ON: the SID volume breathes", max(vol) == 15 and min(vol) < 10, vol)
-menu_set(c, 4, 2)
-c.run_ms(40)
-check("TREMOLO AS SOUND: volume back to 15", c.raw[0xD418] & 15 == 15)
-c.release("q", ms=60)
-
-# MONO/POLY and WARBLE
-t0 = c.cpu.processorCycles
-menu_set(c, 0, 1)
-check("MONO/POLY: MONO", c.v("monoLock") == 1 and c.v("monoMode") == 1)
-c.tap("v", ms=300)
-check("... kept on the next sound (PADS)", c.v("soundMode") == 1 and c.v("monoMode") == 1)
-menu_set(c, 0, 2)
-check("MONO/POLY: AS SOUND (PADS: poly)", c.v("monoLock") == 0 and c.v("monoMode") == 0)
-t0 = c.cpu.processorCycles
-menu_set(c, 6, 2)                            # WARBLE -> OFF
-wb = [b for _, s, a, b in since(c, t0) if s == 0xBA and a == 104]
-check("WARBLE OFF: Game Boy warble 0", wb[-1:] == [0], wb)
-menu_set(c, 6, 1)
-c.press("lshift", ms=10); c.tap("v", ms=300); c.release("lshift", ms=10)
 
 # ---------------------------------------------------------------- BEAT FILL
 c.set("spaceAct", A_FILL)

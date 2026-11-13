@@ -249,7 +249,7 @@ def build():
         assert len(p["name"]) <= NAME_LEN, p["name"]
         out.append(f"patch{i}:" + " " * (4 - len(str(i))) + ".byte " + ",".join(f"${rows[i][n] & 255:02X}" for n in names))
         out.append(f'        .byte "{p["name"]:{NAME_LEN}s}",0')
-    out += banks_asm() + dice_asm(names)
+    out += banks_asm()
     open(os.path.join(ROOT, "src", "soundtab.asm"), "w").write("\n".join(out) + "\n")
     # for Chip Lab: the live patch's layout and the bytes of each built-in patch
     lay = {"format": "fat-chip-64-layout", "doc": "Fat Chip 64's live patch: these fields in this order, then the name "

@@ -250,6 +250,18 @@ FxVars:
 	sta vibSpr
 	; ---- glide
 .g:
+	lda brVib               ; DH-100: the vibrato follows the breath
+	beq .g0
+	lda vibDepth
+	bne .bv
+	jsr VibUser
+	lda #0
+	sta vibDel
+	lda vibDepth
+.bv:
+	jsr BreathScale
+	sta vibDepth
+.g0:
 	ldy glideLock
 	beq .gs
 	cpy #1
@@ -292,6 +304,14 @@ FxVars:
 	bcc .dk
 	lda #32
 .dk:
+	ldy brDet               ; DH-100: the detune follows the breath
+	beq .dk1
+	tay
+	bne .bd
+	lda uDetT+1
+.bd:
+	jsr BreathScale
+.dk1:
 	sta detNow
 	; ---- anything for FxTick to do?
 	lda sndFDep
@@ -302,6 +322,7 @@ FxVars:
 	ora sndSeq
 	ora sweepLvl
 	ora actCnt+A_SWEEP
+	ora brFilt
 	beq .b
 	lda #1
 .b:
@@ -591,6 +612,14 @@ WarbleSend:
 	ldy uWarb
 	lda uWarbT,y
 .w:
+	ldy brWarb              ; DH-100: the warble follows the breath
+	beq .w1
+	tay
+	bne .bw
+	lda uWarbT+1
+.bw:
+	jsr BreathScale
+.w1:
 	ldy actCnt+A_WOBBLE
 	beq .p
 	lda #110
@@ -1073,6 +1102,7 @@ SidFx:
 	sta t0
 .wr0:
 	lda t0
+	jsr BreathCut           ; (DH-100: the breath closes it down)
 	sta SID+$16
 	jmp .pwm
 .noF:
@@ -1080,6 +1110,7 @@ SidFx:
 	; closes it down; let go, it opens again and switches off
 	lda sweepLvl
 	ora actCnt+A_SWEEP
+	ora brFilt
 	beq .swOff
 	lda sweepOn
 	bne .swOn
@@ -1100,6 +1131,7 @@ SidFx:
 	sec
 	sbc t1
 	eor #$FF
+	jsr BreathCut
 	sta SID+$16
 	jmp .pwm
 .swOff:
@@ -1539,81 +1571,8 @@ SidVib:
 	sta bT3
 	rts
 
-; ------------------------------------------------------------ the dice (v0.22)
-; SHIFT + /: each effect in DICE_FX (soundtab.asm) goes on with its chance and
-; gets one of DICE_ROWS ready-made settings, or off. The tone, envelope,
-; levels and octaves stay. The name gets a * at the end. C= + / undoes it.
-DiceRoll:
-	subroutine
-	ldy #127                ; the live patch as it was, for C= + /
-.u:
-	lda livePatch,y
-	sta diceUndo,y
-	dey
-	bpl .u
-	lda #1
-	sta undoOk
-	ldx #0
-.e:
-	stx dcE
-	jsr Random              ; on? (0-127 under the chance)
-	ldx dcE
-	cmp diceProb,x
-	bcs .off
-	jsr Random
-	and #DICE_ROWS-1
-	clc
-	adc #1
-	ldx dcE
-	ldy diceNF,x
-	bne .row
-.off:
-	ldx dcE
-	ldy diceOffNF,x
-	lda #0
-.row:
-	sty dcN                 ; fields to write
-	sta dcR                 ; row
-	lda diceFLo,x
-	sta .f+1
-	lda diceFHi,x
-	sta .f+2
-	lda diceRLo,x           ; row address = rows + row x fields
-	sta .v+1
-	lda diceRHi,x
-	sta .v+2
-	ldy dcR
-	beq .w
-.m:
-	lda .v+1
-	clc
-	adc diceNF,x
-	sta .v+1
-	bcc .mc
-	inc .v+2
-.mc:
-	dey
-	bne .m
-.w:
-	ldy #0
-.wl:
-	cpy dcN
-	beq .next
-.f:
-	ldx $FFFF,y             ; the field
-.v:
-	lda $FFFF,y             ; its value
-	sta livePatch,x
-	iny
-	bne .wl
-.next:
-	ldx dcE
-	inx
-	cpx #DICE_FX
-	bne .e
-	lda #"*"                ; rolled: a * at the end of the name
-	sta patchName+NAME_LEN-1
-	jmp PatchApply
+; ------------------------------------------------------------ the dice
+; (DiceRoll: patchedit.asm)
 
 ; C= + /: back to the patch before the last roll
 DiceUndo:

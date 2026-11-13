@@ -458,8 +458,10 @@ BeatPickKey:
 
 ; A S D F G: that bank, the same slot (or its first patch if that's empty)
 BankKey:
-	subroutine
 	jsr KeyIndex
+; X = bank (the DH-100's tone buttons too)
+BankPick:
+	subroutine
 	stx t3                  ; bank
 	txa
 	asl
@@ -513,6 +515,11 @@ SlotKey:
 ; , / . : tempo down / up 1 BPM (SHIFT: 10), 30-250
 TempoDown:
 	subroutine
+	lda #0
+	jsr ScTempoKey          ; (Synthcart sync: nudge / step)
+	bcc .dn
+	rts
+.dn:
 	lda #1
 	ldx shiftDown
 	beq .d
@@ -527,6 +534,11 @@ TempoDown:
 	lda #30
 	bcc .s
 TempoUp:
+	lda #1
+	jsr ScTempoKey
+	bcc .up
+	rts
+.up:
 	lda #1
 	ldx shiftDown
 	beq .u
@@ -732,7 +744,18 @@ SettingChanged:
 
 ; The settings the chord builder uses (eff*) catch up with the chosen ones.
 ApplySettings:
+	subroutine
+	lda useDh               ; (keeps X and Y)
+	beq .pm
+	lda dhNotes             ; DH-100 NOTES: CHORD or HARMONY, whatever's chosen
+	beq .pm
+	cmp #2                  ; 1 CHORD, 2 -> 3 HARMONY
+	bne .m
+	lda #MODE_HARM
+	bne .m
+.pm:
 	lda playMode
+.m:
 	sta effMode
 	lda spice
 	sta effSpice
@@ -863,6 +886,13 @@ NoteUp:                         ; A = note index
 .su:
 	rts
 .s:
+	cmp #K_COMMA
+	beq .nud
+	cmp #K_PERIOD
+	bne .sp
+.nud:
+	jmp ScNudgeEnd
+.sp:
 	cmp #K_SPACE
 	bne .k
 	lda spaceDown

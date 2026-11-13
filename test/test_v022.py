@@ -27,7 +27,7 @@ def mod(c, m, key, ms=60):
 c = C64(channels=None)
 c.run_ms(400)
 row = lambda r: c.screen_row(r)
-check("header V0.23", "V0.23" in row(0), row(0))
+check("header V0.24", "V0.24" in row(0), row(0))
 check("sound line: bank, slot, patch (FAT   1 FAT)", row(2).startswith("FAT   1 FAT "), row(2))
 
 # ---- banks and slots
@@ -44,7 +44,7 @@ c.tap("v", ms=150)
 check("V: an empty slot in BASS does nothing", c.v("soundMode") == n0, row(2))
 c.tap("x", ms=150)
 check("X: WAVE BASS", row(2).startswith("BASS  2 WAVE BASS"), row(2))
-c.midi_in(0xC0, 12, ms=200)
+c.midi_in(0xC0, 22, ms=200)   # (v0.24: voice 22 = FX 3)
 check("a program change (VIBRAPHONE) shows its bank and slot: FX 3", row(2).startswith("FX    3 VIBRAPHONE"), row(2))
 c.tap("a", ms=150)
 check("A: FAT, slot 3 (COMBO ORGAN)", row(2).startswith("FAT   3 COMBO ORGAN"), row(2))

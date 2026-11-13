@@ -598,6 +598,17 @@ TremTick:
 .st:
 	sta tremA
 .out:
+	lda brAtt               ; DH-100 BREATH VOLUME: on top of the tremolo
+	beq .o2
+	clc
+	adc tremA
+	cmp #16
+	bcc .o1
+	lda #15
+.o1:
+	sta tremA
+	jmp TremDirect
+.o2:
 	lda tremBtn
 	bne TremDirect
 	lda tremLock
