@@ -557,10 +557,21 @@ TremTick:
 	sta exI                 ; rate
 	lda nesTremRH
 	sta exK
+	lda nesTremSync         ; (SYNC: the rate from the tempo)
+	beq .fr
+	lda tremSyncL
+	sta exI
+	lda tremSyncH
+	sta exK
+.fr:
 	lda nesTremSq
 	sta exD                 ; square?
+	lda nesTremMode
+	sta tremMode            ; LFO, PUMP, GATEs
 	jmp .btn
 .user:
+	lda #0
+	sta tremMode
 	jsr TremUser
 .btn:
 	lda tremBtn
@@ -581,6 +592,35 @@ TremTick:
 	lda tremPhH
 	adc exK
 	sta tremPhH
+	ldx tremMode            ; PUMP / GATE
+	beq .lfo
+	dex
+	bne .gate
+	eor #$FF                ; PUMP: the most down at the cycle's start,
+	ldy exS                 ;  back up by its end
+	jsr Mul8
+	lda mt16+1
+	jmp .st
+.gate:
+	lda tremGates-1,x       ; GATE: eight steps, on (no drop) or off (all of it)
+	sta t0
+	lda tremPhH
+	lsr
+	lsr
+	lsr
+	lsr
+	lsr
+	tay
+	lda t0
+	and tremBits,y
+	beq .off
+	lda #0
+	beq .st
+.off:
+	lda exS
+	jmp .st
+.lfo:
+	lda tremPhH
 	ldy exD
 	beq .tri
 	cmp #128                ; square: full depth half the time
@@ -610,12 +650,72 @@ TremTick:
 	jmp TremDirect
 .o2:
 	lda tremBtn
-	bne TremDirect
+	bne .td
 	lda tremLock
 	cmp #1
-	beq TremDirect
+	beq .td
 	lda tremWas
-	bne TremEnd
+	beq .r
+	jmp TremEnd
+.td:
+	jmp TremDirect
+.r:
+	rts
+
+tremGates:  .byte %10101101, %11011010, %10010010   ; X.X.XX.X, XX.XX.X., X..X..X.
+tremBits:   .byte $80,$40,$20,$10,$08,$04,$02,$01
+
+; TREMOLO SYNC: the phase step per 10 ms for its division at this tempo
+; (65536 x 10 ms / the cycle's ms)
+TremSyncCalc:
+	subroutine
+	ldx nesTremSync
+	beq .x
+	lda tsyncL-1,x
+	sta d24
+	lda tsyncM-1,x
+	sta d24+1
+	lda tsyncH-1,x
+	sta d24+2
+	jsr Div24               ; / beatMs
+	lda d24
+	sta tremSyncL
+	lda d24+1
+	sta tremSyncH
+.x:
+	rts
+
+; 655360 / the division in beats: 1 BAR, 1/2, 1/4, 1/8 dotted, 1/8, 1/8T, 1/16, 1/16T, 1/32
+tsyncL:     .byte <163840,<327680,<655360,<873813,<1310720,<1966080,<2621440,<3932160,<5242880
+tsyncM:     .byte >163840,>327680,>655360,>873813,>1310720,>1966080,>2621440,>3932160,>5242880
+tsyncH:     .byte 163840>>16,327680>>16,655360>>16,873813>>16,1310720>>16,1966080>>16,2621440>>16,3932160>>16,5242880>>16
+
+; d24 (24 bits) / beatMs -> d24
+Div24:
+	subroutine
+	lda #0
+	sta d24r
+	sta d24r+1
+	ldx #24
+.l:
+	asl d24
+	rol d24+1
+	rol d24+2
+	rol d24r
+	rol d24r+1
+	lda d24r
+	sec
+	sbc beatMs
+	tay
+	lda d24r+1
+	sbc beatMs+1
+	bcc .n
+	sta d24r+1
+	sty d24r
+	inc d24
+.n:
+	dex
+	bne .l
 	rts
 
 ; the ADVANCED SOUND tremolo

@@ -6,6 +6,15 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.30:** pitch attacks and releases, climbing echoes, tempo tremolo.
+- **ATTACK** (PATCH, SID): **BLIP** starts each note up and drops to it, the chiptune way: OCTAVE, OCTAVE + 5TH, or 2 OCTAVES (two up, one up, the note), each step **BLIP STEP** long (10–40 ms). **CLICK** plays the note's first ~20 ms as noise, a hard pick.
+- **BEND IN** (all chips): each new note starts AMOUNT semitones away and bends to its pitch over TIME (5 ms – 1 s). Above is a drop, below a scoop. The SID bends each voice; the NES uses its glide; the Game Boy uses its own pitch envelope (CC 80 / 81), so its time is the nearest of its sixteen. Legato notes don't bend in.
+- **BEND OUT** (SID): a note you let go sags AMOUNT semitones over TIME while its release rings.
+- **REPEAT** gains **SHIFT** (−12 … +12) and **SHIFT IN** (SEMITONES or SCALE STEPS of the key): each echo moves on from the last, so +12 climbs in octaves and −1 SCALE STEPS walks down the key; echoes stop at the top or bottom of the range. **ECHOES**: GB + NES (as before), **ALL CHIPS** (SID 3 joins in, so the echo hops SID → GB → NES), or **ONE CHIP** (one voice, each echo cuts the last).
+- **TREMOLO** gains **SYNC** (FREE, or 1 BAR … 1/32 of the tempo, including dotted and triplets; with the beat running it starts each bar on the downbeat) and **MODE**: LFO, **PUMP** (a sidechain-style duck on each cycle, swelling back) or one of three **GATE** patterns (X.X.XX.X, XX.XX.X., X..X..X.). As before, a patch's tremolo plays on the NES (and the SID with the tremolo key); the Game Boy has none.
+- The menu's tables moved into the RAM under the KERNAL (copied there at start), which freed about 8 KB for code.
+- Patches are 96 bytes now (Chip Lab's SysEx too).
+
 **v0.29:** SMART CHORD sizes; CHORD + LEAD holds what the mode says; the arp leaves the lead alone.
 - **SMART CHORD** now has five sizes on C= + X: **5TH**, **TRIAD** (the default), **7TH**, **9TH**, **11TH**. EXT is folded into it, so C= + Z is POLY → SMART CHORD → DRONE. 5TH is the key's fifth (B in C major gets its diminished fifth, F); a note outside the key gets a perfect fifth. The screen shows SMART 5TH / TRI / 7TH / 9TH / 11TH. (13ths are gone.)
 - **CHORD + LEAD** holds what the notes mode says: POLY just the chord key's note, SMART CHORD its chord at the size you chose, DRONE the drone.
@@ -393,7 +402,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.29)
+## Not yet (v0.30)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

@@ -130,9 +130,14 @@ SidRetrig:
 	sta sidGate,y
 	pha
 	lda sidOfs,y
+	sta t2
 	tay
 	pla
 	sta SID+4,y
+	stx exV
+	ldy vIdx,x
+	jsr ClickOn
+	ldx exV
 .next:
 	inx
 	cpx #NUM_VOICES
@@ -859,7 +864,8 @@ VoiceSet:
 	sta sidGate,y
 	ldx t2
 	sta SID+4,x
-	rts
+	ldx t0
+	jmp RelDrop             ; (BEND OUT: the release sags)
 .sidOn:
 	jsr SidPitch            ; -> ptr
 .freq:
@@ -881,6 +887,7 @@ VoiceSet:
 	lda ptr+1
 	sta sidBaseHi,y
 .glide:
+	jsr BendIn              ; (BEND IN: a new attack starts away)
 	jsr SidFreqOut          ; (with the SPACE bend and vibrato)
 	; gate
 	ldx t0
@@ -907,6 +914,7 @@ VoiceSet:
 	sta sidGate,y
 	ldx t2
 	sta SID+4,x
+	jmp ClickOn             ; (ATTACK: the CLICK, the BLIP from the start)
 .legato:
 	rts
 
@@ -971,6 +979,8 @@ SidAttackFx:
 	lda #0
 	sta vibT,y
 	sta vibAmt,y
+	sta atkT,y              ; (ATTACK starts again)
+	sta rdOn,y
 	lda sndFEnv
 	beq .x
 	sta fEnv

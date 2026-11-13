@@ -702,6 +702,14 @@ BeatFollow:
 ; there is) and one noise sound (cymbal, open hat, closed hat)
 BeatPlay:
 	subroutine
+	lda beatStep            ; (the bar starts: a synced TREMOLO starts its cycle)
+	bne .vc
+	lda nesTremSync
+	beq .vc
+	lda #0
+	sta tremPhL
+	sta tremPhH
+.vc:
 	lda vinylCut            ; VINYL STOP has stopped: no drums
 	beq .run
 	rts

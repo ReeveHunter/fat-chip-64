@@ -20,6 +20,7 @@ Start:
 	txs
 	lda #$35                ; RAM at $A000/$E000, I/O on (no BASIC/KERNAL)
 	sta $01
+	jsr HiCopy              ; (first: the tables may sit where the variables go)
 	jsr InitHardware
 	jsr InitState
 	jsr ScreenInit
@@ -168,6 +169,30 @@ InitHardware:
 	sta CIA1_CRA
 	lda #$81                ; enable timer A interrupt
 	sta CIA1_ICR
+	rts
+
+; the tables for $E000 (loaded after the program) to $E000
+HiCopy:
+	subroutine
+	lda #<hiPhys
+	sta ptr
+	lda #>hiPhys
+	sta ptr+1
+	lda #<hiStart
+	sta ptr2
+	lda #>hiStart
+	sta ptr2+1
+	ldx #>(hiEnd - hiStart + 255)
+	ldy #0
+.c:
+	lda (ptr),y
+	sta (ptr2),y
+	iny
+	bne .c
+	inc ptr+1
+	inc ptr2+1
+	dex
+	bne .c
 	rts
 
 InitState:
@@ -476,6 +501,7 @@ Nmi:
 	include "devices.asm"
 	include "wander.asm"
 	include "lead.asm"
+	include "attack.asm"
 	include "screen.asm"
 	include "viz.asm"
 	include "nesfx.asm"
@@ -486,3 +512,25 @@ Nmi:
 	include "menutab.asm"
 	include "beats.asm"
 	include "bendtab.asm"
+codeEnd:
+  if codeEnd > $C000
+    echo "the program runs past $C000"
+    err
+  endif
+
+; ---- tables that live under the KERNAL: loaded here, copied to $E000 at
+; start (before the variables at $C000-$C9FF are cleared: they may load there)
+hiPhys:
+	rorg $E000
+hiStart:
+	include "menuhi.asm"
+hiEnd:
+	rend
+  if hiEnd > $FFFA
+    echo "the $E000 tables run into the CPU's vectors"
+    err
+  endif
+  if hiPhys + hiEnd - hiStart > $D000
+    echo "the program file runs into the I/O at $D000"
+    err
+  endif

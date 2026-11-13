@@ -409,6 +409,10 @@ SidFreqOut:
 	lda sidBaseHi,y
 	sta bT3
 	sta mulA+1
+	lda sndBlip             ; (ATTACK: the BLIP's octave)
+	beq .nb
+	jsr BlipApply
+.nb:
 	ldx bendMag
 	beq .w
 	lda bendUp

@@ -159,6 +159,8 @@ NesGlideStep:
 	sta nfxL
 	lda nesGlH,x
 	sta nfxH
+	ldy nesK,x              ; (BEND IN: its own)
+	bne .sh
 	ldy glideK
 	bne .sh
 	ldy #2                  ; (glide switched off mid-slide: finish quickly)
@@ -214,6 +216,7 @@ NesGlideStep:
 	lda #0
 	sta nesGlL,x
 	sta nesGlH,x
+	sta nesK,x
 	lda #3                  ; (one more round: the last bend, centred)
 	sta nfxRun
 .x:
@@ -253,6 +256,17 @@ NesNoteStart:
 	lda #0
 	sta nesGlL,x
 	sta nesGlH,x
+	lda sndPenv             ; BEND IN: a new note starts away (not legato)
+	beq .l
+	ldy legatoNow
+	bne .l
+	sta nesGlH,x
+	lda #0
+	sta nesGlL,x
+	lda #1
+	sta nfxGlide
+	lda sndPenvK
+	sta nesK,x
 .l:
 	lda nfxK
 	sta nesLast,x

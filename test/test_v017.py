@@ -43,7 +43,7 @@ c = C64(channels=None)
 c.run_ms(400)
 c.set("detLock", 2)                          # (no detune on top: exact sums)
 c.set("detNow", 0)
-check("header V0.29", "V0.29" in c.screen_row(0), c.screen_row(0))
+check("header V0.30", "V0.30" in c.screen_row(0), c.screen_row(0))
 check("Game Boy bend range 24 sent at start (CC 85 = 127)",
       all((0xB0 | ch, 85, 127) in [(s, a, b) for _, s, a, b in c.midi()] for ch in GB))
 

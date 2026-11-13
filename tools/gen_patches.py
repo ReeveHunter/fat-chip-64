@@ -215,7 +215,39 @@ def fields(p):
     r = int(round(t["tremRate"] * 65536 / 100)) if t else 0      # per 10 ms
     f["nesTremRL"], f["nesTremRH"] = r & 255, r >> 8
     f["nesTremSq"] = 1 if t and DEF["lists"]["shapes"][t["shape"]] == "SQUARE" else 0
+    # ---- v0.30
+    f["nesTremSync"] = t["tremSync"] if t else 0
+    f["nesTremMode"] = t["mode"] if t else 0
+    f["sndRpShift"] = rp["shift"] & 255 if rp else 0
+    f["sndRpMode"] = rp["shiftIn"] | rp["hop"] << 1 if rp else 0
+    at = on.get("attack") if has("attack", "sid") else None
+    f["sndBlip"] = at["blip"] if at else 0
+    f["sndBlipT"] = BLIP_STEPS[at["blipMs"]] if at else 5
+    f["sndClick"] = at["click"] if at else 0
+    pe = on.get("penv") if (has("penv", "sid") or has("penv", "nes")) else None
+    f["sndPenv"] = pe["amount"] & 255 if pe else 0
+    f["sndPenvK"] = bend_k(pe["time"]) if pe else 0
+    pg = on.get("penv") if has("penv", "gb") else None
+    f["gbPenvA"] = cc(pg["amount"] + 24 if pg else 24, 48)
+    f["gbPenvT"] = cc(gb_penv_t(pg["time"]) if pg else 0, 15)
+    rd = on.get("rdrop") if has("rdrop", "sid") else None
+    f["sndRdrop"] = rd["amount"] if rd else 0
+    f["sndRdropK"] = bend_k(rd["time"]) if rd else 0
     return f
+
+
+BLIP_STEPS = [3, 4, 5, 8, 10]      # ATTACK's BLIP STEP in 4 ms steps (12, 16, 20, 32, 40 ms)
+GB_PENV = [131, 156, 178, 195, 209, 221, 229, 236, 241, 245, 248, 250, 251, 253, 253, 254]   # Fat Chip GB penv_tbl
+
+
+def bend_k(ms):
+    """BEND IN / OUT time -> the C64's glide k (1/2^k of the way each 4 ms; about 3 x 2^k x 4 ms to settle)"""
+    return max(1, min(9, round(math.log2(ms / 12))))
+
+
+def gb_penv_t(ms):
+    """Fat Chip GB pitch envelope time 0-15: x penv_tbl[t] / 256 each 1/60 s; settles in about 3 time constants"""
+    return min(range(16), key=lambda i: abs(math.log(3000 / GB_TICK_HZ / math.log(256 / GB_PENV[i])) - math.log(ms)))
 
 
 def ns_scale(ns):

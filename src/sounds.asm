@@ -332,13 +332,20 @@ FxVars:
 	ora sweepLvl
 	ora actCnt+A_SWEEP
 	ora brFilt
+	sta t0
+	lda sndBlip             ; (v0.30: ATTACK, BEND IN / OUT)
+	ora sndClick
+	sta atkOn
+	ora t0
+	ora sndPenv
+	ora sndRdrop
 	beq .b
 	lda #1
 .b:
 	sta fxBusy
 	lda #6                  ; the NES voices catch up (nesfx.asm)
 	sta nfxRun
-	rts
+	jmp TremSyncCalc        ; (TREMOLO SYNC: this patch's division)
 
 ; the ADVANCED SOUND vibrato (keeps X)
 VibUser:
@@ -767,6 +774,12 @@ GbChan:
 	jsr .put
 	ldy #127                ; bend range 24 semitones (Fat Chip 64 scales its bends)
 	lda #85
+	jsr .put
+	ldy gbPenvA             ; BEND IN: the Game Boy's own pitch envelope
+	lda #80
+	jsr .put
+	ldy gbPenvT
+	lda #81
 	jsr .put
 	ldy t3
 	cpy #2
@@ -1198,9 +1211,14 @@ SidFx:
 	adc sndPwHi
 	sta SID+3,x
 .noP:
-	; ---- pitch: glide and vibrato, every sounding voice
+	; ---- pitch: glide and vibrato, every sounding voice (and ATTACK, BEND
+	; IN / OUT)
 	lda vibDepth
 	ora glideK
+	ora sndBlip
+	ora sndClick
+	ora sndPenv
+	ora sndRdrop
 	bne .pitch
 	rts
 .pitch:
@@ -1226,7 +1244,14 @@ SidFx:
 	tax
 	lda vNote,x
 	cmp #NO_NOTE
+	bne .snd
+	lda rdOn,y              ; (let go: BEND OUT while it rings)
 	beq .next
+.snd:
+	lda atkOn
+	beq .na
+	jsr AtkStep
+.na:
 	jsr GlideStep
 	jsr VibStep
 	ldy envY
@@ -1277,10 +1302,14 @@ SweepStep:
 ; SID voice envY: sidBase moves 1/2^k of the way to sidTgt, fxN times
 GlideStep:
 	subroutine
+	ldy envY
+	lda sK,y                ; (BEND IN / OUT: this voice's own)
+	bne .k
 	lda glideK
-	bne .on
+	bne .k
 	rts
-.on:
+.k:
+	sta glK
 	; d = (target - now) / 2^glideK, worked out once; then d per 4 ms step
 	; (fxN of them), stopping at the target
 	ldy envY
@@ -1292,8 +1321,8 @@ GlideStep:
 	sbc sidBaseHi,y
 	sta t3                  ; t3:t2 = target - now (signed)
 	ora t2
-	beq .x
-	ldx glideK
+	beq .done
+	ldx glK
 .sh:
 	lda t3
 	cmp #$80                ; arithmetic shift right
@@ -1335,6 +1364,10 @@ GlideStep:
 	sta sidBaseLo,y
 	lda sidTgtHi,y
 	sta sidBaseHi,y
+.done:
+	lda #0                  ; (there: the voice's own glide is over)
+	sta sK,y
+	sta rdOn,y
 	rts
 
 ; vibNow = signed tri LFO x depth / 128 at phase A

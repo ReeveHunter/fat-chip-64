@@ -754,7 +754,25 @@ vLead       ds NUM_VOICES      ; the voice plays the lead
 vPat        ds NUM_VOICES      ; the patch on its channel now: 0 chord, 1 lead ($FF: not sure)
 leadBank    ds 1
 leadSlot    ds 1
-leadPatch   ds 128             ; the lead's patch               ; the tuning in use (scSound while the Synthcart is in use)
+leadPatch   ds 128             ; the lead's patch
+; v0.30: attacks, bends, echoes, gates
+sK          ds 3               ; per SID voice: its own glide k now (BEND IN / OUT), 0: glideK
+glK         ds 1               ; GlideStep: the k in use
+rdOn        ds 3               ; per SID voice: BEND OUT while its release rings
+atkT        ds 3               ; per SID voice: 4 ms steps since its attack (ATTACK)
+clickOn     ds 3               ; per SID voice: the CLICK's noise is on
+blT         ds 1               ; BlipApply's scratch
+atkOn       ds 1               ; this sound has a BLIP or CLICK (FxVars)
+nesK        ds NUM_VOICES      ; per NES voice: its own glide k now (BEND IN)
+rpShift     ds 1               ; REPEAT: each echo moved by this (signed)
+rpMode      ds 1               ;   bit 0 scale steps, bits 1-2 ECHOES (0 GB + NES, 1 ALL CHIPS, 2 ONE CHIP)
+rpCur       ds 1               ;   RepeatPress: the echo's note
+rpNEcho     ds 1               ;   echo voices now
+tremSyncL   ds 1               ; TREMOLO SYNC: the phase step per 10 ms
+tremSyncH   ds 1
+tremMode    ds 1               ; TREMOLO MODE now: 0 LFO, 1 PUMP, 2-4 GATEs
+d24         ds 3               ; Div24: dividend (quotient)
+d24r        ds 2               ;   remainder
 dhAct       ds 1               ; the DH-100 portamento button's task while held
 brLvl       ds 1               ; breath / 8, last seen
 brVol       ds 1               ; the breath's jobs (BreathFlags)

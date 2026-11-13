@@ -15,6 +15,7 @@ settings at their defaults). The C64 finds where a patch is by comparing one
 the SID's nibbles, and the C64 works out the Game Boy and NES envelope from
 tables made here (EnvDerive).
 """
+import re
 import json
 import math
 import os
@@ -47,21 +48,28 @@ STEPS = {
                 ("delay", [0, 100, 200, 300, 400, 600, 800, 1000, 1500, 2000]), ("shape", SHAPES), ("drift", [0, 50])],
     "glide": [("time", [0, 1, 2, 3, 4])],
     "warble": [("amount", [2, 4, 6, 8, 10, 12, 16, 20, 25, 30, 40, 50]), ("speed", [10, 20, 30, 40, 50, 60, 80, 100, 127])],
-    "tremolo": [("depth", [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]), ("tremRate", [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16]), ("shape", SHAPES)],
+    "tremolo": [("depth", [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]), ("tremRate", [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16]), ("shape", SHAPES),
+                ("tremSync", list(range(10))), ("mode", list(range(5)))],
+    "penv": [("amount", [-24, -12, -7, -5, -3, -2, -1, 1, 2, 3, 5, 7, 12, 24]), ("time", [5, 10, 20, 40, 80, 150, 300, 600, 1000])],
+    "rdrop": [("amount", [1, 2, 3, 5, 7, 12, 24]), ("time", [50, 100, 200, 300, 500, 800, 1200, 2000])],
+    "attack": [("blip", [0, 1, 2, 3]), ("blipMs", list(range(5))), ("click", [0, 1])],
     "filter": [("cutoff", [8, 16, 24, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 255]), ("resonance", list(range(16))),
                ("envAmount", [0, 16, 32, 48, 64, 96, 127]), ("lfoDepth", [0, 8, 16, 24, 32, 48, 64, 96, 127]),
                ("filtLfoRate", [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6])],
     "pwm": [("depth", [10, 20, 30, 40, 50, 60, 70, 80, 90]), ("pwmRate", [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4]), ("shape", SHAPES)],
     "dutyseq": [("pattern", [0, 1]), ("stepMs", [20, 30, 40, 60, 80, 120, 160, 250, 333, 500])],
-    "repeat": [("time", [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14]), ("repeats", list(range(1, 9))), ("level", [50, 60, 70, 80, 90, 100])],
+    "repeat": [("time", [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14]), ("repeats", list(range(1, 9))), ("level", [50, 60, 70, 80, 90, 100]),
+               ("shift", [-12, -7, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 7, 12]), ("shiftIn", [0, 1]), ("hop", [0, 1, 2])],
 }
-FX_ORDER = ["patch", "tone", "env", "detune", "vibrato", "glide", "warble", "tremolo", "filter", "pwm", "dutyseq", "repeat"]
+FX_ORDER = ["patch", "tone", "env", "attack", "penv", "rdrop", "detune", "vibrato", "glide", "warble", "tremolo", "filter", "pwm",
+            "dutyseq", "repeat"]
 ALWAYS = {"patch", "tone", "env"}
 DICE = ["detune", "glide", "warble", "filter", "pwm", "tremolo", "vibrato"]       # pwm before vibrato
-SHORT = {"PULSE+SAW+TRI": "P+S+T", "PULSE+TRI": "PULS+TRI", "PULSE+SAW": "PULS+SAW", "50/25/12.5%": "SPREAD"}
+SHORT = {"OCTAVE + 5TH": "OCT + 5TH", "GATE X.X.XX.X": "X.X.XX.X", "GATE XX.XX.X.": "XX.XX.X.", "GATE X..X..X.": "X..X..X.",
+         "SCALE STEPS": "SCALE", "SEMITONES": "SEMIS", "1/8 DOTTED": "1/8 DOT", "PULSE+SAW+TRI": "P+S+T", "PULSE+TRI": "PULS+TRI", "PULSE+SAW": "PULS+SAW", "50/25/12.5%": "SPREAD"}
 FXNAME = {"patch": "PATCH", "tone": "TONE", "env": "ENVELOPE", "dutyseq": "DUTY STEPS"}
 PNAME = {("patch", "mono"): "MONO", ("patch", "fatBass"): "FAT BASS", ("vibrato", "vibRate"): "RATE",
-         ("tremolo", "tremRate"): "RATE", ("pwm", "pwmRate"): "RATE", ("filter", "filtLfoRate"): "LFO RATE",
+         ("tremolo", "tremRate"): "RATE", ("tremolo", "tremSync"): "SYNC", ("repeat", "shift"): "SHIFT", ("pwm", "pwmRate"): "RATE", ("filter", "filtLfoRate"): "LFO RATE",
          ("tone", "gbWaveShape"): "GB WAVE SHAPE", ("tone", "sidPwSpread"): "SID WIDTHS"}
 
 
@@ -79,7 +87,9 @@ def label(eid, pid, v):
         s = ["OFF", "ON"][v]
     elif q["type"] == "enum":
         s = SHORT.get(q["values"][v], q["values"][v])
-    elif q["type"] == "ms" or pid in ("delay", "stepMs"):
+    elif q.get("unit") == "semitones":
+        s = f"{v:+d}" if pid == "shift" else f"{v:+d} SEMIS"
+    elif q["type"] == "ms" or q.get("unit") == "ms" or pid in ("delay", "stepMs"):
         s = (f"{v / 1000:g} S" if v >= 1000 else f"{v} MS") if v else "NONE" if pid == "delay" else f"{v} MS"
     elif q["type"] == "hz":
         s = f"{v:g} HZ"
@@ -498,7 +508,50 @@ def main():
     gbA, gbD, gbR, nA, nR, nS, nD = env_tables()
     for name, t in (("edGbAtk", gbA), ("edGbDec", gbD), ("edGbRel", gbR), ("edNesAtk", nA), ("edNesRel", nR), ("edNesSus", nS), ("edNesDec", nD)):
         A(f"{name}: .byte " + ",".join(str(v) for v in t))
-    open(os.path.join(ROOT, "src", "menutab.asm"), "w").write("\n".join(out) + "\n")
+    # long .byte / .word lines split (dasm's line length)
+    split = []
+    for line in out:
+        m = re.match(r"^(\S*\s*)(\.byte|\.word)\s+(.*)$", line)
+        if m and len(line) > 160 and '"' not in m.group(3):
+            vals = m.group(3).split(",")
+            for k in range(0, len(vals), 24):
+                split.append((m.group(1) if k == 0 else "        ") + m.group(2) + " " + ",".join(vals[k:k + 24]))
+        else:
+            split.append(line)
+    out = split
+
+    def size(line):
+        m = re.match(r"^\S*\s*(\.byte|\.word)\s+(.*)$", line)
+        if not m:
+            return 0
+        n = 0
+        for part in re.findall(r'"[^"]*"|[^,]+', m.group(2)):
+            n += len(part) - 2 if part.startswith('"') else (2 if m.group(1) == ".word" else 1)
+        return n
+    # the big string / step tables go under the KERNAL ($E000: main.asm copies
+    # them there at start), as many as fit; the index tables stay below $C000
+    groups, cur = [], None
+    for line in out:
+        m = re.match(r"^([A-Za-z_]\w*):", line)
+        if m:
+            g = re.match(r"^(pS|mL|pW|mS|pK|eO|eN|mU)\d+$", m.group(1))
+            cur = [g.group(1) if g else None, []]
+            groups.append(cur)
+        if cur is None:
+            cur = [None, []]
+            groups.append(cur)
+        cur[1].append(line)
+    room, high_kinds = 8150, []
+    for kind in ["pS", "mL", "pW", "mS", "pK", "eO", "eN", "mU"]:
+        n = sum(size(l) for g in groups if g[0] == kind for l in g[1])
+        if n <= room:
+            high_kinds.append(kind)
+            room -= n
+    low, high = [], ["; Generated by tools/gen_menu.py - do not edit. (at $E000)"]
+    for kind, lines in groups:
+        (high if kind in high_kinds else low).extend(lines)
+    open(os.path.join(ROOT, "src", "menutab.asm"), "w").write("\n".join(low) + "\n")
+    open(os.path.join(ROOT, "src", "menuhi.asm"), "w").write("\n".join(high) + "\n")
     print(f"{len(items)} menu lines on {len(PAGES)} pages, {len(params)} patch settings")
 
 

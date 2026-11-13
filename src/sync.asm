@@ -285,6 +285,7 @@ SetBeat16:
 	lda #1
 	sta screenDirty
 .same:
+	jsr TremSyncCalc        ; (TREMOLO SYNC follows)
 	jmp StepCalc
 
 ; beatMs was just set (tap tempo, a beat demo): beat16 from it, or snapped

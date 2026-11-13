@@ -36,11 +36,17 @@ RepeatSet:
 	bpl .c
 	jsr RepeatActive
 	beq .x
-	lda allocFree           ; spare after the notes and Fat Bass: 1 or 2 echoes
+	lda #0
+	sta rpNEcho
+	lda rpMode              ; ECHOES: GB + NES 2 voices, ALL CHIPS 3, ONE CHIP 1
+	lsr
+	and #3
+	tax
+	lda allocFree           ; spare after the notes and Fat Bass
 	beq .x
-	cmp #3
+	cmp rpMaxE,x
 	bcc .n
-	lda #2
+	lda rpMaxE,x
 .n:
 	sta t1
 	lda #0
@@ -49,6 +55,13 @@ RepeatSet:
 .p:
 	sty t3
 	ldx rpCand,y
+	cpx #6
+	bne .ps
+	lda rpMode              ; (SID 3: ALL CHIPS only)
+	and #6
+	cmp #2
+	bne .pn
+.ps:
 	jsr VoiceEnabled        ; (uses Y)
 	ldy t3
 	cmp #0
@@ -57,17 +70,20 @@ RepeatSet:
 	sta vSkip,x
 	sta vEcho,x
 	inc t2
+	inc rpNEcho
 	lda t2
 	cmp t1
 	beq .x
 .pn:
+	ldy t3
 	iny
-	cpy #4
+	cpy #5
 	bne .p
 .x:
 	rts
 
-rpCand:     .byte 4, 5, 1, 2        ; GB pulse 2, NES pulse 2, GB pulse 1, NES pulse 1
+rpCand:     .byte 4, 5, 6, 1, 2     ; GB pulse 2, NES pulse 2, SID 3 (ALL CHIPS), GB pulse 1, NES pulse 1
+rpMaxE:     .byte 2, 3, 1, 2
 
 ; Allocate's end: the echo voices keep whatever echo they're playing
 EchoKeep:
@@ -101,6 +117,7 @@ RepeatPress:
 	pha
 	jsr IdxNote
 	sta t3                  ; the note
+	sta rpCur
 	jsr RepeatGap           ; t1:t0 = ms between echoes
 	jsr GetTicks
 	lda nowL
@@ -134,6 +151,9 @@ RepeatPress:
 	cmp #8
 	bcc .x                  ; too quiet to hear: stop here
 	sta rpVelNow
+	; its note: PITCH SHIFT on from the last (semitones or the key's scale)
+	jsr EchoShift
+	bcs .x                  ; (out of range: no more)
 	; a free slot
 	ldy #RP_SLOTS-1
 .f:
@@ -150,7 +170,7 @@ RepeatPress:
 	sta rpAtL,y
 	lda rpHi
 	sta rpAtH,y
-	lda t3
+	lda rpCur
 	sta rpNote,y
 	lda rpVelNow
 	sta rpVel,y
@@ -173,6 +193,86 @@ RepeatPress:
 	pla
 	sta t0
 	ldx rpKey
+	rts
+
+; rpCur moved by PITCH SHIFT (rpShift): semitones, or (rpMode bit 0) notes
+; of the key's scale. Carry set: out of the range that sounds (12-108).
+EchoShift:
+	subroutine
+	lda rpShift
+	beq .ok
+	lda rpMode
+	lsr
+	bcs .scale
+	lda rpCur
+	clc
+	adc rpShift
+	sta rpCur
+	jmp .rng
+.scale:
+	lda rpShift
+	sta exK                 ; steps left (signed)
+.st:
+	lda exK
+	beq .rng
+	bmi .dn
+	dec exK
+	lda #1
+	bne .mv
+.dn:
+	inc exK
+	lda #$FF
+.mv:
+	sta exD                 ; +1 / -1 a semitone until the next note in the key
+.s1:
+	lda rpCur
+	clc
+	adc exD
+	sta rpCur
+	cmp #12
+	bcc .no
+	cmp #109
+	bcs .no
+	jsr InKey
+	bne .s1
+	beq .st
+.rng:
+	lda rpCur
+	cmp #12
+	bcc .no
+	cmp #109
+	bcs .no
+.ok:
+	clc
+	rts
+.no:
+	sec
+	rts
+
+; Z set if note A is in the key's scale (keeps nothing much: X, ptr)
+InKey:
+	subroutine
+	sec
+	sbc effRoot
+	clc
+	adc #120
+.m:
+	cmp #12
+	bcc .r
+	sbc #12
+	bcs .m
+.r:
+	sta exV
+	jsr ScalePtr
+	ldy exLenM1
+.l:
+	lda (ptr),y
+	cmp exV
+	beq .x
+	dey
+	bpl .l
+	lda #1                  ; (Z clear: not in it)
+.x:
 	rts
 
 rpRatio:    .byte 0, 230, 205, 179, 154, 128    ; FULL, 90 .. 50 % (x 256)
@@ -298,8 +398,18 @@ RepeatTick:
 	beq .on
 	stx t0
 	lda #NO_NOTE
+	ldy vDev,x
+	bne .om
+	sta vWant,x             ; (SID 3: its gate off)
+	jsr VoiceSet
+	ldx t0
+	lda #NO_NOTE
+.om:
 	sta vNote,x
+	ldy vDev,x
+	beq .od
 	jsr MidiTo
+.od:
 	ldx t0
 .on:
 	dex
@@ -309,11 +419,21 @@ RepeatTick:
 ; slot rpY is due: play it on an echo voice (they take turns)
 EchoPlay:
 	subroutine
-	; the voice: echo voices in turn (odd / even echoes)
+	; the voice: echo voices in turn (echo number mod how many there are)
 	ldx #NUM_VOICES-1
+	lda rpNEcho
+	bne .ne
+	rts                     ; (no echo voices now)
+.ne:
 	lda rpNum,y
-	and #1
-	sta t3                  ; which of the two
+	sec
+.md:
+	cmp rpNEcho
+	bcc .mok
+	sbc rpNEcho
+	bcs .md
+.mok:
+	sta t3                  ; which of them
 .f:
 	lda vEcho,x
 	beq .n
@@ -334,6 +454,18 @@ EchoPlay:
 .got:
 	stx t0
 	stx rpVoiceX
+	lda vDev,x
+	bne .midi
+	lda rpNote,y            ; SID 3 (ALL CHIPS): a new attack
+	sta vWant,x
+	lda #1
+	sta t3
+	jsr VoiceSet
+	ldx rpVoiceX
+	lda vWant,x
+	sta vNote,x
+	jmp .off
+.midi:
 	lda rpVel,y
 	sta mtVel
 	lda rpNote,y
@@ -341,6 +473,7 @@ EchoPlay:
 	jsr MidiTo
 	lda #VELOCITY
 	sta mtVel
+.off:
 	; it stops after 3/4 of the gap
 	jsr RepeatGap
 	lsr t1
@@ -405,6 +538,9 @@ RepeatFromSound:
 	sta rpCount
 	lda uRpLevel
 	sta rpLevel
+	lda #0
+	sta rpShift
+	sta rpMode
 	jmp RepeatLockSet
 .snd:
 	ldx soundMode
@@ -414,6 +550,10 @@ RepeatFromSound:
 	sta rpCount
 	lda sndRpLevel
 	sta rpLevel
+	lda sndRpShift          ; (v0.30: climbing echoes, which chips)
+	sta rpShift
+	lda sndRpMode
+	sta rpMode
 RepeatLockSet:
 	ldx soundMode
 	lda sndRp

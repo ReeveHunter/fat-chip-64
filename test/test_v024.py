@@ -55,12 +55,13 @@ def patch(c):
 
 
 def name(c):
-    return bytes(c.v("livePatch", 128)[66:82]).decode("latin-1")
+    n = c.sym["patchName"] - c.sym["livePatch"]
+    return bytes(c.v("livePatch", 128)[n:n + 16]).decode("latin-1")
 
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.29", "V0.29" in c.screen_row(0), c.screen_row(0))
+check("header V0.30", "V0.30" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)
