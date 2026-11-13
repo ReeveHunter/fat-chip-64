@@ -35,7 +35,7 @@ vIdx:       .byte 0,0,0, 1,1,1, 2,2,2      ; SID voice / channel offset from the
 vBass:      .byte 0,0,0, 0,0,0, 0,1,1      ; GB wave and NES triangle: bass, octave down
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64  V0.28        RETURN: MENU ",0
+txtHeader:  .byte " FAT CHIP 64  V0.29        RETURN: MENU ",0
 txtBlank6:  .byte "       ",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -108,14 +108,14 @@ tS16:       .byte "TAP    ",0
 tS17:       .byte "BEAT   ",0
 tS18:       .byte "SOUND  ",0
 tS19:       .byte "NOTHING",0
-modeTxtLo:  .byte <tMPoly,<tMChord,<tMEx7,<tMEx9,<tMEx11,<tMEx13,<tMDrone
-modeTxtHi:  .byte >tMPoly,>tMChord,>tMEx7,>tMEx9,>tMEx11,>tMEx13,>tMDrone
+modeTxtLo:  .byte <tMPoly,<tM5,<tMTri,<tM7,<tM9,<tM11,<tMDrone
+modeTxtHi:  .byte >tMPoly,>tM5,>tMTri,>tM7,>tM9,>tM11,>tMDrone
 tMPoly:     .byte "POLY      ",0
-tMChord:    .byte "SMART CHRD",0
-tMEx7:      .byte "EXT 7TH   ",0
-tMEx9:      .byte "EXT 9TH   ",0
-tMEx11:     .byte "EXT 11TH  ",0
-tMEx13:     .byte "EXT 13TH  ",0
+tM5:        .byte "SMART 5TH ",0
+tMTri:      .byte "SMART TRI ",0
+tM7:        .byte "SMART 7TH ",0
+tM9:        .byte "SMART 9TH ",0
+tM11:       .byte "SMART 11TH",0
 tMDrone:    .byte "DRONE     ",0
 txtPoly:    .byte "POLY",0
 txtMono:    .byte "MONO",0
@@ -154,4 +154,4 @@ shapeScale: .byte 0,0,0,0,1,1,2,2,3,4,4,5,5,5,6,6,7,7,8,9,9
 NUM_SHAPES  equ 21
 pcBit:      .byte $01,$02,$04,$08,$10,$20,$40,$80
 ; a note outside the key: major triad, b7, 9, 11, 13
-chromTones: .byte 0,4,7,10,14,17,21
+chromTones: .byte 0,4,7,10,14,17

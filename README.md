@@ -6,6 +6,11 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.29:** SMART CHORD sizes; CHORD + LEAD holds what the mode says; the arp leaves the lead alone.
+- **SMART CHORD** now has five sizes on C= + X: **5TH**, **TRIAD** (the default), **7TH**, **9TH**, **11TH**. EXT is folded into it, so C= + Z is POLY → SMART CHORD → DRONE. 5TH is the key's fifth (B in C major gets its diminished fifth, F); a note outside the key gets a perfect fifth. The screen shows SMART 5TH / TRI / 7TH / 9TH / 11TH. (13ths are gone.)
+- **CHORD + LEAD** holds what the notes mode says: POLY just the chord key's note, SMART CHORD its chord at the size you chose, DRONE the drone.
+- **The arp plays the chord part, never the lead:** UNISON leaves the lead's voices alone (no new attacks on each step), and SPARKLE's pair moves to SID 2 and Game Boy pulse 2 (NES pulse 2 or SID 1 without the Game Boy) while CHORD + LEAD is on.
+
 **v0.28:** CHORD + LEAD, two sounds at once. The visualizer is GLITCH only.
 - **CHORD + LEAD** (PLAYING): **LOW NOTE**: the first key you press is the chord's root (POLY: root and fifth; SMART CHORD, EXT and DRONE: their chord), and every other key is the lead while you hold it. Let go of the chord key and the next key is the new chord. **LATCH 3**: three keys pressed together (within 100 ms) latch as the chord and keep sounding; every other key is the lead; three more together make a new chord; L lets the chord go. The ordinary latch doesn't apply in CHORD + LEAD (each mode has its own).
 - **The lead** is one note, the last key pressed, on one voice per chip (SID 3, Game Boy pulse 1, NES pulse 1; fewer chips, fewer voices), and only while it plays: otherwise those voices fatten the chord as before.
@@ -244,8 +249,8 @@ lowest key (Q) starts at C3.
 |---|---|
 | A | Arp type: UNISON ↔ SPARKLE (doesn't start it; F5 and the ARP action use it) |
 | S / D / F | Arp pattern / speed / SPARKLE octave |
-| Z | POLY → SMART CHORD → EXT → DRONE |
-| X | Extensions 7TH → 9TH → 11TH → 13TH |
+| Z | POLY → SMART CHORD → DRONE |
+| X | SMART CHORD size: 5TH → TRIAD → 7TH → 9TH → 11TH |
 | C | POLY ↔ MONO |
 | L | Latch style: SMART / HOLD / ADD |
 | , / . | What SPACE does |
@@ -388,7 +393,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.28)
+## Not yet (v0.29)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

@@ -727,9 +727,9 @@ KeyShapeDone:
 
 ModeKey:
 	subroutine
-	ldx playMode            ; POLY, SMART CHORD, EXT, DRONE
+	ldx playMode            ; POLY, SMART CHORD, DRONE
 	inx
-	cpx #4
+	cpx #3
 	bcc .s
 	ldx #0
 .s:
@@ -738,9 +738,9 @@ ModeKey:
 
 SpiceKey:
 	subroutine
-	ldx spice
+	ldx spice               ; SMART CHORD: 5TH, TRIAD, 7TH, 9TH, 11TH
 	inx
-	cpx #4
+	cpx #5
 	bcc .s
 	ldx #0
 .s:

@@ -154,8 +154,7 @@ LATCH_ADD   equ 3
 SMART_WINDOW equ 500           ; ms: SMART latch adds notes pressed within this
 MODE_POLY   equ 0
 MODE_CHORD  equ 1
-MODE_EXT    equ 2
-MODE_DRONE  equ 3             ; v0.27: open fifths that wander
+MODE_DRONE  equ 2             ; v0.27: open fifths that wander (v0.29: EXT folded into SMART CHORD)
 MODE_HARM   equ 4             ; v0.24: DH-100 HARMONY (root + a third)
 SND_FAT     equ 0
 SND_PADS    equ 1
@@ -299,7 +298,7 @@ muteNow     ds 1               ; mute (M) xor momentary (SPACE)
 keyRoot     ds 1               ; 0-11, C = 0
 keyScale    ds 1               ; v0.22: 0 major .. 9 diminished (scaleLen)
 playMode    ds 1               ; 0 poly, 1 smart chord, 2 extensions
-spice       ds 1               ; extensions: 0 = 7th, 1 = 9th, 2 = 11th, 3 = 13th
+spice       ds 1               ; SMART CHORD's size: 0 5TH, 1 TRIAD, 2 7TH, 3 9TH, 4 11TH
 soundMode   ds 1               ; 0 FAT, 1 PADS, 2 RAW
 arpOct      ds 1               ; SPARKLE arp: octaves up (0-2)
 vOut        ds NUM_VOICES      ; MIDI voices: note actually sounding on the device
@@ -739,6 +738,8 @@ okpList     ds 16              ; the phrase's notes
 okpChord    ds 8               ; the chord (CHORD NOTES), from BuildHeld
 okpChordN   ds 1
 lastEff     ds 1
+exFifth     ds 1               ; Expand: 5TH (tones 0 and 2)
+exKK        ds 1
 numBuf      ds 16              ; the menu: a number to print
 ; v0.28: Chord + Lead
 clMode      ds 1               ; CHORD + LEAD: 0 OFF, 1 LOW NOTE, 2 LATCH 3

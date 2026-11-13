@@ -184,10 +184,10 @@ BuildHeld:
 .o:
 	jmp OkpAdd              ; (One Key Play's notes: never expanded)
 
-; SMART CHORD / EXTENSIONS: each held note becomes a chord built in the key.
-; A note in the scale gets its diatonic chord (stacked scale thirds: triad,
-; or 7 / 9 / 11 / 13 with extensions). A note outside the scale gets a
-; major triad (+ b7, 9, 11, 13). Results merge, ascending, at most 8.
+; SMART CHORD: each held note becomes a chord built in the key, its size
+; (X) 5TH, TRIAD, 7TH, 9TH or 11TH. A note in the scale gets its diatonic
+; chord (stacked scale thirds); a note outside the scale a major one (+ b7,
+; 9, 11). Results merge, ascending, at most 8.
 Expand:
 	subroutine
 	cmp #MODE_DRONE
@@ -205,17 +205,20 @@ Expand:
 .cpd:
 	lda #0
 	sta heldCount
-	ldx #2                  ; tones: HARMONY two
+	lda #0
+	sta exFifth
+	ldx #2                  ; tones: HARMONY two (root, third)
 	lda effMode
 	cmp #MODE_HARM
 	beq .tn
-	ldx #3                  ; triad
-	cmp #MODE_EXT
+	ldx effSpice            ; SMART CHORD: 5TH, TRIAD, 7TH, 9TH, 11TH
+	bne .sz
+	inc exFifth             ; 5TH: root and fifth (every other "third")
+	ldx #2
 	bne .tn
-	lda effSpice
-	clc
-	adc #4                  ; 7th = 4 tones ... 13th = 7
-	tax
+.sz:
+	inx                     ; TRIAD 3 tones ... 11TH 6
+	inx
 .tn:
 	stx exTones
 	lda #0
@@ -256,12 +259,17 @@ Expand:
 	lda exK
 	cmp exTones
 	beq .nextRaw
+	ldy exFifth             ; (5TH: tones 0 and 2)
+	beq .k1
+	asl
+.k1:
+	sta exKK
 	ldy exD
 	bmi .chrom
 	; in the scale: scale[d + 2k] - scale[d] (stacked "thirds": every
 	; other note of the scale, so whole tone gives augmented chords,
 	; diminished diminished ones)
-	lda exK
+	lda exKK
 	asl
 	clc
 	adc exD
@@ -272,7 +280,7 @@ Expand:
 	sbc (ptr),y
 	jmp .add
 .chrom:
-	ldy exK
+	ldy exKK
 	lda chromTones,y
 .add:
 	clc
@@ -549,6 +557,25 @@ ArpPairSet:
 	cmp #ARP_SPARKLE
 	bne .x
 	ldx #1                  ; GB pulse 1 / 2 = v1 / v4
+	lda clMode              ; CHORD + LEAD: pulse 1s are the lead's: SID 2 +
+	beq .p                  ;  GB pulse 2 (or NES pulse 2, or SID 1)
+	ldx #3
+	stx pairA
+	ldx #4
+	lda devOn+DEV_GB
+	bne .cb
+	ldx #5
+	lda devOn+DEV_NES
+	bne .cb
+	ldx #0
+.cb:
+	stx pairB
+	lda #1
+	sta vSkip,x
+	ldx pairA
+	sta vSkip,x
+	rts
+.p:
 	lda devOn+DEV_GB
 	bne .set
 	ldx #2                  ; NES pulse 1 / 2 = v2 / v5
@@ -587,8 +614,9 @@ ArpPairNotes:
 	lda arpHit
 	beq .x
 	ldx #NUM_VOICES-1       ; unison: every voice re-attacks each step
-	lda #1
 .u:
+	lda vLead,x             ; (but the lead's: CHORD + LEAD)
+	eor #1
 	sta vArpHit,x
 	dex
 	bpl .u

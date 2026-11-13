@@ -65,7 +65,7 @@ def shift(c, key, ms=150):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.28", "V0.28" in c.screen_row(0), c.screen_row(0))
+check("header V0.29", "V0.29" in c.screen_row(0), c.screen_row(0))
 check("row 3 empty with CHORD + LEAD off", c.screen_row(3).strip() == "", c.screen_row(3))
 
 # ---------------------------------------------------------------- LOW NOTE
@@ -75,14 +75,14 @@ c.run_ms(200)
 check("row 3: the lead's patch (LEADS 1: DUTY LEAD)", c.screen_row(3).startswith("LEAD    DUTY LEAD"), c.screen_row(3))
 sid3_chord = c.raw[0xD400 + 14 + 4] & 0xF0
 c.press("q", ms=150)
-check("the first key: the chord (POLY: root and fifth, C G)", held(c) == [48, 55] and c.v("leadNote") == 255, held(c))
+check("the first key: the chord (POLY: just it, v0.29)", held(c) == [48] and c.v("leadNote") == 255, held(c))
 check("... on every voice (no lead playing)", all(n != 255 for n in c.v("vNote", 9)), c.v("vNote", 9))
 t0 = c.cpu.processorCycles
 c.press("e", ms=150)
 vn = c.v("vNote", 9)
 check("another key: the lead (E), on SID 3, GB pulse 1, NES pulse 1", c.v("leadNote") == 52
       and all(vn[i] == 52 for i in LEAD_V) and c.v("vLead", 9) == [0, 1, 1, 0, 0, 0, 1, 0, 0], vn)
-check("... the chord keeps the other six voices", sorted(set(vn[i] for i in range(9) if i not in LEAD_V)) == [48, 55], vn)
+check("... the chord keeps the other six voices", sorted(set(vn[i] for i in range(9) if i not in LEAD_V)) == [48], vn)
 lead_wave = c.v("leadPatch", 128)[8] & 0xF0
 check("... SID 3 has the lead's waveform", c.raw[0xD400 + 14 + 4] & 0xF0 == lead_wave, (hex(c.raw[0xD412]), hex(lead_wave)))
 ccs = [(s, a, b) for t, s, a, b in c.midi() if t >= t0 and s & 0xF0 == 0xB0 and a == 70]
@@ -95,13 +95,51 @@ c.release("t", ms=80)
 check("... let go: the lead goes back to... nothing (E's key: still down? no: last pressed only)", c.v("leadNote") in (255, 52))
 c.release("e", ms=150)
 vn = c.v("vNote", 9)
-check("lead let go: its voices go back to the chord", c.v("leadNote") == 255 and all(n in (48, 55) for n in vn), vn)
+check("lead let go: its voices go back to the chord", c.v("leadNote") == 255 and all(n == 48 for n in vn), vn)
 check("... with the chord's patch again (SID 3's waveform)", c.raw[0xD412] & 0xF0 == sid3_chord and c.v("vPat", 9)[6] == 0,
       hex(c.raw[0xD412]))
 c.release("q", ms=150)
 c.press("t", ms=120)
-check("chord key let go, the next key's the new chord (G D)", held(c) == [55, 62], held(c))
+check("chord key let go, the next key's the new chord (G)", held(c) == [55], held(c))
 c.release("t", ms=150)
+c._raw_press("cbm", ms=30); c._raw_tap("z", ms=30); c._raw_release("cbm", ms=30)
+c.press("q", ms=120)
+check("SMART CHORD (TRIAD): the chord key holds its triad (C E G)", held(c) == [48, 52, 55], held(c))
+c.press("u", ms=120)
+check("... and the lead plays over it (B)", c.v("leadNote") == 59 and held(c) == [48, 52, 55])
+c.release("u", "q", ms=150)
+c._raw_press("cbm", ms=30); c._raw_tap("x", ms=30); c._raw_tap("x", ms=30); c._raw_tap("x", ms=30)
+c._raw_tap("x", ms=30); c._raw_release("cbm", ms=30)
+c.press("q", ms=120)
+check("SMART 5TH: C G", held(c) == [48, 55], held(c))
+c.release("q", ms=100)
+c._raw_press("cbm", ms=30); c._raw_tap("x", ms=30); c._raw_tap("z", ms=30); c._raw_tap("z", ms=30)
+c._raw_release("cbm", ms=30)
+check("(back to TRIAD, POLY)", c.v("spice") == 1 and c.v("playMode") == 0)
+c.press("t", ms=120)
+c.release("t", ms=150)
+
+# ---------------------------------------------------------------- the arp plays the chord, never the lead
+c._raw_press("cbm", ms=30); c._raw_tap("z", ms=30); c._raw_release("cbm", ms=30)   # SMART CHORD
+c._raw_tap("f5", ms=60)                      # arp on (UNISON)
+c.press("q", ms=300)
+c.press("e", ms=50)
+t0 = c.cpu.processorCycles
+c.run_ms(900)
+gb1 = [(a, b) for t, s, a, b in c.midi() if t >= t0 and s == 0x90 + c.v("gbBase")]
+arp = [a for t, s, a, b in c.midi() if t >= t0 and s == 0x90 + c.v("gbBase") + 1 and b]
+check("arp UNISON: the chord voices step through C E G", set(arp) <= {48, 52, 55} and len(set(arp)) == 3, arp[:8])
+check("... the lead's voice holds its note (no new attacks from the arp)", gb1 == [] and c.v("vNote", 9)[1] == 52, gb1[:4])
+c._raw_press("cbm", ms=30); c._raw_tap("a", ms=30); c._raw_release("cbm", ms=30)   # SPARKLE
+c.run_ms(500)
+vn = c.v("vNote", 9)
+check("arp SPARKLE: its pair is SID 2 + GB pulse 2, the lead keeps SID 3 / GB 1 / NES 1",
+      c.v("pairA") == 3 and c.v("pairB") == 4 and all(vn[i] == 52 for i in LEAD_V), (c.v("pairA"), c.v("pairB"), vn))
+c.release("e", "q", ms=100)
+c._raw_press("cbm", ms=30); c._raw_tap("a", ms=30); c._raw_release("cbm", ms=30)   # back to UNISON
+c._raw_tap("f5", ms=60)                      # arp off
+c._raw_press("cbm", ms=30); c._raw_tap("z", ms=30); c._raw_tap("z", ms=30); c._raw_release("cbm", ms=60)  # POLY
+c.run_ms(800)
 
 # ---------------------------------------------------------------- the lead's patch
 shift(c, "g")

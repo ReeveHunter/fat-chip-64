@@ -59,7 +59,7 @@ mL18:      .byte "CRSR DOWN / RIGHT: ONE KEY PLAY ",0
 mL19:      .byte "SHIFT + ASDFG / ZXCVB: THE LEAD'S PATCH ",0
 mL20:      .byte "C= + A ARP TYPE   S D F PATTERN, ",0
 mL21:      .byte "      SPEED, OCTAVE ",0
-mL22:      .byte "C= + Z MODE (..DRONE)  X EXT  C MONO ",0
+mL22:      .byte "C= + Z MODE  X CHORD SIZE  C MONO ",0
 mL23:      .byte "C= + L LATCH STYLE  , . SPACE'S ACTION ",0
 mL24:      .byte "C= + ; : MIDI IN OCTAVE  / UNDO DICE ",0
 mL25:      .byte "C= + F1 F3 F5 CHIPS  F7 PANIC ",0

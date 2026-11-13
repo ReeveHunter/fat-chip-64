@@ -237,6 +237,8 @@ InitState:
 	lda #2
 	sta okpMotion
 	sta okpTurn
+	lda #1                  ; SMART CHORD: TRIAD
+	sta spice
 	lda #50                 ; FINE TUNE 0
 	sta fineTune
 	lda #64                 ; (the Game Boy's master tune: 0 cents)

@@ -1,8 +1,8 @@
 ; Fat Chip 64 - CHORD + LEAD (v0.28): a chord and a lead at once, each its
 ; own patch.
-;   LOW NOTE  the first key pressed is the chord's root (POLY: root and
-;             fifth; SMART CHORD / EXT / DRONE: their chord); every other key
-;             is the lead, while the chord key is held
+;   LOW NOTE  the first key pressed is the chord's root (POLY: just it;
+;             SMART CHORD: its 5TH, TRIAD...; DRONE: the drone); every other
+;             key is the lead, while the chord key is held
 ;   LATCH 3   three keys pressed together latch as the chord (let go, it
 ;             keeps sounding); everything else is the lead. L clears it.
 ; The lead is one note (the last key pressed) on one voice per chip (SID 3,
@@ -108,14 +108,7 @@ ClBuild:
 	lda physKey,x
 	beq .x
 	jsr IdxNote
-	sta exR
-	jsr InsertNote
-	lda effMode             ; POLY: root and fifth
-	bne .x
-	lda exR
-	clc
-	adc #7
-	jmp InsertNote
+	jmp InsertNote          ; (POLY: just it; SMART CHORD, DRONE: their chord)
 .l3:
 	ldx #0
 .n:

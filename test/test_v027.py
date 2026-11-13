@@ -59,7 +59,7 @@ def since(c, t0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.28", "V0.28" in c.screen_row(0), c.screen_row(0))
+check("header V0.29", "V0.29" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- FINE TUNE
 c.midi_in(0x90, 60, 100, ms=80)
@@ -97,9 +97,9 @@ back(c, 2)
 check("back to 0", c.v("tuneC") == 0 and c.v("tuneN") == 0)
 
 # ---------------------------------------------------------------- DRONE
-for _ in range(3):
+for _ in range(2):
     c._raw_press("cbm", ms=30); c._raw_tap("z", ms=30); c._raw_release("cbm", ms=30)
-check("C= + Z x 3: DRONE", c.v("playMode") == 3 and "DRONE" in c.screen_row(9), c.screen_row(9))
+check("C= + Z x 2: DRONE (v0.29)", c.v("playMode") == 2 and "DRONE" in c.screen_row(9), c.screen_row(9))
 c.press("q", ms=120)
 check("a key: open fifths up from it (C: C G C G)", held(c) == [48, 55, 60, 67], held(c))
 check("CHORD CHANGE AS MODE in DRONE: glides (glideK set)", c.v("glideK") > 0, c.v("glideK"))

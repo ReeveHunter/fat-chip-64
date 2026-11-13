@@ -232,7 +232,7 @@ HELP = [
     "",
     "C= + A ARP TYPE   S D F PATTERN,",
     "      SPEED, OCTAVE",
-    "C= + Z MODE (..DRONE)  X EXT  C MONO",
+    "C= + Z MODE  X CHORD SIZE  C MONO",
     "C= + L LATCH STYLE  , . SPACE'S ACTION",
     "C= + ; : MIDI IN OCTAVE  / UNDO DICE",
     "C= + F1 F3 F5 CHIPS  F7 PANIC",

@@ -46,7 +46,7 @@ c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.28") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.29") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])

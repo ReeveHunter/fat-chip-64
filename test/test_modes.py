@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fat Chip 64 v0.06: notes modes (POLY, SMART CHORD, EXTENSIONS), the key,
+"""Fat Chip 64 v0.06: notes modes (POLY, SMART CHORD and its sizes, DRONE), the key,
 the PADS sound, and the SPARKLE arp octave."""
 import os
 import sys
@@ -38,7 +38,7 @@ check("key line: key C MAJOR, POLY; sound line: FAT", c.screen_row(9).startswith
 check("POLY: one key, one note", chord("w") == [50])
 
 c.tap("z", ms=60)
-check("Z: SMART CHORD", c.v("playMode") == 1 and "SMART CHRD" in c.screen_row(9), c.screen_row(9))
+check("Z: SMART CHORD (TRIAD)", c.v("playMode") == 1 and "SMART TRI" in c.screen_row(9), c.screen_row(9))
 check("C -> C major (C E G)", chord("q") == [48, 52, 55])
 check("D -> D minor (D F A)", chord("w") == [50, 53, 57])
 check("E -> E minor", chord("e") == [52, 55, 59])
@@ -71,22 +71,27 @@ check("in G minor: D -> D minor (natural minor)", chord("w") == [50, 53, 57])
 c.tap("l", ms=30)
 c.press("k", ms=20); c.tap("q", ms=30); c.release("k", ms=60)
 
-c.tap("z", ms=60)
-check("Z: EXT 7TH", c.v("playMode") == 2 and "EXT 7TH" in c.screen_row(9), c.screen_row(9))
+c.tap("x", ms=60)                           # (v0.29: EXT folded into SMART CHORD's sizes)
+check("X: SMART 7TH", c.v("spice") == 2 and "SMART 7TH" in c.screen_row(9), c.screen_row(9))
 check("C -> Cmaj7", chord("q") == [48, 52, 55, 59])
 check("D -> Dm7", chord("w") == [50, 53, 57, 60])
 check("G -> G7", chord("t") == [55, 59, 62, 65])
 c.tap("x", ms=60)
-check("X: EXT 9TH", "EXT 9TH" in c.screen_row(9) and chord("q") == [48, 52, 55, 59, 62])
-c.tap("x", ms=20); c.tap("x", ms=60)
-check("X X: EXT 13TH: C -> C E G B D F A", "EXT 13TH" in c.screen_row(9)
-      and chord("q") == [48, 52, 55, 59, 62, 65, 69], c.screen_row(9))
-check("outside the key with 13ths: C# 7 9 11 13", chord("2") == [49, 53, 56, 59, 63, 66, 70])
-check("two 13th chords: at most 8 notes, lowest kept", chord("q", "w") == [48, 50, 52, 53, 55, 57, 59, 60])
-c.tap("x", ms=30)                           # back to 7th
+check("X: 9TH", "SMART 9TH" in c.screen_row(9) and chord("q") == [48, 52, 55, 59, 62])
+c.tap("x", ms=60)
+check("X: 11TH: C -> C E G B D F", "SMART 11TH" in c.screen_row(9)
+      and chord("q") == [48, 52, 55, 59, 62, 65], c.screen_row(9))
+check("outside the key with 11ths: C# 7 9 11", chord("2") == [49, 53, 56, 59, 63, 66])
+check("two 11th chords: at most 8 notes, lowest kept", chord("q", "w") == [48, 50, 52, 53, 55, 57, 59, 60])
+c.tap("x", ms=60)
+check("X: round to 5TH: C -> C G, D -> D A, B -> B F (the key's fifth)", "SMART 5TH" in c.screen_row(9)
+      and chord("q") == [48, 55] and chord("w") == [50, 57] and chord("u") == [59, 65], c.screen_row(9))
+check("outside the key: a perfect fifth (C# G#)", chord("2") == [49, 56])
+c.tap("x", ms=60)
+check("X: TRIAD again", c.v("spice") == 1 and "SMART TRI" in c.screen_row(9))
 
 # arp over a smart chord: one key arpeggiates the chord
-c.tap("z", ms=20)                           # EXT -> DRONE (v0.27)
+c.tap("z", ms=20)                           # SMART CHORD -> DRONE (v0.27)
 c.tap("z", ms=20)                           # -> POLY
 c.tap("z", ms=60)                           # -> SMART CHORD
 check("Z cycles back round to SMART CHORD", c.v("playMode") == 1, c.v("playMode"))
@@ -97,7 +102,7 @@ notes = [a for cyc, s, a, b in c.midi(since=t0) if s == 0x90 and b]
 check("arp + smart chord: one key arpeggiates C E G", notes[:3] == [48, 52, 55], notes)
 c.release("q", ms=60)
 c.tap("a", ms=20); c.tap("a", ms=40)         # SPARKLE -> OFF
-c.tap("z", ms=20); c.tap("z", ms=20); c.tap("z", ms=60)         # CHORD -> EXT -> DRONE -> POLY
+c.tap("z", ms=20); c.tap("z", ms=60)         # CHORD -> DRONE -> POLY
 check("back to POLY", c.v("playMode") == 0)
 
 # ---------------------------------------------------------------- latched chord + a mode change
@@ -107,7 +112,7 @@ check("latched in POLY: C G", held() == [48, 55], held())
 c.tap("z", ms=80)                           # -> SMART CHORD
 check("mode change while latched: the chord stays as it was", held() == [48, 55] and c.screen_row(9)[28:38] == "LATCH NEXT",
       (held(), c.screen_row(9)))
-check("...but the screen shows the new mode", "SMART CHRD" in c.screen_row(9))
+check("...but the screen shows the new mode", "SMART TRI" in c.screen_row(9))
 c.tap("w", ms=80)                           # next press: new chord, new mode (even though quick)
 check("next key: a new chord in the new mode (D minor)", held() == [50, 53, 57], held())
 c.press("k", ms=20); c.tap("t", ms=30); c.release("k", ms=80)
@@ -117,13 +122,11 @@ check("next key: D in G major = D major", held() == [50, 54, 57], held())
 c.press("k", ms=20); c.tap("q", ms=30); c.release("k", ms=40)
 c.tap("=", ms=40)                           # (NEXT already, from the key change): latch off
 c.press("q", ms=60)
-c.tap("z", ms=80)                           # latch off: applies at once to held keys
-check("latch off: a mode change applies at once", held() == [48, 52, 55, 59], held())
+c.tap("z", ms=80)                           # latch off: applies at once to held keys (-> DRONE)
+check("latch off: a mode change applies at once (DRONE: C G C G)", held() == [48, 55, 60, 67], held())
 c.release("q", ms=40)
-c.tap("z", ms=20); c.tap("z", ms=20); c.tap("z", ms=60)         # EXT -> DRONE -> POLY -> CHORD
-c.tap("z", ms=60)
-check("(mode back to EXT for the next part)", c.v("playMode") == 2)
-c.tap("z", ms=20); c.tap("z", ms=60)
+c.tap("z", ms=60)                           # -> POLY
+check("(back to POLY for the next part)", c.v("playMode") == 0)
 
 # ---------------------------------------------------------------- SPARKLE octave
 c.tap("a", ms=20); c.tap("a", ms=60)         # SPARKLE

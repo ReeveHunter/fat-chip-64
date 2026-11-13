@@ -502,12 +502,10 @@ ScrKey:
 	ldx #6
 	bne .m1
 .m0:
-	cpx #MODE_EXT
+	cpx #MODE_CHORD
 	bne .m1
-	lda spice
-	clc
-	adc #2
-	tax
+	ldx spice               ; SMART CHORD: its size
+	inx
 .m1:
 	lda modeTxtLo,x
 	sta ptr
