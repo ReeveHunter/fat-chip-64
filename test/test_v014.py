@@ -46,7 +46,7 @@ c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.25") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.26") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])
@@ -193,8 +193,9 @@ check("let go: the bar falls away", col.count(160) == 0, col)
 c.tap("return", ms=60)
 check("RETURN: the menu from the visualizer", c.v("menuOn") == 1 and "MENU" in c.screen_row(0))
 c.tap("f7", ms=60)
-check("F7 in the menu: nothing", c.v("vizOn") == 1 and c.v("menuOn") == 1)
-c.press("lshift", ms=10); c.tap("return", ms=100); c.release("lshift", ms=100)
+check("F7 in the menu (v0.26: changes the line): HELP opens, the visualizer stays", c.v("vizOn") == 1 and c.v("menuOn") == 1
+      and "HELP" in c.screen_row(0))
+c.press("lshift", ms=10); c.tap("return", ms=100); c.tap("return", ms=100); c.release("lshift", ms=100)
 check("closing the menu: back to the visualizer", "VISUALIZER" in c.screen_row(0), c.screen_row(0))
 c.tap("f7", ms=100)
 c.tap("f7", ms=200)

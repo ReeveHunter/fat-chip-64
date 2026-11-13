@@ -703,6 +703,9 @@ nudgeH      ds 1
 scIdx       ds 1               ; the Synthcart tempo chosen last
 scSound     ds 1               ; SYNTHCART TUNE TO: 0 OFF, 1 SQUARE .. 5 SAW
 scKey       ds 1               ;   MATCH KEY: 1 ON
+mvDir       ds 1               ; the menu: 0 down a line, 1 up
+mvBack      ds 1               ;   1: step a value back
+mvCnt       ds 1
 tuneNow     ds 1               ; the tuning in use (scSound while the Synthcart is in use)
 dhAct       ds 1               ; the DH-100 portamento button's task while held
 brLvl       ds 1               ; breath / 8, last seen

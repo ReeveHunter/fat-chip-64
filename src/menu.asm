@@ -32,11 +32,31 @@ MenuPage:
 	lda pgFirst,x
 	sta menuRow
 .in:
-	ldx menuRow             ; (a hidden line: the first one shown)
+	ldx menuRow             ; (a hidden line or text: the first one to choose)
 	jsr ItemShown
+	beq .f
+	lda mKind,x
+	cmp #4
 	bne .vis
-	ldx menuPage
-	lda pgFirst,x
+.f:
+	ldy menuPage
+	lda pgFirst,y
+	tax
+	lda pgCount,y
+	sta mvCnt
+.fl:
+	stx menuRow
+	jsr ItemShown
+	beq .fn
+	lda mKind,x
+	cmp #4
+	bne .vis
+.fn:
+	inx
+	dec mvCnt
+	bne .fl
+	ldy menuPage            ; (text only: the first line, no cursor)
+	lda pgFirst,y
 	sta menuRow
 .vis:
 	jsr MenuDraw
@@ -83,6 +103,10 @@ MenuDraw:
 	ldx exK
 	jsr ItemRow
 	sta mvRow
+	ldx exK
+	lda mKind,x
+	cmp #4
+	beq .txt
 	lda #<mDots             ; the dots, then the label over them
 	sta ptr
 	lda #>mDots
@@ -90,13 +114,19 @@ MenuDraw:
 	ldx #2
 	ldy mvRow
 	jsr PrintAt
+	ldx #2
+	bne .lb
+.txt:
+	ldx #1                  ; (text: from column 1)
+.lb:
+	stx t0
 	ldy mvRow
 	ldx exK
 	lda mLblLo,x
 	sta ptr
 	lda mLblHi,x
 	sta ptr+1
-	ldx #2
+	ldx t0
 	jsr PrintAt
 .n:
 	ldx exK
@@ -220,6 +250,11 @@ MenuVals:
 ; line X: cursor and value
 MenuVal:
 	subroutine
+	lda mKind,x
+	cmp #4
+	bne .v
+	rts                     ; (text: nothing to show)
+.v:
 	stx exK
 	jsr ItemRow
 	sta mvRow
@@ -343,22 +378,47 @@ StepLabel:
 MenuKey:
 	subroutine
 	sta keyCodeNow
+	ldx cbmDown             ; F1 F3: line up / down; F5 F7: value back / on
+	bne .nf                 ; (C= + F keys keep their jobs)
+	ldx #1
+	cmp #K_F1
+	beq .mvF
+	dex
+	cmp #K_F3
+	beq .mvF
+	ldx #1
+	cmp #K_F5
+	beq .chF
+	dex
+	cmp #K_F7
+	beq .chF
+.nf:
 	cmp #K_CRSR_DOWN
 	bne .r
+	ldx shiftDown
+.mvF:
+	stx mvDir
 	jmp .move
 .r:
 	cmp #K_CRSR_RIGHT
 	bne .ret
+	ldx shiftDown
+.chF:
+	stx mvBack
 	ldx menuRow
 	lda mKind,x
 	beq .open
+	cmp #4
+	bne .nt
+	rts                     ; (a line of text)
+.nt:
 	cmp #2
 	beq .fxt
 	cmp #3
 	bne .en
 	jmp .par
 .en:
-	lda shiftDown
+	lda mvBack
 	beq .nx
 	jmp .prev
 .nx:
@@ -429,7 +489,7 @@ MenuKey:
 	stx t3
 	jsr ParamNearest
 	ldx t3
-	ldy shiftDown
+	ldy mvBack
 	bne .pdn
 	clc
 	adc #1
@@ -448,8 +508,6 @@ MenuKey:
 	jmp MenuVals
 .other:
 	lda keyCodeNow
-	cmp #K_F7               ; (no visualizer from in here)
-	beq .x
 	jsr KeyCmdPlay          ; the key's usual job
 	lda menuOn
 	beq .x                  ; (it closed the menu)
@@ -492,15 +550,22 @@ MenuKey:
 	ldy #0
 .x:
 	rts
-.move:                          ; CRSR DOWN (SHIFT: up), past hidden lines
+.move:                          ; mvDir 0 down, 1 up; past hidden lines and text
 	ldx menuRow
 	stx t3                  ; (the old line)
+	ldy menuPage
+	lda pgCount,y
+	sta mvCnt               ; (a page of text only: the cursor stays)
 .m:
+	dec mvCnt
+	bpl .m1
+	rts
+.m1:
 	ldy menuPage
 	txa
 	sec
 	sbc pgFirst,y
-	ldx shiftDown
+	ldx mvDir
 	bne .up
 	clc
 	adc #1
@@ -520,6 +585,9 @@ MenuKey:
 	adc pgFirst,y
 	tax
 	jsr ItemShown
+	beq .m
+	lda mKind,x
+	cmp #4
 	beq .m
 	stx menuRow
 	ldx t3
@@ -570,7 +638,7 @@ DevHook:
 	sta devOn,x
 	jmp ToggleDevice
 
-mHelp1:     .byte "CRSR DOWN, SHIFT+CRSR DOWN: CHOOSE",0
-mHelp2:     .byte "CRSR RIGHT, SHIFT+CRSR RIGHT: CHANGE",0
+mHelp1:     .byte "F1 / F3 (CRSR): CHOOSE A LINE",0
+mHelp2:     .byte "F5 / F7 (CRSR RIGHT): CHANGE IT",0
 mHelp3:     .byte "RETURN: OPEN   SHIFT+/: ROLL THE DICE",0
 mHelp4:     .byte "SHIFT+RETURN: BACK",0

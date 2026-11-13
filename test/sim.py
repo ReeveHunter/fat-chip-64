@@ -292,7 +292,7 @@ class C64:
         plain = []
         for k in keys:
             if k in self.LEG_CBM:
-                self._raw_press("cbm", ms=12)          # (C= well before the key, as hands do)
+                self._raw_press("cbm", ms=30)          # (C= well before the key, as hands do: a busy MIDI link can hold a scan up 25 ms)
                 self.pressed.add(self.LEG_CBM[k])
             elif k == "f5" and self.pressed & {"ctrl", "lshift", "rshift"}:
                 plain.append(k)                  # (CTRL / SHIFT + F5 kept their jobs)

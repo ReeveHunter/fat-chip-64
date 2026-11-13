@@ -6,6 +6,10 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.26:** the menu on the F keys, and a HELP page.
+- In the menu, **F1 / F3** move up / down a line and **F5 / F7** change the value back / forward (an effect: off / on; a page: opens it). The cursor keys still work. While the menu is open the F keys don't change octave, start the arp or open the visualizer; C= + F1 / F3 / F5 / F7 still turn the chips on and off and panic.
+- **HELP: THE KEYS** is the first line of the main menu: a page listing the keyboard shortcuts (plain, C=, RUN/STOP and the menu's). The play screen already shows RETURN: MENU top right.
+
 **v0.25:** Fat Chip tunes itself to the Synthcart.
 - The SYNTHCART page has **TUNE TO**: OFF or one of Synthcart's five sounds, with the key and tuning its manual gives for the major / minor scales (SQUARE C −10 cents, LEAD F −10, BASS C# −35, PITFALL C# −30, SAW C# +10). While the Synthcart is in use, Fat Chip moves by those cents on every chip: the SID's note frequencies, the Game Boy's master tune (CC 103), and the NES's bends (to the nearest 1/16 semitone, about 6 cents).
 - **MATCH KEY** (ON by default): choosing a sound also sets the key's root to its key (the scale stays), so SMART CHORD, EXT and the arp land on notes the Atari plays. OFF leaves the key to you (K) for experimenting.
@@ -215,7 +219,7 @@ lowest key (Q) starts at C3.
 | F5 | Arp on / off, in the type C= + A chose |
 | F7 | Visualizers |
 | RUN/STOP | Tapped: beat start / stop |
-| RETURN | The menu (SHIFT+RETURN backs out; CRSR DOWN / RIGHT choose and change) |
+| RETURN | The menu (SHIFT+RETURN backs out; F1 / F3 choose a line, F5 / F7 change it; HELP lists the keys) |
 | RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
 | CTRL + F3 / F5 | Game Boy / NES to the next block of channels |
 

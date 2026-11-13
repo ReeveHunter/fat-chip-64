@@ -43,7 +43,7 @@ c = C64(channels=None)
 c.run_ms(400)
 c.set("detLock", 2)                          # (no detune on top: exact sums)
 c.set("detNow", 0)
-check("header V0.25", "V0.25" in c.screen_row(0), c.screen_row(0))
+check("header V0.26", "V0.26" in c.screen_row(0), c.screen_row(0))
 check("Game Boy bend range 24 sent at start (CC 85 = 127)",
       all((0xB0 | ch, 85, 127) in [(s, a, b) for _, s, a, b in c.midi()] for ch in GB))
 
@@ -94,7 +94,7 @@ c.set("bendRange", 1)
 
 # menu: BEND RANGE goes to 24
 c.tap("return", ms=80)
-c.set("menuRow", 4)                          # PLAYING
+c.set("menuRow", 5)                          # PLAYING (HELP first)
 c.tap("return", ms=80)
 c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30)   # BEND RANGE
 for _ in range(22):

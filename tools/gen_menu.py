@@ -207,6 +207,32 @@ def enum(lbl, var, values, hook=None, show=None):
     return dict(kind=1, lbl=lbl, var=var, values=values, hook=hook, show=show)
 
 
+def text(lbl):
+    return dict(kind=4, lbl=lbl)
+
+
+HELP = [
+    "ASDFG BANK    ZXCVB PATCH 1-5",
+    "L LATCH       K + NOTE: KEY AND SCALE",
+    "= TAP TEMPO   , . TEMPO (SHIFT: 10)",
+    "/ MUTE        SHIFT+/ DICE",
+    "; : ARP SPEED SPACE ITS ACTION",
+    "F1 F3 OCTAVE  F5 ARP  F7 VISUALS",
+    "RUN/STOP BEAT (HELD + A-H: PICK ONE)",
+    "",
+    "C= + A ARP TYPE   S D F PATTERN,",
+    "      SPEED, OCTAVE",
+    "C= + Z MODE  X EXTENSIONS  C MONO",
+    "C= + L LATCH STYLE  , . SPACE'S ACTION",
+    "C= + ; : MIDI IN OCTAVE  / UNDO DICE",
+    "C= + F1 F3 F5 CHIPS  F7 PANIC",
+    "",
+    "IN THE MENU: F1 F3 LINE  F5 F7 VALUE",
+    "RETURN OPEN  SHIFT+RETURN BACK",
+    "SHIFT+/ ON A SETTING: ROLL JUST IT",
+]
+
+
 def page(lbl, target, show=None):
     return dict(kind=0, lbl=lbl, target=target, show=show)
 
@@ -220,6 +246,8 @@ def add_page(name, title, header, items, parent=None):
 
 def build_pages(params, effects):
     add_page("main", "FAT CHIP 64 MENU", None, [
+        page("HELP: THE KEYS", "help"),
+        None,
         enum("SID", "devOn", ["OFF", "ON"], hook="DevHook"),
         enum("GAME BOY", "devOn+1", ["OFF", "ON"], hook="DevHook"),
         enum("MIDINES", "devOn+2", ["OFF", "ON"], hook="DevHook"),
@@ -232,6 +260,7 @@ def build_pages(params, effects):
         page("CASIO DH-100", "dh", show="useDh"),
         page("ATARI SYNTHCART", "sc", show="useSc"),
     ])
+    add_page("help", "HELP: THE KEYS", None, [text(h) if h else None for h in HELP], parent="main")
     pl = []
     for e in effects:
         if e["eid"] == "patch":
@@ -348,8 +377,10 @@ def main():
             args.append(it["var"]); counts.append(len(it["values"])); vlo.append(f"mE{i}")
         elif it["kind"] == 2:
             args.append(str(it["fx"])); counts.append(0); vlo.append("0")
-        else:
+        elif it["kind"] == 3:
             args.append(str(it["param"])); counts.append(0); vlo.append("0")
+        else:
+            args.append("0"); counts.append(0); vlo.append("0")
     A("mKind:      .byte " + ",".join(map(str, kinds)))
     A("mRowY:      .byte " + ",".join(map(str, rows)))
     A("mCount:     .byte " + ",".join(map(str, counts)))

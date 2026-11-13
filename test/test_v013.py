@@ -57,12 +57,13 @@ c.run_ms(400)
 c.tap("return", ms=60)
 check("RETURN: the menu", c.v("menuOn") == 1 and "MENU" in c.screen_row(0), c.screen_row(0))
 rows = [c.screen_row(r) for r in range(25)]
-check("menu: the chips on top, PATCH, PLAYING, DEVICES, the SHS-10 (in use)",
-      rows[2].startswith("> SID") and rows[3][2:].startswith("GAME BOY") and rows[4][2:].startswith("MIDINES")
-      and rows[6][2:].startswith("PATCH") and rows[7][2:].startswith("PLAYING") and rows[8][2:].startswith("DEVICES")
-      and rows[10][2:].startswith("YAMAHA SHS-10") and rows[11].strip() == "", rows[2:12])
-c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40); c.tap("crsrdown", ms=40)
-check("CRSR DOWN x4 (past the gap): PLAYING", c.screen_row(7).startswith("> PLAYING"), c.screen_row(7))
+check("menu: HELP, the chips, PATCH, PLAYING, DEVICES, the SHS-10 (in use)",
+      rows[2].startswith("> HELP") and rows[4][2:].startswith("SID") and rows[5][2:].startswith("GAME BOY")
+      and rows[6][2:].startswith("MIDINES") and rows[8][2:].startswith("PATCH") and rows[9][2:].startswith("PLAYING")
+      and rows[10][2:].startswith("DEVICES") and rows[12][2:].startswith("YAMAHA SHS-10") and rows[13].strip() == "", rows[2:14])
+for _ in range(5):
+    c.tap("crsrdown", ms=40)
+check("CRSR DOWN x5 (past the gaps): PLAYING", c.screen_row(9).startswith("> PLAYING"), c.screen_row(9))
 c.tap("return", ms=60)
 rows = [c.screen_row(r) for r in range(25)]
 check("PLAYING: its page and defaults", "PLAYING" in rows[0] and rows[2].startswith("> LATCH STYLE") and "SMART" in rows[2]
@@ -77,8 +78,8 @@ c.press("q", ms=100)
 check("notes play while the menu is up", 60 - 12 in [a for _, s, a, b in since(c, t0) if (s & 0xF0) == 0x90 and b])
 c.release("q", ms=100)
 c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=40)
-check("SHIFT+RETURN: back to the main page, on PLAYING", c.v("menuPage") == 0 and c.screen_row(7).startswith("> PLAYING"),
-      c.screen_row(7))
+check("SHIFT+RETURN: back to the main page, on PLAYING", c.v("menuPage") == 0 and c.screen_row(9).startswith("> PLAYING"),
+      c.screen_row(9))
 c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=250)
 check("SHIFT+RETURN again: back to play, the screen redrawn", c.v("menuOn") == 0 and "FAT CHIP 64" in c.screen_row(0)
       and c.screen_row(2).startswith("FAT   1 FAT") and c.screen_row(24).startswith("F1/F3"), (c.screen_row(0), c.screen_row(2)))
