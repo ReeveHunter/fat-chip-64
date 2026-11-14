@@ -676,11 +676,25 @@ TremTick:
 	beq .lfo
 	dex
 	bne .gate
-	eor #$FF                ; PUMP: the most down at the cycle's start,
-	ldy exS                 ;  back up by its end
+	sec                     ; PUMP (v0.35): like a compressor ducking to a kick:
+	sbc #26                 ;  all the way down for the first tenth of the
+	bcs .p1                 ;  cycle, then a swell back up on a curve (quick at
+	lda #127                ;  first, easing in), at full volume from half way
+	bne .ps
+.p1:
+	cmp #128
+	bcc .p2
+	lda #0
+	beq .ps
+.p2:
+	eor #$7F                ; (127 - x)^2 / 128
+	tay
 	jsr Mul8
+	asl mt16
 	lda mt16+1
-	jmp .st
+	rol
+.ps:
+	jmp .sc
 .gate:
 	lda tremGates-1,x       ; GATE: eight steps, on (no drop) or off (all of it)
 	sta t0

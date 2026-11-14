@@ -65,7 +65,7 @@ def shift(c, key, ms=150):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.34", "V0.34" in c.screen_row(0), c.screen_row(0))
+check("header V0.35", "V0.35" in c.screen_row(0), c.screen_row(0))
 check("row 3 empty with CHORD + LEAD off", c.screen_row(3).strip() == "", c.screen_row(3))
 
 # ---------------------------------------------------------------- LOW NOTE

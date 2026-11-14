@@ -6,6 +6,9 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.35:** a better PUMP.
+- **TREMOLO's PUMP** now ducks like a compressor to a kick drum: all the way down for the first tenth of each cycle, then a curved swell back (quick at first, easing in), at full volume from about half way. SAW UP is still the plain even ramp, so the two sound different now.
+
 **v0.34:** a smoother SID volume, a quiet tremolo in the silence, every SHAPE.
 - **No more volume thumps:** the SID's master volume never jumps now. Wherever it's going (the tremolo, mute, VINYL STOP, a new patch), it moves one step every 2 ms, so a full swing takes about 30 ms. On a 6581 every jump in the volume thumps (it moves the chip's DC offset); small, spread-out steps don't. The GATEs still chop, PUMP still ducks, just without the click; mute fades out quickly instead of popping.
 - **Tremolo holds still in the silence:** with nothing sounding on the SID (no key down, no release still ringing) its volume stays at full and the tremolo doesn't touch it, so there's no ticking between notes. It picks up again with the next note and carries on through the release.
@@ -427,7 +430,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.34)
+## Not yet (v0.35)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.
