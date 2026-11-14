@@ -328,10 +328,10 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	bne .leadF              ; SHIFT + F1 F3: the lead's octave, F5 SPLIT, F7 its mode
 	cpx #2
 	bcc .oct
-	beq .arp
-	jmp VizKey              ; F7
-.arp:
-	jmp ArpToggle           ; F5
+	beq .fat
+	jmp ArpToggle           ; F7 (v0.37; was F5)
+.fat:
+	jmp FatKey              ; F5: Fat Bass on / off (v0.37)
 .oct:
 	lda octBase             ; F1 up, F3 down: an octave (C0 .. C6 on the lowest key)
 	cpx #0
@@ -1009,8 +1009,9 @@ NoteUp:                         ; A = note index
 .x2:
 	rts
 
-; RESTORE (top B of the overlay): each press switches both screens off / on
-; (the C64's, and the Game Boy's with CC 112). No double tap.
+; RESTORE (top B of the overlay), v0.37: each press the next video mode:
+; NORMAL, VISUALIZER (GLITCH), SCREENS OFF (the C64's, and the Game Boy's
+; with CC 112), NORMAL again. In the menu it skips the visualizer. No double tap.
 RestoreCheck:
 	subroutine
 	lda nmiCount
@@ -1036,9 +1037,38 @@ RestoreCheck:
 	sta lastRestore
 	lda nmiTick+1
 	sta lastRestore+1
-	lda videoMode
-	eor #1
+	ldx vidState            ; NORMAL -> VISUALIZER -> OFF -> NORMAL
+	inx
+	cpx #1
+	bne .n1
+	lda menuOn              ; (the menu: no visualizer)
+	beq .n1
+	inx
+.n1:
+	cpx #3
+	bcc .n2
+	ldx #0
+.n2:
+	stx vidState
+	cpx #1
+	bne .n3
+	jmp VizOn               ; VISUALIZER
+.n3:
+	lda vizOn               ; (leaving it: the play screen back underneath)
+	beq .n4
+	jsr VizOff
+.n4:
+	lda #0
+	cpx #2
+	bne .n5
+	lda #1                  ; OFF: both screens
+.n5:
+	cmp videoMode
+	bne .ch
+	rts
+.ch:
 	sta videoMode
+	tax
 	beq .on
 	lda VIC_CTRL1
 	and #$EF                ; blank the C64 screen

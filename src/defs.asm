@@ -239,6 +239,7 @@ shiftDown   ds 1
 reallocFlag ds 1
 screenDirty ds 1
 videoMode   ds 1               ; Game Boy screen: 0 on, 1 off (CC 112)
+vidState    ds 1               ; v0.37 RESTORE: 0 NORMAL, 1 VISUALIZER, 2 SCREENS OFF
 lastRestore ds 2
 restoreFlash ds 1
 sidGate     ds 3               ; current control register value per SID voice

@@ -248,11 +248,11 @@ class C64:
             if m == 0:
                 if self.v("arpLast") != 1:
                     self._mod("a")
-                self._raw_tap("f5")
+                self._raw_tap("f7")              # (the arp's key: F7 from v0.37)
             elif m == 1:
                 self._mod("a")
             else:
-                self._raw_tap("f5")              # (SPARKLE stays the type, as A left it)
+                self._raw_tap("f7")              # (SPARKLE stays the type, as A left it)
         elif k == "g":
             nxt = (self.v("beatSel") + 1) % 6
             self._raw_press("runstop")
@@ -286,7 +286,30 @@ class C64:
         self._raw_tap(k)
         self._raw_release("cbm", ms=6)
 
+    # v0.37 moved the arp to F7 (F5 is Fat Bass) and the visualizer to RESTORE:
+    # tests written before then still say F5 / F7 for those (in play, unmodified)
+    fkeys_036 = True
+
+    def _fkeys(self, keys):
+        if not self.fkeys_036 or self.v("menuOn") or self.pressed & {"ctrl", "lshift", "rshift", "cbm", "runstop"}:
+            return keys, False
+        viz = "f7" in keys
+        out = tuple(k for k in keys if k != "f7")
+        if not self.legacy_keys:
+            out = tuple("f7" if k == "f5" else k for k in out)
+        return out, viz
+
+    def _viz_toggle(self):
+        self.restore()
+        self.run_ms(60)
+        if self.v("vidState") == 2:              # (the old F7 was GLITCH on / off: past SCREENS OFF)
+            self.restore()
+            self.run_ms(60)
+
     def press(self, *keys, ms=12):
+        keys, viz = self._fkeys(keys)
+        if viz:
+            self._viz_toggle()
         if not self.legacy_keys:
             return self._raw_press(*keys, ms=ms)
         plain = []
@@ -307,6 +330,7 @@ class C64:
         self._raw_press(*plain, ms=ms)
 
     def release(self, *keys, ms=12):
+        keys, _ = self._fkeys(keys)
         if not self.legacy_keys:
             return self._raw_release(*keys, ms=ms)
         plain, cbm = [], False

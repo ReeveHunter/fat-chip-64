@@ -12,22 +12,23 @@ VIZ_NAMES   equ 22              ; note names
 VIZ_FULL    equ 160             ; reversed space
 VIZ_HALF    equ 98              ; lower half block
 
-; F7: GLITCH on / off (not from the menu)
-VizKey:
+; RESTORE's VISUALIZER (v0.37; was F7): GLITCH on (not from the menu)
+VizOn:
 	subroutine
 	lda menuOn
-	bne .x
+	bne VizX
 	jsr GlitchCalm
-	ldx #2                  ; GLITCH on / off
-	lda vizOn
-	beq .s
-	ldx #0
-.s:
-	stx vizOn
-	cpx #0
-	beq .off
+	lda #2
+	sta vizOn
 	jmp VizDraw
-.off:
+; GLITCH off: the play screen again. Keeps X.
+VizOff:
+	subroutine
+	txa
+	pha
+	jsr GlitchCalm
+	lda #0
+	sta vizOn
 	jsr ClearScreen
 	lda #13
 	jsr ColourAll
@@ -37,7 +38,9 @@ VizKey:
 	sta scrStage
 	lda #1
 	sta screenDirty
-.x:
+	pla
+	tax
+VizX:
 	rts
 
 ; colour RAM all A

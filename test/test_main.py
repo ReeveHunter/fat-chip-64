@@ -311,24 +311,28 @@ check("plain F7 is the visualizer (GLITCH, v0.28), not panic", c.v("vizOn") == 2
 c.tap("f7", ms=150)
 check("F7 again: the play screen", c.v("vizOn") == 0 and c.screen_row(4).startswith("SID"), c.screen_row(4))
 
-# ---------------------------------------------------------------- RESTORE
+# ---------------------------------------------------------------- RESTORE (v0.37: NORMAL, VISUALIZER, SCREENS OFF)
 c.run_ms(500)
+c.restore()
+c.run_ms(100)
+check("RESTORE: the visualizer", c.v("vidState") == 1 and c.v("vizOn") == 2 and c.raw[0xD011] & 0x10)
 t0 = c.cpu.processorCycles
 c.restore()
-c.run_ms(20)
+c.run_ms(60)                                 # (the play screen is redrawn first, under the blank)
 check("RESTORE: both screens off (C64 blanked, Game Boy CC 112 = 1)", not (c.raw[0xD011] & 0x10)
-      and (0xB0, 112, 1) in [x[1:] for x in c.midi(since=t0)])
+      and (0xB0, 112, 1) in [x[1:] for x in c.midi(since=t0)], (c.v("vidState"), hex(c.raw[0xD011]), [x[1:] for x in c.midi(since=t0)]))
 c.run_ms(100)
 t0 = c.cpu.processorCycles
 c.restore()
 c.run_ms(20)
-check("RESTORE again: both back on", c.raw[0xD011] & 0x10 and (0xB0, 112, 0) in [x[1:] for x in c.midi(since=t0)])
+check("RESTORE again: both back on, the play screen", c.raw[0xD011] & 0x10 and (0xB0, 112, 0) in [x[1:] for x in c.midi(since=t0)]
+      and c.v("vizOn") == 0)
 c.run_ms(100)
 c.restore(); c.run_ms(10); c.restore(); c.run_ms(20)
-check("a bounce (10 ms) is ignored", not (c.raw[0xD011] & 0x10))
+check("a bounce (10 ms) is ignored (one step: the visualizer)", c.v("vidState") == 1)
 c.run_ms(100)
-c.restore(); c.run_ms(20)
-check("screens on again", c.raw[0xD011] & 0x10)
+c.restore(); c.run_ms(100); c.restore(); c.run_ms(20)
+check("screens on again", c.raw[0xD011] & 0x10 and c.v("vidState") == 0)
 
 # ---------------------------------------------------------------- re-attack
 c.press("q", ms=40)

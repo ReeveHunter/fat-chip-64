@@ -6,6 +6,11 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.37:** RESTORE for the screen, F5 Fat Bass, F7 the arp.
+- **RESTORE** steps through the video modes: **NORMAL** (the play screen), **VISUALIZER** (GLITCH), **SCREENS OFF** (the C64's and the Game Boy's), then NORMAL again. In the menu it skips the visualizer.
+- **F5:** Fat Bass on / off (until the next sound, like C= + C for MONO).
+- **F7:** the arp on / off (was F5). F7 no longer does the visualizer.
+
 **v0.36:** SPLIT reworked, new SHIFT and C= F keys.
 - **SPLIT's modes:** OFF, **KEY**, **BASS** (was LOW NOTE), **TRIAD** (was LATCH 3).
 - **Row 3 always shows SPLIT:** SPLIT OFF / SPLIT KEY C4 / SPLIT BASS / SPLIT TRIAD, then LEAD and its octave (LEAD +1) and the lead's patch, in dark grey while SPLIT is off.
@@ -444,7 +449,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.36)
+## Not yet (v0.37)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

@@ -65,7 +65,7 @@ def shift(c, key, ms=150):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.36", "V0.36" in c.screen_row(0), c.screen_row(0))
+check("header V0.37", "V0.37" in c.screen_row(0), c.screen_row(0))
 check("row 3: SPLIT OFF, the lead's patch dark grey (v0.36)", c.screen_row(3).startswith("SPLIT OFF")
       and "DUTY LEAD" in c.screen_row(3) and c.raw[0xD800 + 3 * 40 + 22] & 15 == 11, c.screen_row(3))
 
@@ -123,7 +123,7 @@ c.release("t", ms=150)
 
 # ---------------------------------------------------------------- the arp plays the chord, never the lead
 c._raw_press("cbm", ms=30); c._raw_tap("z", ms=30); c._raw_release("cbm", ms=30)   # SMART CHORD
-c._raw_tap("f5", ms=60)                      # arp on (UNISON)
+c._raw_tap("f7", ms=60)                      # arp on (UNISON; F7 from v0.37)
 c.press("q", ms=300)
 c.press("e", ms=50)
 t0 = c.cpu.processorCycles
@@ -139,7 +139,7 @@ check("arp SPARKLE: its pair is SID 2 + GB pulse 2, the lead keeps SID 3 / GB 1 
       c.v("pairA") == 3 and c.v("pairB") == 4 and all(vn[i] == 64 for i in LEAD_V), (c.v("pairA"), c.v("pairB"), vn))
 c.release("e", "q", ms=100)
 c._raw_press("cbm", ms=30); c._raw_tap("a", ms=30); c._raw_release("cbm", ms=30)   # back to UNISON
-c._raw_tap("f5", ms=60)                      # arp off
+c._raw_tap("f7", ms=60)                      # arp off
 c._raw_press("cbm", ms=30); c._raw_tap("z", ms=30); c._raw_tap("z", ms=30); c._raw_release("cbm", ms=60)  # POLY
 c.run_ms(800)
 

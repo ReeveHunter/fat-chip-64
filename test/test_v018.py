@@ -20,7 +20,7 @@ def check(name, cond, info=""):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.36", "V0.36" in c.screen_row(0), c.screen_row(0))
+check("header V0.37", "V0.37" in c.screen_row(0), c.screen_row(0))
 size = c.sym["PATCH_SIZE"] if "PATCH_SIZE" in c.sym else None
 n = c.sym.get("NUM_SOUNDS", 19)
 names = [l.split('"')[1].rstrip() for l in open(os.path.join(ROOT, "src", "soundtab.asm")) if l.startswith('        .byte "')]

@@ -36,7 +36,8 @@ c.run_ms(150)
 c.press("q", "e", "t", ms=120)          # C-E-G chord, held
 t_chord = c.cpu.processorCycles
 c.run_ms(200)
-c.restore(); c.run_ms(100)               # RESTORE: screens off
+c.restore(); c.run_ms(100)               # RESTORE: the visualizer (v0.37)...
+c.restore(); c.run_ms(100)               # ... RESTORE again: screens off
 c.release("q", "e", "t", ms=200)
 rnd = random.Random(3)
 for _ in range(40):                     # fast, messy playing

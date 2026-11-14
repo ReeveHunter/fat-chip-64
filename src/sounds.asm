@@ -94,6 +94,17 @@ MonoKey:
 	sta reallocFlag
 	jmp Dirty
 
+; F5 (v0.37): Fat Bass on / off (until the next sound)
+FatKey:
+	subroutine
+	jsr SoundRelease
+	lda fatBass
+	eor #1
+	sta fatBass
+	lda #1
+	sta reallocFlag
+	jmp Dirty
+
 ; Every Game Boy / NES voice lets go now (no soft releases), so nothing
 ; sounding depends on the old sound's octave or bass settings. The next
 ; voice update plays the held notes again.

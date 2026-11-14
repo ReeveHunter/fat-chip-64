@@ -15,9 +15,9 @@ mL10:      .byte "ATARI SYNTHCART ",0
 mL11:      .byte "ASDFG BANK    ZXCVB PATCH 1-5 ",0
 mL12:      .byte "L LATCH       K + NOTE: KEY AND SCALE ",0
 mL13:      .byte "= TAP TEMPO   , . TEMPO (SHIFT: 10) ",0
-mL14:      .byte "/ MUTE        SHIFT+/ DICE ",0
+mL14:      .byte "/ MUTE  SHIFT+/ DICE  RESTORE: SCREEN ",0
 mL15:      .byte "; : ARP SPEED SPACE ITS ACTION ",0
-mL16:      .byte "F1 F3 OCTAVE  F5 ARP  F7 VISUALS ",0
+mL16:      .byte "F1 F3 OCTAVE  F5 FAT BASS  F7 ARP ",0
 mL17:      .byte "RUN/STOP BEAT (HELD + A-H: PICK ONE) ",0
 mL18:      .byte "CRSR DOWN / RIGHT: ONE KEY PLAY ",0
 mL19:      .byte "SHIFT+ASDFG ZXCVB LEAD PATCH F1 F3 OCT ",0
