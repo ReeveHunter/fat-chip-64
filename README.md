@@ -6,6 +6,20 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.36:** SPLIT reworked, new SHIFT and C= F keys.
+- **SPLIT's modes:** OFF, **KEY**, **BASS** (was LOW NOTE), **TRIAD** (was LATCH 3).
+- **Row 3 always shows SPLIT:** SPLIT OFF / SPLIT KEY C4 / SPLIT BASS / SPLIT TRIAD, then LEAD and its octave (LEAD +1) and the lead's patch, in dark grey while SPLIT is off.
+- **TRIAD** plays three keys pressed together as the chord while you hold them, and any other key as the lead. With **LATCH** on (L) the triad keeps sounding after you let go, so you can play the lead over it; three more keys together make a new chord; L again lets it go.
+- **LATCH and KEY:** with LATCH on, KEY's chord side latches the way the LATCH STYLE says; the lead never latches. BASS doesn't latch.
+- **The lead is an octave up in every mode** (LEAD OCTAVE, now on the PLAYING page whenever SPLIT is on).
+- **New keys:**
+  - **SHIFT + F1 / F3:** the lead an octave up / down (−2…+2).
+  - **SHIFT + F5:** SPLIT on / off (back to the mode it was in). **Hold SHIFT + F5 and press a key** (or play a MIDI note) to put the KEY split there.
+  - **SHIFT + F7:** SPLIT's next mode (KEY, BASS, TRIAD).
+  - **C= + F1 / F3 / F5:** the SID / Game Boy / NES on or off; **C= + F7:** panic. (SHIFT + F keys no longer do these.)
+  - C= + V no longer does anything.
+- **SHIFT + A S D F G / Z X C V B** always picks the lead's patch, SPLIT on or off (shown in grey while it's off).
+
 **v0.35:** a better PUMP.
 - **TREMOLO's PUMP** now ducks like a compressor to a kick drum: all the way down for the first tenth of each cycle, then a curved swell back (quick at first, easing in), at full volume from about half way. SAW UP is still the plain even ramp, so the two sound different now.
 
@@ -430,7 +444,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.35)
+## Not yet (v0.36)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

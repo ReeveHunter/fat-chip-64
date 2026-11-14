@@ -43,7 +43,7 @@ def note(c, n, on=True, ms=0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.35", "V0.35" in c.screen_row(0), c.screen_row(0))
+check("header V0.36", "V0.36" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- tables under the KERNAL
 hs, hp, he = c.sym["hiStart"], c.sym["hiPhys"], c.sym["hiEnd"]

@@ -742,11 +742,14 @@ exFifth     ds 1               ; Expand: 5TH (tones 0 and 2)
 exKK        ds 1
 numBuf      ds 16              ; the menu: a number to print
 ; v0.28: Chord + Lead
-clMode      ds 1               ; SPLIT: 0 OFF, 1 KEY, 2 LOW NOTE, 3 LATCH 3 (v0.32)
+clMode      ds 1               ; SPLIT: 0 OFF, 1 KEY, 2 BASS, 3 TRIAD (v0.32 / v0.36)
 splitKey    ds 1               ; SPLIT KEY: the C64 overlay key (0-23) the lead starts at
 splitNote   ds 1               ; SPLIT NOTE: the MIDI note in (as sent) the lead starts at
 leadOct     ds 1               ; LEAD OCTAVE (KEY): 0-4 = -2..+2
 clKeyOn     ds 1               ; SPLIT is KEY (the menu shows its rows)
+clOn        ds 1               ; SPLIT is on (LEAD OCTAVE's row)
+clLast      ds 1               ; v0.36: SPLIT's mode when last on (SHIFT + F5 back to it)
+clCIdx      ds 8               ; TRIAD: the chord's keys
 spArm       ds 1               ; C= + V held: a note sets the split point
 spUsed      ds 1               ;   and one did (so letting go doesn't cycle SPLIT)
 clChordIdx  ds 1               ; LOW NOTE: the chord's key ($FF: none)

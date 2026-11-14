@@ -143,7 +143,7 @@ check("bend: every Game Boy / NES channel ends centred",
       all([x for x in b if x[1] == ch][-1][2] == 8192 for ch in GB + NES), b[-6:])
 c.press("space", ms=600)
 c.release("space", ms=10)                   # coming back up...
-c.press("lshift", ms=10); c.tap("f7", ms=40); c.release("lshift", ms=10)   # ...panic
+c.press("cbm", ms=10); c.tap("f7", ms=40); c.release("cbm", ms=10)   # ...panic
 c.run_ms(250)                               # (v0.12: the Game Boy's sound setup after panic is longer)
 b = bends(c, c.cpu.processorCycles - 310 * CYCLES_PER_MS)
 check("panic during a bend: straight back to centre", c.v("bendLvl") == 0 and b and all(x[2] == 8192 for x in b[-6:]), b[-6:])

@@ -158,7 +158,7 @@ c.midi_in(*[b for n in range(60, 70) for b in (0x80, n, 0)], ms=100)
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("...all let go: silent", sounding(c) == set() and sum(c.v("physKey", 32)) == 0, sounding(c))
 c.midi_in(0x90, 50, 64, ms=60)              # its note-off never comes
-c.press("lshift", ms=10); c.tap("f7", ms=40); c.release("lshift", ms=10)
+c.press("cbm", ms=10); c.tap("f7", ms=40); c.release("cbm", ms=10)
 c.run_ms(60)
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 check("panic: a MIDI note whose note-off was lost is let go", sounding(c) == set() and sum(c.v("physKey", 32)) == 0)

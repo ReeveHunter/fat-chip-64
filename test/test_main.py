@@ -98,7 +98,7 @@ c.run_ms(900)                               # (v0.19: the NES rings out with the
 check("chord released", notes_on(c.midi()) == {})
 
 # ---------------------------------------------------------------- devices
-def shifted(key, mod="lshift"):
+def shifted(key, mod="cbm"):                 # (v0.36: the chips and panic are C= + F keys only)
     c.press(mod, ms=10); c.tap(key, ms=30); c.release(mod, ms=10)
 
 
@@ -114,7 +114,7 @@ c.press("q", ms=60)
 gb_new = [x for x in c.midi(since=t0) if (x[1] & 15) in GB]
 check("Game Boy off: nothing sent to it", gb_new == [], gb_new)
 c.release("q", ms=60)
-shifted("f3", "rshift")                     # back on: startup again
+shifted("f3")                               # back on: startup again
 c.run_ms(60)
 gb_new = [x for x in c.midi(since=t0) if (x[1] & 15) in GB]
 check("SHIFT+F3 again: Game Boy startup resent", len(gb_new) > 1 and gb_new[0][1:] == (0xB0, 113, 64) and gb_new[1][1:] == (0xB0, 102, 70), gb_new[:2])

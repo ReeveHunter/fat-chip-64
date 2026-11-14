@@ -77,8 +77,8 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
-check("screen: header V0.35, sound line, tempo / beat line",
-      "V0.35" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
+check("screen: header V0.36, sound line, tempo / beat line",
+      "V0.36" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
       and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  BEAT ELECTRO  STOP",
       (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles
@@ -274,13 +274,13 @@ c.tap("f5", ms=50)
 
 # panic stops a beat
 c.tap("f5", ms=200)
-c.press("lshift", ms=10); c.tap("f7", ms=40); c.release("lshift", ms=10)
+c.press("cbm", ms=10); c.tap("f7", ms=40); c.release("cbm", ms=10)
 t0 = c.cpu.processorCycles
 c.run_ms(500)
 check("SHIFT+F7 panic stops the beat", c.v("beatRun") == 0 and not [x for x in since(c, t0) if (x[1] & 0xF0) == 0x90 and x[3]])
 
 # NES off: the drums go quiet
-c.press("lshift", ms=10); c.tap("f5", ms=40); c.release("lshift", ms=100)
+c._raw_press("cbm", ms=10); c._raw_tap("f5", ms=40); c._raw_release("cbm", ms=100)
 t0 = c.cpu.processorCycles
 c.midi_in(0x9F, 45, 127, 0x9F, 57, 64, ms=60)
 check("NES off: keytar drums send nothing", since(c, t0) == [], since(c, t0))

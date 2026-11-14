@@ -37,7 +37,7 @@ def cycle(c, **trem):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.35", "V0.35" in c.screen_row(0), c.screen_row(0))
+check("header V0.36", "V0.36" in c.screen_row(0), c.screen_row(0))
 p = cycle(c, depth=100, tremSync=3, mode=1)                 # PUMP, 1/4 (500 ms at 120)
 n = len(p)
 held = sum(1 for x in p[:n // 5] if x == p[0])

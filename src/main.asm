@@ -280,6 +280,8 @@ InitState:
 	sta splitNote
 	lda #3                  ; LEAD OCTAVE +1
 	sta leadOct
+	lda #1                  ; SHIFT + F5: SPLIT KEY at first
+	sta clLast
 	lda #2
 	sta leadBank
 	lda bankSlot+10

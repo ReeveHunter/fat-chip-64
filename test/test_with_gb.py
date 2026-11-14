@@ -73,7 +73,7 @@ c.raw[c.sym["ticks"]], c.raw[c.sym["ticks"] + 1] = t & 255, (t >> 8) & 255
 c.press("r", ms=80); c.release("r", ms=80)
 c.press("q", "w", ms=100)               # held through the panic
 t_panic = c.cpu.processorCycles
-c.press("lshift", ms=10); c.tap("f7", ms=30); c.release("lshift", ms=10)
+c.press("cbm", ms=10); c.tap("f7", ms=30); c.release("cbm", ms=10)
 c.run_ms(200)
 late = [m for m in c.midi(since=t_quiet) if m[1] == 0x90 and m[2] == 53]
 check("after a minute of silence the next note still reaches the Game Boy at once", late != [], late)

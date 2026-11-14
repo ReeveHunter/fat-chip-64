@@ -117,7 +117,7 @@ ev = [e for e in on_ch(c, P1, t1) if e[0] > offs[0][0]]
 check("unmute: attacks again from 0", [(e[1], e[3]) for e in ev][:2] == [("cc", 0), ("on", 100)], ev[:4])
 c.release("q", ms=300)
 t1 = c.cpu.processorCycles
-c.press("lshift", ms=10); c.tap("f7", ms=40); c.release("lshift", ms=10)
+c.press("cbm", ms=10); c.tap("f7", ms=40); c.release("cbm", ms=10)
 ev = on_ch(c, P1, t1)
 check("PADS + panic during a release: note-off straight away", ev and ev[0][1] == "off" and ev[0][0] < 40, ev[:3])
 c.run_ms(2500)

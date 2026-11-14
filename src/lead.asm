@@ -1,10 +1,14 @@
 ; Fat Chip 64 - CHORD + LEAD (v0.28): a chord and a lead at once, each its
 ; own patch.
-;   LOW NOTE  the first key pressed is the chord's root (POLY: just it;
-;             SMART CHORD: its 5TH, TRIAD...; DRONE: the drone); every other
-;             key is the lead, while the chord key is held
-;   LATCH 3   three keys pressed together latch as the chord (let go, it
-;             keeps sounding); everything else is the lead. L clears it.
+;   BASS      (was LOW NOTE) the first key pressed is the chord's root
+;             (POLY: just it; SMART CHORD: its 5TH, TRIAD...; DRONE: the
+;             drone); every other key is the lead, while the chord key is held
+;   TRIAD     (was LATCH 3) three keys pressed together are the chord while
+;             they're held (v0.36: with LATCH on, it keeps sounding after you
+;             let go); every other key is the lead.
+; v0.36: the lead is LEAD OCTAVE up in every mode (+1 at first; SHIFT + F1 /
+; F3). SHIFT + F5 SPLIT on / off (held + a note: the split point), SHIFT + F7
+; its mode. LATCH holds KEY's chord side and TRIAD's chord.
 ; The lead is one note (the last key pressed) on one voice per chip (SID 3,
 ; Game Boy pulse 1, NES pulse 1), only while it plays: the rest of the time
 ; those voices are the chord's. Its patch: SHIFT + A S D F G / Z X C V B.
@@ -16,10 +20,10 @@
 ;             chord (as the mode plays them), keys from it up the lead (LEAD
 ;             OCTAVE, +1 at first). On the C64's keys the split is a key (it
 ;             stays put when the octave changes); over MIDI, a note as sent
-;             (before MIDI IN OCTAVE). C= + V held + a note sets either.
+;             (before MIDI IN OCTAVE). SHIFT + F5 held + a note sets either.
 CL_KEY      equ 1               ; SPLIT (clMode)
-CL_LOW      equ 2
-CL_L3       equ 3
+CL_BASS     equ 2
+CL_L3       equ 3               ; (TRIAD)
 LEAD_SID    equ 6               ; the lead's voices: SID 3, GB pulse 1, NES pulse 1
 LEAD_GB     equ 1
 LEAD_NES    equ 2
@@ -91,6 +95,8 @@ ClPress:
 	bcs .kn
 	jsr IdxNote             ; (keeps X, Y)
 	sta clChord,y
+	txa
+	sta clCIdx,y            ; (v0.36: its key, for TRIAD without LATCH)
 	iny
 .kn:
 	inx
@@ -112,39 +118,7 @@ ClBuild:
 	lda physKey,x
 	beq .c
 	jsr IdxNote
-	sta leadNote
-.c:
-	lda #0
-	sta heldCount
-	lda clMode
-	cmp #CL_L3
-	beq .l3
-	cmp #CL_KEY
-	beq .key
-	ldx clChordIdx
-	bmi .x
-	lda physKey,x
-	beq .x
-	jsr IdxNote
-	jmp InsertNote          ; (POLY: just it; SMART CHORD, DRONE: their chord)
-.l3:
-	ldx #0
-.n:
-	cpx clChordN
-	beq .x
-	lda clChord,x
-	stx exK
-	jsr InsertNote
-	ldx exK
-	inx
-	bne .n
-.x:
-	rts
-.key:
-	lda leadNote            ; KEY: the lead LEAD OCTAVE up (or down)
-	cmp #NO_NOTE
-	beq .kc
-	ldy leadOct
+	ldy leadOct             ; LEAD OCTAVE up (or down), every mode (v0.36)
 .ko:
 	cpy #2
 	beq .kd
@@ -161,13 +135,65 @@ ClBuild:
 .kd:
 	cmp #128
 	bcc .ks
-	lda leadNote            ; (off the top or bottom: where it was played)
+	jsr IdxNote             ; (off the top or bottom: where it was played)
 .ks:
 	sta leadNote
-.kc:
-	ldx #0                  ; the chord: every key down below the split
-.kn:
+.c:
+	lda #0
+	sta heldCount
+	lda clMode
+	cmp #CL_L3
+	beq .l3
+	cmp #CL_KEY
+	beq .key
+	ldx clChordIdx
+	bmi .x
 	lda physKey,x
+	beq .x
+	jsr IdxNote
+	jmp InsertNote          ; (POLY: just it; SMART CHORD, DRONE: their chord)
+.l3:
+	lda latch               ; TRIAD: LATCH on, the chord as it was; off, the
+	beq .lk                 ;  chord's keys still held
+	ldx #0
+.n:
+	cpx clChordN
+	beq .x
+	lda clChord,x
+	stx exK
+	jsr InsertNote
+	ldx exK
+	inx
+	bne .n
+.x:
+	rts
+.lk:
+	ldx #0
+	stx exS                 ; (any still down?)
+.k:
+	cpx clChordN
+	beq .ke
+	stx exK
+	lda clCIdx,x
+	tax
+	lda physKey,x
+	beq .kn
+	inc exS
+	jsr IdxNote
+	jsr InsertNote
+.kn:
+	ldx exK
+	inx
+	bne .k
+.ke:
+	lda exS
+	bne .x
+	sta clChordN            ; (all let go: no chord)
+	rts
+.key:
+	ldx #0                  ; KEY: the chord, every note held below the split
+.kk:                            ;  (noteHeld: LATCH keeps them)
+	lda noteHeld,x
 	beq .kx
 	jsr LeadSide
 	bcs .kx
@@ -178,7 +204,7 @@ ClBuild:
 .kx:
 	inx
 	cpx #NIDX
-	bne .kn
+	bne .kk
 	rts
 
 ; note index X: carry set if it's on the lead's side of the split (KEY).
@@ -194,17 +220,55 @@ LeadSide:
 	cmp splitNote
 	rts
 
-; C= + V let go with no note: SPLIT steps on (OFF, KEY, LOW NOTE, LATCH 3)
+; SHIFT + F7: SPLIT's next mode (KEY, BASS, TRIAD; on if it was off)
 SplitNext:
 	subroutine
 	ldx clMode
+	bne .n
+	ldx clLast
+	dex
+.n:
 	inx
 	cpx #4
 	bcc .s
-	ldx #0
+	ldx #1
 .s:
 	stx clMode
+	stx clLast
 	jmp ClHook
+
+; SHIFT + F5 let go with no note: SPLIT on (its last mode) / off
+SplitToggle:
+	subroutine
+	lda clMode
+	beq .on
+	sta clLast
+	lda #0
+	beq .s
+.on:
+	lda clLast
+.s:
+	sta clMode
+	jmp ClHook
+
+; SHIFT + F1 / F3: the lead an octave up / down (LEAD OCTAVE, -2..+2)
+LeadOctUp:
+	ldx leadOct
+	cpx #4
+	bcs LeadOctX
+	inx
+	bne LeadOctS
+LeadOctDown:
+	ldx leadOct
+	beq LeadOctX
+	dex
+LeadOctS:
+	stx leadOct
+	lda #1
+	sta reallocFlag
+	jmp Dirty
+LeadOctX:
+	rts
 
 ; C= + V held, note index X pressed: the split point there; SPLIT is KEY
 SplitSet:
@@ -221,9 +285,10 @@ SplitSet:
 .k:
 	lda #CL_KEY
 	sta clMode
+	sta clLast
 	jmp ClHook
 
-; C= + V pressed
+; SHIFT + F5 pressed
 SplitArm:
 	subroutine
 	lda #1
@@ -470,6 +535,12 @@ ClHook:
 	inx
 .k:
 	stx clKeyOn
+	ldx #0
+	lda clMode
+	beq .o
+	inx
+.o:
+	stx clOn
 	lda #$FF
 	sta clChordIdx
 	sta clLeadIdx
@@ -499,58 +570,74 @@ SidOct:
 	adc sndOct
 	rts
 
-; row 3 of the play screen: the lead's patch (CHORD + LEAD on)
+; row 3 of the play screen (v0.36): SPLIT's mode (KEY: and the note it
+; splits at), then the lead: its octave and patch, dark while SPLIT is off
 ScrLead:
 	subroutine
-	lda #<txtLeadOff
-	ldy #>txtLeadOff
-	ldx clMode
-	beq .p
-	lda #<txtLead
-	ldy #>txtLead
-.p:
+	lda clMode
+	asl
+	tax
+	lda splitTxt,x
 	sta ptr
-	sty ptr+1
+	lda splitTxt+1,x
+	sta ptr+1
 	ldx #0
 	ldy #3
 	jsr PrintAt
 	lda clMode
-	beq .x
-	lda #<(leadPatch+patchName-livePatch)
-	sta ptr
-	lda #>(leadPatch+patchName-livePatch)
-	sta ptr+1
-	ldx #8
-	ldy #3
-	jsr PrintAt
-	lda clMode
 	cmp #CL_KEY
-	beq .sp
-.x:
-	lda #<txtSplitOff       ; (no split point shown)
-	sta ptr
-	lda #>txtSplitOff
-	sta ptr+1
-	ldx #26
-	ldy #3
-	jmp PrintAt
-.sp:
-	lda #<txtSplitAt        ; KEY: SPLIT AT the note the split key plays now
-	sta ptr
-	lda #>txtSplitAt
-	sta ptr+1
-	ldx #26
-	ldy #3
-	jsr PrintAt
+	bne .l
 	lda splitKey
 	clc
 	adc octBase
 	jsr NoteBuf
-	ldx #35
+	ldx #10
 	ldy #3
-	jmp PrintAt
+	jsr PrintAt
+.l:
+	lda leadOct             ; (8 bytes each)
+	asl
+	asl
+	asl
+	clc
+	adc #<txtLeadOct
+	sta ptr
+	lda #>txtLeadOct
+	adc #0
+	sta ptr+1
+	ldx #14
+	ldy #3
+	jsr PrintAt
+	lda #<(leadPatch+patchName-livePatch)
+	sta ptr
+	lda #>(leadPatch+patchName-livePatch)
+	sta ptr+1
+	ldx #22
+	ldy #3
+	jsr PrintAt
+	ldx #0                  ; the lead's part: dark grey while SPLIT is off
+	ldy #3
+	jsr ScreenAddr
+	lda ptr2+1
+	clc
+	adc #>(COLRAM-SCREEN)
+	sta ptr2+1
+	lda #13
+	ldx clMode
+	bne .c
+	lda #11
+.c:
+	ldy #14
+.cc:
+	sta (ptr2),y
+	iny
+	cpy #39
+	bne .cc
+	rts
 
-txtLead:    .byte "LEAD",0
-txtLeadOff: .byte "                        ",0
-txtSplitAt: .byte "SPLIT AT ",0
-txtSplitOff: .byte "             ",0
+splitTxt:   .word txtSpOff,txtSpKey,txtSpBass,txtSpTriad
+txtSpOff:   .byte "SPLIT OFF     ",0
+txtSpKey:   .byte "SPLIT KEY     ",0
+txtSpBass:  .byte "SPLIT BASS    ",0
+txtSpTriad: .byte "SPLIT TRIAD   ",0
+txtLeadOct: .byte "LEAD -2",0,"LEAD -1",0,"LEAD  0",0,"LEAD +1",0,"LEAD +2",0

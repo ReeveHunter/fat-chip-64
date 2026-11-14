@@ -194,8 +194,6 @@ Suspect:
 ;   RETURN         the menu                  CTRL+F3/F5  GB / NES channel block
 ;   C= +  A S D F  arp type / pattern / speed / SPARKLE octave
 ;         Z X C    notes mode / extensions / POLY-MONO     L  latch style
-;         V        SPLIT (tapped: OFF KEY LOW NOTE LATCH 3; held + a note:
-;                  the split point there, on the C64's keys or over MIDI)
 ;         , .      SPACE's action            ; :  MIDI in octave down / up
 ;         /        undo the dice             F1 F3 F5  SID / GB / NES on-off
 ;         F7       panic                     (SHIFT + F keys too, as before)
@@ -302,6 +300,8 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	sta keyCodeNow
 	ldx okpOn               ; ONE KEY PLAY: the cursor keys play
 	beq .nokp
+	ldx spArm               ; (not while SHIFT + F5 is held: left SHIFT, F5 and E
+	bne .nokp               ;  ghost a CRSR DOWN in the keyboard's wiring)
 	ldx #1
 	cmp #K_CRSR_DOWN
 	beq .okp
@@ -323,8 +323,9 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	lda ctrlDown
 	bne .ctrlF
 	lda cbmDown
-	ora shiftDown
-	bne .shiftF
+	bne .shiftF             ; C= + F1 F3 F5: the chips, F7: panic
+	lda shiftDown
+	bne .leadF              ; SHIFT + F1 F3: the lead's octave, F5 SPLIT, F7 its mode
 	cpx #2
 	bcc .oct
 	beq .arp
@@ -354,6 +355,19 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	cpx #3
 	beq .panic
 	jmp ToggleDevice        ; X = 0 SID, 1 GB, 2 NES
+.leadF:
+	cpx #1
+	bcc .lu
+	beq .ld
+	cpx #2
+	beq .ls
+	jmp SplitNext
+.lu:
+	jmp LeadOctUp
+.ld:
+	jmp LeadOctDown
+.ls:
+	jmp SplitArm
 .panic:
 	jmp Panic
 .ctrlF:
@@ -412,20 +426,20 @@ cmdCode:    .byte K_CTRL,K_CBM,K_STOP,K_SPACE,K_RETURN,K_K,0
 CMD_PLAIN   equ 7
 	.byte K_A,K_S,K_D,K_F,K_G,K_Z,K_X,K_C,K_V,K_B,K_L,K_EQUALS,K_COMMA,K_PERIOD,K_SLASH,K_SEMI,K_COLON,0
 CMD_CBM     equ CMD_PLAIN+18
-	.byte K_A,K_S,K_D,K_F,K_Z,K_X,K_C,K_L,K_COMMA,K_PERIOD,K_SEMI,K_COLON,K_SLASH,K_V,0
-CMD_STOP    equ CMD_CBM+15
+	.byte K_A,K_S,K_D,K_F,K_Z,K_X,K_C,K_L,K_COMMA,K_PERIOD,K_SEMI,K_COLON,K_SLASH,0
+CMD_STOP    equ CMD_CBM+14
 	.byte K_A,K_S,K_D,K_F,K_G,K_H,0
 cmdLo:      .byte <CtrlDown,<CbmDown,<StopDown,<MomentDown,<ReturnKey,<KeyArm,0
 	.byte <BankKey,<BankKey,<BankKey,<BankKey,<BankKey,<SlotKey,<SlotKey,<SlotKey,<SlotKey,<SlotKey
 	.byte <LatchKey,<TapTempo,<TempoDown,<TempoUp,<SlashKey,<ArpFaster,<ArpSlower,0
 	.byte <ArpTypeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ModeKey,<SpiceKey,<MonoKey,<LatchStyleKey
-	.byte <SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<DiceUndo,<SplitArm,0
+	.byte <SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<DiceUndo,0
 	.byte <BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,0
 cmdHi:      .byte >CtrlDown,>CbmDown,>StopDown,>MomentDown,>ReturnKey,>KeyArm,0
 	.byte >BankKey,>BankKey,>BankKey,>BankKey,>BankKey,>SlotKey,>SlotKey,>SlotKey,>SlotKey,>SlotKey
 	.byte >LatchKey,>TapTempo,>TempoDown,>TempoUp,>SlashKey,>ArpFaster,>ArpSlower,0
 	.byte >ArpTypeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ModeKey,>SpiceKey,>MonoKey,>LatchStyleKey
-	.byte >SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>DiceUndo,>SplitArm,0
+	.byte >SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>DiceUndo,0
 	.byte >BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,0
 
 ; the bank keys (A S D F G) and slot keys (Z X C V B), in order; H = beat 6
@@ -483,9 +497,7 @@ BeatPickKey:
 ; A S D F G: that bank, the same slot (or its first patch if that's empty)
 BankKey:
 	jsr KeyIndex
-	lda clMode              ; CHORD + LEAD: SHIFT picks the lead's bank
-	beq BankPick
-	lda shiftDown
+	lda shiftDown           ; SHIFT: the lead's bank (v0.36: SPLIT on or off)
 	beq BankPick
 	jmp LeadBank
 ; X = bank (the DH-100's tone buttons too)
@@ -525,9 +537,7 @@ BankPick:
 SlotKey:
 	subroutine
 	jsr KeyIndex
-	lda clMode              ; CHORD + LEAD: SHIFT picks the lead's patch
-	beq .n
-	lda shiftDown
+	lda shiftDown           ; SHIFT: the lead's patch (v0.36: SPLIT on or off)
 	beq .n
 	jmp LeadSlot
 .n:
@@ -817,15 +827,8 @@ ApplySettings:
 ; L: latch on (in the LATCH STYLE: SMART / HOLD / ADD) or off
 LatchKey:
 	subroutine
-	lda clMode              ; CHORD + LEAD LATCH 3: L lets the chord go
-	cmp #CL_L3
-	bne .l
-	lda #0
-	sta clChordN
-	lda #1
+	lda #1                  ; (SPLIT: LATCH holds the chord part: rebuild)
 	sta reallocFlag
-	rts
-.l:
 	lda latch
 	bne .off
 	ldx latchStyle          ; (0-2: SMART, HOLD, ADD)
@@ -910,8 +913,13 @@ NoteUp:                         ; A = note index
 	beq .n
 	dec physCount
 .n:
-	lda clMode              ; (CHORD + LEAD: no latch, it has its own)
+	lda clMode              ; SPLIT: only KEY's chord side latches (TRIAD
+	beq .lt                 ;  keeps its chord itself; the lead never)
+	cmp #CL_KEY
 	bne .clr
+	jsr LeadSide
+	bcs .clr
+.lt:
 	lda latch
 	ora sustainOn           ; (the keytar's sustain button, held)
 	bne .x                  ; latched: keeps sounding
@@ -933,15 +941,15 @@ NoteUp:                         ; A = note index
 	txa
 	jmp OkpRelease
 .ct:
-	cmp #K_V
+	cmp #K_F5
 	bne .ct2
-	lda spArm               ; C= + V let go: no note set the split, so SPLIT steps on
+	lda spArm               ; SHIFT + F5 let go: no note set the split, so SPLIT on / off
 	beq .ct2
 	lda #0
 	sta spArm
 	lda spUsed
 	bne .vx
-	jmp SplitNext
+	jmp SplitToggle
 .vx:
 	rts
 .ct2:

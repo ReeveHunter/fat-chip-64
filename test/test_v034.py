@@ -59,7 +59,7 @@ def sel(c, label):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.35", "V0.35" in c.screen_row(0), c.screen_row(0))
+check("header V0.36", "V0.36" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- no jumps
 send(c, BY["TREMOLO GATE"])
@@ -76,6 +76,7 @@ c.midi_in(0x80, 60, 0, ms=10)
 # ---------------------------------------------------------------- the silence: still
 c.run_ms(800)                                # (TREMOLO GATE's release: 240 ms)
 w = vol_writes(c, 500)
+w = [x for x in w if x[0] > 40]             # (the last steps up to full as the release ends)
 check("nothing sounding on the SID: no volume changes at all", w == [] and c.raw[0xD418] & 15 == 15, w[:10])
 c.midi_in(0x90, 60, 100, ms=10)
 w = vol_writes(c, 300)

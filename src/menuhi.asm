@@ -20,10 +20,10 @@ mL15:      .byte "; : ARP SPEED SPACE ITS ACTION ",0
 mL16:      .byte "F1 F3 OCTAVE  F5 ARP  F7 VISUALS ",0
 mL17:      .byte "RUN/STOP BEAT (HELD + A-H: PICK ONE) ",0
 mL18:      .byte "CRSR DOWN / RIGHT: ONE KEY PLAY ",0
-mL19:      .byte "SHIFT + ASDFG / ZXCVB: THE LEAD'S PATCH ",0
-mL20:      .byte "C= + A ARP TYPE  S D F PATTERN/SPEED/OCT ",0
-mL21:      .byte "C= + Z MODE X SIZE C MONO V SPLIT (HOLD ",0
-mL22:      .byte "      V + A NOTE: THE SPLIT POINT) ",0
+mL19:      .byte "SHIFT+ASDFG ZXCVB LEAD PATCH F1 F3 OCT ",0
+mL20:      .byte "SHIFT+F5 SPLIT (+ A KEY: WHERE) F7 MODE ",0
+mL21:      .byte "C=+A ARP TYPE  S D F PATTERN/SPEED/OCT ",0
+mL22:      .byte "C= + Z MODE  X CHORD SIZE  C MONO ",0
 mL23:      .byte "C= + L LATCH STYLE  , . SPACE'S ACTION ",0
 mL24:      .byte "C= + ; : MIDI IN OCTAVE  / UNDO DICE ",0
 mL25:      .byte "C= + F1 F3 F5 CHIPS  F7 PANIC ",0
@@ -105,7 +105,7 @@ mU99:      .byte " CENTS",0
 mL100:      .byte "CHORD CHANGE ",0
 mL101:      .byte "WANDER TIME ",0
 mL102:      .byte "DRONE VOICING ",0
-mL103:      .byte "SPLIT (C= V) ",0
+mL103:      .byte "SPLIT (SHIFT F5) ",0
 mL104:      .byte "SPLIT KEY ",0
 mU104:      .byte "~K",0
 mL105:      .byte "SPLIT NOTE (MIDI) ",0
@@ -217,8 +217,8 @@ mS62:   .byte "FIFTHS",0
 mS63:   .byte "FIFTHS + 9TH",0
 mS64:   .byte "SUS4",0
 mS65:   .byte "KEY",0
-mS66:   .byte "LOW NOTE",0
-mS67:   .byte "LATCH 3",0
+mS66:   .byte "BASS",0
+mS67:   .byte "TRIAD",0
 mS68:   .byte "PENTATONIC PAIRS",0
 mS69:   .byte "CHORD NOTES",0
 mS70:   .byte "DOWN",0
