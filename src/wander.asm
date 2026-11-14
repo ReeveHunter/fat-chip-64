@@ -5,7 +5,7 @@
 ;   ATTACK   as always: the new notes start
 ;   GLIDE    every voice slides to its new note (a glide even if the patch
 ;            has none)
-;   SPLIT    the SID and the bass voices glide, the Game Boy and NES pulses
+;   STAGGER  the SID and the bass voices glide, the Game Boy and NES pulses
 ;            start again
 ;   WANDER   each voice moves at its own moment within WANDER TIME, the bass
 ;            late; some glide, some start again (fade out, come back in)
@@ -16,7 +16,7 @@
 
 CHG_ATTACK  equ 1
 CHG_GLIDE   equ 2
-CHG_SPLIT   equ 3
+CHG_STAGGER   equ 3
 CHG_WANDER  equ 4
 CHG_K       equ 6               ; CHORD CHANGE's glide (as a patch's glideK)
 
@@ -42,7 +42,7 @@ ChgStyle:
 	lda vNote,x
 	cmp #NO_NOTE
 	bne .snd
-	lda vWant,x             ; from silence: at once (GLIDE, SPLIT: from the
+	lda vWant,x             ; from silence: at once (GLIDE, STAGGER: from the
 	cmp #NO_NOTE            ;  voice's last note, like a portamento)
 	beq .now0
 	lda hardCut
@@ -51,7 +51,7 @@ ChgStyle:
 	jsr ChgEff
 	cmp #CHG_GLIDE
 	beq .gs
-	cmp #CHG_SPLIT
+	cmp #CHG_STAGGER
 	bne .now0
 	lda vDev,x
 	beq .gs
@@ -85,9 +85,9 @@ ChgStyle:
 	beq .now
 	cmp #CHG_GLIDE
 	beq .glide
-	cmp #CHG_SPLIT
+	cmp #CHG_STAGGER
 	bne .wander
-	lda vDev,x              ; SPLIT: the SID and the bass glide
+	lda vDev,x              ; STAGGER: the SID and the bass glide
 	beq .glide
 	lda vIdx,x
 	cmp #2

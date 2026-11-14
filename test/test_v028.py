@@ -45,10 +45,10 @@ def set_cl(c, steps):
     c.tap("return", ms=60)
     sel(c, "PLAYING")
     c.tap("return", ms=60)
-    sel(c, "CHORD + LEAD")
+    sel(c, "SPLIT (C= V)")
     for _ in range(steps):
         c.tap("f7", ms=40)
-    v = row_of(c, "CHORD + LEAD")
+    v = row_of(c, "SPLIT (C= V)")
     back(c, 2)
     return v
 
@@ -65,12 +65,12 @@ def shift(c, key, ms=150):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.31", "V0.31" in c.screen_row(0), c.screen_row(0))
+check("header V0.32", "V0.32" in c.screen_row(0), c.screen_row(0))
 check("row 3 empty with CHORD + LEAD off", c.screen_row(3).strip() == "", c.screen_row(3))
 
 # ---------------------------------------------------------------- LOW NOTE
-v = set_cl(c, 1)
-check("PLAYING: CHORD + LEAD LOW NOTE", "LOW NOTE" in v and c.v("clMode") == 1, v)
+v = set_cl(c, 2)
+check("PLAYING: SPLIT LOW NOTE (v0.32: after KEY)", "LOW NOTE" in v and c.v("clMode") == 2, v)
 c.run_ms(200)
 check("row 3: the lead's patch (LEADS 1: DUTY LEAD)", c.screen_row(3).startswith("LEAD    DUTY LEAD"), c.screen_row(3))
 sid3_chord = c.raw[0xD400 + 14 + 4] & 0xF0
@@ -153,7 +153,7 @@ check("SHIFT + D, SHIFT + Z: back to DUTY LEAD", c.screen_row(3).startswith("LEA
 
 # ---------------------------------------------------------------- LATCH 3
 v = set_cl(c, 1)
-check("CHORD + LEAD: LATCH 3", "LATCH 3" in v and c.v("clMode") == 2, v)
+check("SPLIT: LATCH 3", "LATCH 3" in v and c.v("clMode") == 3, v)
 c.press("q", "e", "t", ms=100)
 c.release("q", "e", "t", ms=150)
 check("three keys together: latched as the chord (C E G), keeps sounding", held(c) == [48, 52, 55]

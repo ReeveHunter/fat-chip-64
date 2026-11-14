@@ -12,6 +12,14 @@
 ; Boy pulse's CCs, the NES pulse's duty. Shared with the chord: the effects
 ; (vibrato, filter, tremolo...), the NES envelope.
 
+;   KEY       (v0.32) a keyboard split: keys below the split point are the
+;             chord (as the mode plays them), keys from it up the lead (LEAD
+;             OCTAVE, +1 at first). On the C64's keys the split is a key (it
+;             stays put when the octave changes); over MIDI, a note as sent
+;             (before MIDI IN OCTAVE). C= + V held + a note sets either.
+CL_KEY      equ 1               ; SPLIT (clMode)
+CL_LOW      equ 2
+CL_L3       equ 3
 LEAD_SID    equ 6               ; the lead's voices: SID 3, GB pulse 1, NES pulse 1
 LEAD_GB     equ 1
 LEAD_NES    equ 2
@@ -22,8 +30,16 @@ ClPress:
 	subroutine
 	stx exI
 	lda clMode
-	cmp #2
+	cmp #CL_L3
 	beq .l3
+	cmp #CL_KEY
+	bne .low
+	jsr LeadSide            ; KEY: which side of the split
+	bcc .ch
+	stx clLeadIdx
+.ch:
+	rts
+.low:
 	; LOW NOTE: the chord's key, if none is held
 	ldy clChordIdx
 	bmi .chord
@@ -101,8 +117,10 @@ ClBuild:
 	lda #0
 	sta heldCount
 	lda clMode
-	cmp #2
+	cmp #CL_L3
 	beq .l3
+	cmp #CL_KEY
+	beq .key
 	ldx clChordIdx
 	bmi .x
 	lda physKey,x
@@ -121,6 +139,97 @@ ClBuild:
 	inx
 	bne .n
 .x:
+	rts
+.key:
+	lda leadNote            ; KEY: the lead LEAD OCTAVE up (or down)
+	cmp #NO_NOTE
+	beq .kc
+	ldy leadOct
+.ko:
+	cpy #2
+	beq .kd
+	bcc .kdn
+	clc
+	adc #12
+	dey
+	bne .ko
+.kdn:
+	sec
+	sbc #12
+	iny
+	bne .ko
+.kd:
+	cmp #128
+	bcc .ks
+	lda leadNote            ; (off the top or bottom: where it was played)
+.ks:
+	sta leadNote
+.kc:
+	ldx #0                  ; the chord: every key down below the split
+.kn:
+	lda physKey,x
+	beq .kx
+	jsr LeadSide
+	bcs .kx
+	jsr IdxNote
+	stx exK
+	jsr InsertNote
+	ldx exK
+.kx:
+	inx
+	cpx #NIDX
+	bne .kn
+	rts
+
+; note index X: carry set if it's on the lead's side of the split (KEY).
+; Keeps X.
+LeadSide:
+	subroutine
+	cpx #MIDI_FIRST
+	bcs .m
+	cpx splitKey
+	rts
+.m:
+	lda midiSrc-MIDI_FIRST,x
+	cmp splitNote
+	rts
+
+; C= + V let go with no note: SPLIT steps on (OFF, KEY, LOW NOTE, LATCH 3)
+SplitNext:
+	subroutine
+	ldx clMode
+	inx
+	cpx #4
+	bcc .s
+	ldx #0
+.s:
+	stx clMode
+	jmp ClHook
+
+; C= + V held, note index X pressed: the split point there; SPLIT is KEY
+SplitSet:
+	subroutine
+	lda #1
+	sta spUsed
+	cpx #MIDI_FIRST
+	bcs .m
+	stx splitKey
+	bcc .k
+.m:
+	lda midiSrc-MIDI_FIRST,x
+	sta splitNote
+.k:
+	lda #CL_KEY
+	sta clMode
+	jmp ClHook
+
+; C= + V pressed
+SplitArm:
+	subroutine
+	lda #1
+	sta spArm
+	lda #0
+	sta spUsed
 	rts
 
 ; Allocate: the lead's voices (before anything else is shared out)
@@ -354,6 +463,13 @@ LeadLoad:
 
 ; CHORD + LEAD changed: nothing held over
 ClHook:
+	ldx #0
+	lda clMode
+	cmp #CL_KEY
+	bne .k
+	inx
+.k:
+	stx clKeyOn
 	lda #$FF
 	sta clChordIdx
 	sta clLeadIdx
@@ -361,7 +477,12 @@ ClHook:
 	sta clChordN
 	lda #1
 	sta reallocFlag
-	jmp Dirty
+	jsr Dirty
+	lda menuOn              ; (the menu: KEY's rows come or go)
+	beq .x
+	jmp MenuDraw
+.x:
+	rts
 
 ; the SID's octave for SID voice Y: the lead's on its voice (A = note + it)
 SidOct:
@@ -401,9 +522,35 @@ ScrLead:
 	sta ptr+1
 	ldx #8
 	ldy #3
-	jmp PrintAt
+	jsr PrintAt
+	lda clMode
+	cmp #CL_KEY
+	beq .sp
 .x:
-	rts
+	lda #<txtSplitOff       ; (no split point shown)
+	sta ptr
+	lda #>txtSplitOff
+	sta ptr+1
+	ldx #26
+	ldy #3
+	jmp PrintAt
+.sp:
+	lda #<txtSplitAt        ; KEY: SPLIT AT the note the split key plays now
+	sta ptr
+	lda #>txtSplitAt
+	sta ptr+1
+	ldx #26
+	ldy #3
+	jsr PrintAt
+	lda splitKey
+	clc
+	adc octBase
+	jsr NoteBuf
+	ldx #35
+	ldy #3
+	jmp PrintAt
 
 txtLead:    .byte "LEAD",0
 txtLeadOff: .byte "                        ",0
+txtSplitAt: .byte "SPLIT AT ",0
+txtSplitOff: .byte "             ",0

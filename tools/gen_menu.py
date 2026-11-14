@@ -220,9 +220,15 @@ def enum(lbl, var, values, hook=None, show=None):
 WANDER_S = ["0.5", "1", "2", "3", "4", "6", "8"]
 
 
-def number(lbl, var, half, suffix="", hook=None):
+def number(lbl, var, half, suffix="", hook=None, show=None):
     """kind 5: a value 0..2*half shown as -half..+half (and the suffix)"""
-    return dict(kind=5, lbl=lbl, var=var, count=2 * half + 1, suffix=suffix, hook=hook, show=None)
+    return dict(kind=5, lbl=lbl, var=var, count=2 * half + 1, suffix=suffix, hook=hook, show=show)
+
+
+def note(lbl, var, count, key=False, hook=None, show=None):
+    """kind 5 shown as a note name: a MIDI note 0..count-1 (key: an overlay key,
+    shown as the note it plays now). NumText knows it by its suffix."""
+    return dict(kind=5, lbl=lbl, var=var, count=count, suffix="~K" if key else "~N", hook=hook, show=show)
 
 
 def text(lbl):
@@ -240,9 +246,9 @@ HELP = [
     "CRSR DOWN / RIGHT: ONE KEY PLAY",
     "SHIFT + ASDFG / ZXCVB: THE LEAD'S PATCH",
     "",
-    "C= + A ARP TYPE   S D F PATTERN,",
-    "      SPEED, OCTAVE",
-    "C= + Z MODE  X CHORD SIZE  C MONO",
+    "C= + A ARP TYPE  S D F PATTERN/SPEED/OCT",
+    "C= + Z MODE X SIZE C MONO V SPLIT (HOLD",
+    "      V + A NOTE: THE SPLIT POINT)",
     "C= + L LATCH STYLE  , . SPACE'S ACTION",
     "C= + ; : MIDI IN OCTAVE  / UNDO DICE",
     "C= + F1 F3 F5 CHIPS  F7 PANIC",
@@ -301,11 +307,14 @@ def build_pages(params, effects):
         None,
         number("FINE TUNE", "fineTune", 50, " CENTS", hook="SyncDerive"),
         None,
-        enum("CHORD CHANGE", "chgMode", ["AS MODE", "ATTACK", "GLIDE", "SPLIT", "WANDER"], hook="SoundVarsHook"),
+        enum("CHORD CHANGE", "chgMode", ["AS MODE", "ATTACK", "GLIDE", "STAGGER", "WANDER"], hook="SoundVarsHook"),
         enum("WANDER TIME", "wanderT", [f"{t} S" for t in WANDER_S]),
         enum("DRONE VOICING", "droneVc", ["FIFTHS", "FIFTHS + 9TH", "SUS4"], hook="SettingChanged"),
         None,
-        enum("CHORD + LEAD", "clMode", ["OFF", "LOW NOTE", "LATCH 3"], hook="ClHook"),
+        enum("SPLIT (C= V)", "clMode", ["OFF", "KEY", "LOW NOTE", "LATCH 3"], hook="ClHook"),
+        note("SPLIT KEY", "splitKey", 24, key=True, hook="Dirty", show="clKeyOn"),
+        note("SPLIT NOTE (MIDI)", "splitNote", 128, show="clKeyOn"),
+        number("LEAD OCTAVE", "leadOct", 2, hook="ClHook", show="clKeyOn"),
     ], parent="main")
     add_page("okp", "ONE KEY PLAY", "THE CURSOR KEYS PLAY", [
         enum("ONE KEY PLAY", "okpOn", ["OFF", "ON"], hook="OkpHook"),

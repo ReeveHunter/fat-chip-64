@@ -194,6 +194,8 @@ Suspect:
 ;   RETURN         the menu                  CTRL+F3/F5  GB / NES channel block
 ;   C= +  A S D F  arp type / pattern / speed / SPARKLE octave
 ;         Z X C    notes mode / extensions / POLY-MONO     L  latch style
+;         V        SPLIT (tapped: OFF KEY LOW NOTE LATCH 3; held + a note:
+;                  the split point there, on the C64's keys or over MIDI)
 ;         , .      SPACE's action            ; :  MIDI in octave down / up
 ;         /        undo the dice             F1 F3 F5  SID / GB / NES on-off
 ;         F7       panic                     (SHIFT + F keys too, as before)
@@ -205,6 +207,10 @@ KeyDown:
 	jmp .cmd
 NoteDown:                       ; A = note index (overlay key 0-23, MIDI slot 24-31)
 	tax
+	lda spArm
+	beq .nsp
+	jmp SplitSet            ; (C= + V held: this note sets the split, it doesn't play)
+.nsp:
 	lda kArm
 	beq .note
 	jmp KeyShapeNote        ; (K tapped: this note picks the key, it doesn't play)
@@ -406,20 +412,20 @@ cmdCode:    .byte K_CTRL,K_CBM,K_STOP,K_SPACE,K_RETURN,K_K,0
 CMD_PLAIN   equ 7
 	.byte K_A,K_S,K_D,K_F,K_G,K_Z,K_X,K_C,K_V,K_B,K_L,K_EQUALS,K_COMMA,K_PERIOD,K_SLASH,K_SEMI,K_COLON,0
 CMD_CBM     equ CMD_PLAIN+18
-	.byte K_A,K_S,K_D,K_F,K_Z,K_X,K_C,K_L,K_COMMA,K_PERIOD,K_SEMI,K_COLON,K_SLASH,0
-CMD_STOP    equ CMD_CBM+14
+	.byte K_A,K_S,K_D,K_F,K_Z,K_X,K_C,K_L,K_COMMA,K_PERIOD,K_SEMI,K_COLON,K_SLASH,K_V,0
+CMD_STOP    equ CMD_CBM+15
 	.byte K_A,K_S,K_D,K_F,K_G,K_H,0
 cmdLo:      .byte <CtrlDown,<CbmDown,<StopDown,<MomentDown,<ReturnKey,<KeyArm,0
 	.byte <BankKey,<BankKey,<BankKey,<BankKey,<BankKey,<SlotKey,<SlotKey,<SlotKey,<SlotKey,<SlotKey
 	.byte <LatchKey,<TapTempo,<TempoDown,<TempoUp,<SlashKey,<ArpFaster,<ArpSlower,0
 	.byte <ArpTypeKey,<ArpPatKey,<ArpLenKey,<ArpOctKey,<ModeKey,<SpiceKey,<MonoKey,<LatchStyleKey
-	.byte <SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<DiceUndo,0
+	.byte <SpaceBack,<SpaceNext,<MidiOctDown,<MidiOctUp,<DiceUndo,<SplitArm,0
 	.byte <BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,<BeatPickKey,0
 cmdHi:      .byte >CtrlDown,>CbmDown,>StopDown,>MomentDown,>ReturnKey,>KeyArm,0
 	.byte >BankKey,>BankKey,>BankKey,>BankKey,>BankKey,>SlotKey,>SlotKey,>SlotKey,>SlotKey,>SlotKey
 	.byte >LatchKey,>TapTempo,>TempoDown,>TempoUp,>SlashKey,>ArpFaster,>ArpSlower,0
 	.byte >ArpTypeKey,>ArpPatKey,>ArpLenKey,>ArpOctKey,>ModeKey,>SpiceKey,>MonoKey,>LatchStyleKey
-	.byte >SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>DiceUndo,0
+	.byte >SpaceBack,>SpaceNext,>MidiOctDown,>MidiOctUp,>DiceUndo,>SplitArm,0
 	.byte >BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,>BeatPickKey,0
 
 ; the bank keys (A S D F G) and slot keys (Z X C V B), in order; H = beat 6
@@ -812,7 +818,7 @@ ApplySettings:
 LatchKey:
 	subroutine
 	lda clMode              ; CHORD + LEAD LATCH 3: L lets the chord go
-	cmp #2
+	cmp #CL_L3
 	bne .l
 	lda #0
 	sta clChordN
@@ -927,6 +933,18 @@ NoteUp:                         ; A = note index
 	txa
 	jmp OkpRelease
 .ct:
+	cmp #K_V
+	bne .ct2
+	lda spArm               ; C= + V let go: no note set the split, so SPLIT steps on
+	beq .ct2
+	lda #0
+	sta spArm
+	lda spUsed
+	bne .vx
+	jmp SplitNext
+.vx:
+	rts
+.ct2:
 	cmp #K_CTRL
 	bne .cb
 	lda #0

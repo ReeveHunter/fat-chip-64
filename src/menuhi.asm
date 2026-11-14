@@ -21,9 +21,9 @@ mL16:      .byte "F1 F3 OCTAVE  F5 ARP  F7 VISUALS ",0
 mL17:      .byte "RUN/STOP BEAT (HELD + A-H: PICK ONE) ",0
 mL18:      .byte "CRSR DOWN / RIGHT: ONE KEY PLAY ",0
 mL19:      .byte "SHIFT + ASDFG / ZXCVB: THE LEAD'S PATCH ",0
-mL20:      .byte "C= + A ARP TYPE   S D F PATTERN, ",0
-mL21:      .byte "      SPEED, OCTAVE ",0
-mL22:      .byte "C= + Z MODE  X CHORD SIZE  C MONO ",0
+mL20:      .byte "C= + A ARP TYPE  S D F PATTERN/SPEED/OCT ",0
+mL21:      .byte "C= + Z MODE X SIZE C MONO V SPLIT (HOLD ",0
+mL22:      .byte "      V + A NOTE: THE SPLIT POINT) ",0
 mL23:      .byte "C= + L LATCH STYLE  , . SPACE'S ACTION ",0
 mL24:      .byte "C= + ; : MIDI IN OCTAVE  / UNDO DICE ",0
 mL25:      .byte "C= + F1 F3 F5 CHIPS  F7 PANIC ",0
@@ -105,46 +105,52 @@ mU99:      .byte " CENTS",0
 mL100:      .byte "CHORD CHANGE ",0
 mL101:      .byte "WANDER TIME ",0
 mL102:      .byte "DRONE VOICING ",0
-mL103:      .byte "CHORD + LEAD ",0
-mL104:      .byte "ONE KEY PLAY ",0
-mE104      equ mE1
-mL105:      .byte "NOTES ",0
-mL106:      .byte "MOTION ",0
-mL107:      .byte "TURN ",0
-mL108:      .byte "DIRECTION ",0
-mL109:      .byte "EACH PRESS ",0
-mL110:      .byte "YAMAHA SHS-10 ",0
-mL111:      .byte "CASIO DH-100 ",0
-mE111      equ mE110
-mL112:      .byte "ATARI SYNTHCART ",0
-mE112      equ mE110
-mL113:      .byte "TEMPO ",0
-mL114:      .byte "SHS-10 RHYTHM ",0
-mL115:      .byte "START/STOP ",0
-mL116:      .byte "VOICE BUTTONS ",0
-mL117:      .byte "RHYTHM BUTTONS ",0
-mL118:      .byte "WHEEL ",0
-mL119:      .byte "VIBRATO BUTTON ",0
-mE119      equ mE96
-mL120:      .byte "PORTAMENTO BUTTON ",0
-mE120      equ mE96
-mL121:      .byte "SUSTAIN BUTTON ",0
-mE121      equ mE96
-mL122:      .byte "BREATH ",0
-mL123:      .byte "BREATH FX1 ",0
-mL124:      .byte "BREATH FX2 ",0
-mE124      equ mE123
-mL125:      .byte "BREATH FEEL ",0
-mL126:      .byte "NOTES ",0
-mL127:      .byte "PORTAMENTO BUTTON ",0
-mE127      equ mE96
-mL128:      .byte "TONE BUTTONS ",0
-mL129:      .byte "TEMPO ",0
-mL130:      .byte "TRIM ",0
-mU130:      .byte "",0
-mL131:      .byte "TUNE TO ",0
-mL132:      .byte "MATCH KEY ",0
-mE132      equ mE1
+mL103:      .byte "SPLIT (C= V) ",0
+mL104:      .byte "SPLIT KEY ",0
+mU104:      .byte "~K",0
+mL105:      .byte "SPLIT NOTE (MIDI) ",0
+mU105:      .byte "~N",0
+mL106:      .byte "LEAD OCTAVE ",0
+mU106:      .byte "",0
+mL107:      .byte "ONE KEY PLAY ",0
+mE107      equ mE1
+mL108:      .byte "NOTES ",0
+mL109:      .byte "MOTION ",0
+mL110:      .byte "TURN ",0
+mL111:      .byte "DIRECTION ",0
+mL112:      .byte "EACH PRESS ",0
+mL113:      .byte "YAMAHA SHS-10 ",0
+mL114:      .byte "CASIO DH-100 ",0
+mE114      equ mE113
+mL115:      .byte "ATARI SYNTHCART ",0
+mE115      equ mE113
+mL116:      .byte "TEMPO ",0
+mL117:      .byte "SHS-10 RHYTHM ",0
+mL118:      .byte "START/STOP ",0
+mL119:      .byte "VOICE BUTTONS ",0
+mL120:      .byte "RHYTHM BUTTONS ",0
+mL121:      .byte "WHEEL ",0
+mL122:      .byte "VIBRATO BUTTON ",0
+mE122      equ mE96
+mL123:      .byte "PORTAMENTO BUTTON ",0
+mE123      equ mE96
+mL124:      .byte "SUSTAIN BUTTON ",0
+mE124      equ mE96
+mL125:      .byte "BREATH ",0
+mL126:      .byte "BREATH FX1 ",0
+mL127:      .byte "BREATH FX2 ",0
+mE127      equ mE126
+mL128:      .byte "BREATH FEEL ",0
+mL129:      .byte "NOTES ",0
+mL130:      .byte "PORTAMENTO BUTTON ",0
+mE130      equ mE96
+mL131:      .byte "TONE BUTTONS ",0
+mL132:      .byte "TEMPO ",0
+mL133:      .byte "TRIM ",0
+mU133:      .byte "",0
+mL134:      .byte "TUNE TO ",0
+mL135:      .byte "MATCH KEY ",0
+mE135      equ mE1
 mS0:   .byte "OFF",0
 mS1:   .byte "ON",0
 mS2:   .byte "SMART",0
@@ -198,7 +204,7 @@ mS49:   .byte "DEFAULT",0
 mS50:   .byte "IGNORE",0
 mS51:   .byte "AS MODE",0
 mS52:   .byte "ATTACK",0
-mS53:   .byte "SPLIT",0
+mS53:   .byte "STAGGER",0
 mS54:   .byte "WANDER",0
 mS55:   .byte "0.5 S",0
 mS56:   .byte "1 S",0
@@ -210,68 +216,69 @@ mS61:   .byte "8 S",0
 mS62:   .byte "FIFTHS",0
 mS63:   .byte "FIFTHS + 9TH",0
 mS64:   .byte "SUS4",0
-mS65:   .byte "LOW NOTE",0
-mS66:   .byte "LATCH 3",0
-mS67:   .byte "PENTATONIC PAIRS",0
-mS68:   .byte "CHORD NOTES",0
-mS69:   .byte "DOWN",0
-mS70:   .byte "MOSTLY DOWN",0
-mS71:   .byte "PING PONG",0
-mS72:   .byte "RANDOM WALK",0
-mS73:   .byte "NEVER",0
-mS74:   .byte "A LITTLE",0
-mS75:   .byte "SOME",0
-mS76:   .byte "A LOT",0
-mS77:   .byte "UP",0
-mS78:   .byte "CUTS",0
-mS79:   .byte "RINGS ON",0
-mS80:   .byte "NOT USED",0
-mS81:   .byte "IN USE",0
-mS82:   .byte "FOLLOW",0
-mS83:   .byte "PLAY ON MIDINES",0
-mS84:   .byte "BUILT-IN BEATS",0
-mS85:   .byte "PICK PATCH",0
-mS86:   .byte "PICK BEAT",0
-mS87:   .byte "BEND",0
-mS88:   .byte "VOLUME",0
-mS89:   .byte "VOLUME+FILTER",0
-mS90:   .byte "FILTER",0
-mS91:   .byte "NONE",0
-mS92:   .byte "VIBRATO DEPTH",0
-mS93:   .byte "WARBLE DEPTH",0
-mS94:   .byte "DETUNE DEPTH",0
-mS95:   .byte "HELD: MUTE",0
-mS96:   .byte "HELD: BEND DOWN",0
-mS97:   .byte "HELD: BEND UP",0
-mS98:   .byte "HELD: VIBRATO",0
-mS99:   .byte "HELD: TREMOLO",0
-mS100:   .byte "HELD: ARP",0
-mS101:   .byte "HELD: STUTTER",0
-mS102:   .byte "HELD: VINYL STOP",0
-mS103:   .byte "HELD: GLIDE",0
-mS104:   .byte "HELD: SUSTAIN",0
-mS105:   .byte "HELD: OCTAVE UP",0
-mS106:   .byte "HELD: REPEAT",0
-mS107:   .byte "HELD: FILTER SWE",0
-mS108:   .byte "HELD: BEAT FILL",0
-mS109:   .byte "HELD: TAPE WOBBL",0
-mS110:   .byte "HELD: WIDE",0
-mS111:   .byte "HELD: TAP TEMPO",0
-mS112:   .byte "HELD: BEAT ON/OF",0
-mS113:   .byte "HELD: NEXT SOUND",0
-mS114:   .byte "SOFT",0
-mS115:   .byte "NORMAL",0
-mS116:   .byte "HARD",0
-mS117:   .byte "AS PLAYED",0
-mS118:   .byte "CHORD",0
-mS119:   .byte "HARMONY",0
-mS120:   .byte "PICK BANK",0
-mS121:   .byte "SYNC",0
-mS122:   .byte "SQUARE C -10",0
-mS123:   .byte "LEAD F -10",0
-mS124:   .byte "BASS C# -35",0
-mS125:   .byte "PITFALL C# -30",0
-mS126:   .byte "SAW C# +10",0
+mS65:   .byte "KEY",0
+mS66:   .byte "LOW NOTE",0
+mS67:   .byte "LATCH 3",0
+mS68:   .byte "PENTATONIC PAIRS",0
+mS69:   .byte "CHORD NOTES",0
+mS70:   .byte "DOWN",0
+mS71:   .byte "MOSTLY DOWN",0
+mS72:   .byte "PING PONG",0
+mS73:   .byte "RANDOM WALK",0
+mS74:   .byte "NEVER",0
+mS75:   .byte "A LITTLE",0
+mS76:   .byte "SOME",0
+mS77:   .byte "A LOT",0
+mS78:   .byte "UP",0
+mS79:   .byte "CUTS",0
+mS80:   .byte "RINGS ON",0
+mS81:   .byte "NOT USED",0
+mS82:   .byte "IN USE",0
+mS83:   .byte "FOLLOW",0
+mS84:   .byte "PLAY ON MIDINES",0
+mS85:   .byte "BUILT-IN BEATS",0
+mS86:   .byte "PICK PATCH",0
+mS87:   .byte "PICK BEAT",0
+mS88:   .byte "BEND",0
+mS89:   .byte "VOLUME",0
+mS90:   .byte "VOLUME+FILTER",0
+mS91:   .byte "FILTER",0
+mS92:   .byte "NONE",0
+mS93:   .byte "VIBRATO DEPTH",0
+mS94:   .byte "WARBLE DEPTH",0
+mS95:   .byte "DETUNE DEPTH",0
+mS96:   .byte "HELD: MUTE",0
+mS97:   .byte "HELD: BEND DOWN",0
+mS98:   .byte "HELD: BEND UP",0
+mS99:   .byte "HELD: VIBRATO",0
+mS100:   .byte "HELD: TREMOLO",0
+mS101:   .byte "HELD: ARP",0
+mS102:   .byte "HELD: STUTTER",0
+mS103:   .byte "HELD: VINYL STOP",0
+mS104:   .byte "HELD: GLIDE",0
+mS105:   .byte "HELD: SUSTAIN",0
+mS106:   .byte "HELD: OCTAVE UP",0
+mS107:   .byte "HELD: REPEAT",0
+mS108:   .byte "HELD: FILTER SWE",0
+mS109:   .byte "HELD: BEAT FILL",0
+mS110:   .byte "HELD: TAPE WOBBL",0
+mS111:   .byte "HELD: WIDE",0
+mS112:   .byte "HELD: TAP TEMPO",0
+mS113:   .byte "HELD: BEAT ON/OF",0
+mS114:   .byte "HELD: NEXT SOUND",0
+mS115:   .byte "SOFT",0
+mS116:   .byte "NORMAL",0
+mS117:   .byte "HARD",0
+mS118:   .byte "AS PLAYED",0
+mS119:   .byte "CHORD",0
+mS120:   .byte "HARMONY",0
+mS121:   .byte "PICK BANK",0
+mS122:   .byte "SYNC",0
+mS123:   .byte "SQUARE C -10",0
+mS124:   .byte "LEAD F -10",0
+mS125:   .byte "BASS C# -35",0
+mS126:   .byte "PITFALL C# -30",0
+mS127:   .byte "SAW C# +10",0
 pW0:  .byte 0,$FF,$00,0,$FF,$01
 pS0:  .byte "POLY",0,"MONO",0
 pW1:  .byte 5,$FF,$00,5,$FF,$01

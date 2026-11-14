@@ -6,6 +6,13 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.32:** SPLIT, with a keyboard split.
+- **CHORD + LEAD is now SPLIT** (PLAYING, or **C= + V**): **OFF**, **KEY**, **LOW NOTE**, **LATCH 3**. LOW NOTE and LATCH 3 work as before.
+- **KEY** is a keyboard split: keys below the split point play the chord (as the notes mode plays them: SMART CHORD makes the left side one-finger chords), keys from it up play the lead's patch on the lead's voices, **LEAD OCTAVE** up (+1 at first, −2…+2). On the C64's keys the split is a key, so it stays put when F1 / F3 change the octave; over MIDI it's a note as the keyboard sends it (before MIDI IN OCTAVE). Row 3 shows SPLIT AT and the note the split key plays now.
+- **C= + V** tapped steps SPLIT round. **Hold C= + V and press a key** to put the split there (and turn KEY on): a C64 key sets SPLIT KEY, a note over MIDI sets SPLIT NOTE. That note doesn't play. Both are on the PLAYING page too (shown while SPLIT is KEY).
+- KEY's chord side has no latch, like the other SPLIT modes: hold the chord with one hand.
+- **CHORD CHANGE**'s SPLIT is renamed **STAGGER** (it works as before).
+
 **v0.31:** BEND OUT on every chip (needs Fat Chip GB v0.09 for the Game Boy).
 - **Game Boy:** Fat Chip GB v0.09 has its own release drop (CC 87 amount, CC 88 time), so the note-off goes on time and the Game Boy bends the note down itself while its release rings, smoothly and with no extra MIDI. Its time is the nearest of its sixteen.
 - **NES with an envelope** (most patches): Fat Chip already holds the pulses' note-off until its release has faded; now the note bends down while it fades.
@@ -36,7 +43,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 **v0.27:** FINE TUNE, chord changes that glide or wander, DRONE, One Key Play.
 - **FINE TUNE** (PLAYING): −50 … +50 cents, for tape loops. It moves every chip: the SID's note frequencies (the notes sounding move at once), the Game Boy's master tune, the NES's bends. It adds to the Synthcart's TUNE TO.
 - **Finer NES pitch:** Fat Chip now adds up the NES's pitch offsets (tuning, detune, vibrato, glide) in 1/64 semitone (about 1.6 cents) instead of 1/16, so the MidiNES's own fine bends get used: smoother vibrato and glides, and tuning within a few cents.
-- **CHORD CHANGE** (PLAYING) is how the voices move when the chord changes: **AS MODE** (DRONE wanders, the rest ATTACK), **ATTACK** (as before), **GLIDE** (every voice slides to its new note, from the last note it played, even if the patch has no glide), **SPLIT** (the SID and the bass glide, the Game Boy and NES pulses start again), **WANDER** (each voice moves at its own moment within **WANDER TIME**, 0.5–8 s, the bass late; some glide, some start again). The arp, MONO and One Key Play notes always move at once.
+- **CHORD CHANGE** (PLAYING) is how the voices move when the chord changes: **AS MODE** (DRONE wanders, the rest ATTACK), **ATTACK** (as before), **GLIDE** (every voice slides to its new note, from the last note it played, even if the patch has no glide), **SPLIT** (**STAGGER** from v0.32: the SID and the bass glide, the Game Boy and NES pulses start again), **WANDER** (each voice moves at its own moment within **WANDER TIME**, 0.5–8 s, the bass late; some glide, some start again). The arp, MONO and One Key Play notes always move at once.
 - **DRONE** joins C= + Z (POLY → SMART CHORD → EXT → DRONE): the lowest key held is the root, and the voices play open fifths up from it (**DRONE VOICING**: FIFTHS, FIFTHS + 9TH, SUS4). A new key moves the drone, wandering by default. Latch it and play the root changes.
 - **ONE KEY PLAY** (on by default; its own page on the main menu): the **cursor keys** step through a phrase, your timing; alternate the two for fast runs. NOTES: **PENTATONIC PAIRS** (two notes of the key's pentatonic scale, one apart, like the SK-1; minor keys get the minor pentatonic) or **CHORD NOTES** (one note at a time of the chord you hold or latched, over two octaves). MOTION: DOWN, MOSTLY DOWN, **PING PONG**, RANDOM WALK; TURN: NEVER, A LITTLE, **SOME**, A LOT (how often it turns early); DIRECTION DOWN / UP; EACH PRESS **CUTS** the last step or lets it RING ON while you hold it. Its notes are never turned into chords.
 - Menu numbers (FINE TUNE, Synthcart TRIM) are a new kind of line, which saved about 1 KB.
@@ -375,9 +382,10 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/drums.asm`, `tools/gen_beats.py` → `src/beats.asm` | keytar drums (MIDI in ch 16), beat demos and kits |
 | `src/menu.asm`, `tools/gen_menu.py` → `src/menutab.asm` | the menu (RETURN): its pages and lines, every patch setting's steps |
 | `src/patchedit.asm` | editing the live patch: settings, effects on / off, the dice, the envelope and Game Boy LFO kept in step |
-| `src/lead.asm` | CHORD + LEAD: the chord and lead keys, the lead's voices and patch |
+| `src/lead.asm` | SPLIT (was CHORD + LEAD): KEY, LOW NOTE, LATCH 3, the lead's voices and patch |
 | `test/test_v028.py` | CHORD + LEAD (LOW NOTE, LATCH 3), the lead's patch and voices |
-| `src/wander.asm` | CHORD CHANGE (glide, split, wander), DRONE, One Key Play |
+| `test/test_v032.py` | SPLIT KEY: by key on the C64, by note over MIDI, C= + V, LEAD OCTAVE, STAGGER |
+| `src/wander.asm` | CHORD CHANGE (glide, stagger, wander), DRONE, One Key Play |
 | `test/test_v027.py` | FINE TUNE, NES 1/64 semitones, DRONE, wander, GLIDE, One Key Play |
 | `src/devices.asm` | DEVICES: SHS-10 / DH-100 / Synthcart settings, the breath, Synthcart nudges and steps |
 | `test/test_v024.py` | the menu, PATCH pages, the dice, DEVICES, SHS-10 voice buttons, DH-100 breath and buttons, Synthcart tempo |
@@ -409,7 +417,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.31)
+## Not yet (v0.32)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

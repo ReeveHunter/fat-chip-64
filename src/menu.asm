@@ -354,6 +354,31 @@ MenuVal:
 ; then its suffix -> ptr = numBuf
 NumText:
 	subroutine
+	lda mValLo,x            ; v0.32: a suffix "~N" / "~K": a note name instead
+	sta ptr
+	lda mValHi,x
+	sta ptr+1
+	ldy #0
+	lda (ptr),y
+	cmp #$7E                ; (~)
+	bne .num
+	iny
+	lda (ptr),y
+	sta t1                  ; K: an overlay key (the note it plays now)
+	lda mArgLo,x
+	sta ptr
+	lda mArgHi,x
+	sta ptr+1
+	dey
+	lda (ptr),y
+	ldy t1
+	cpy #$4B                ; (K)
+	bne .nt
+	clc
+	adc octBase
+.nt:
+	jmp NoteBuf
+.num:
 	lda mArgLo,x
 	sta ptr
 	lda mArgHi,x
@@ -418,6 +443,45 @@ NumText:
 	iny
 	bne .c
 .x:
+	lda #<numBuf
+	sta ptr
+	lda #>numBuf
+	sta ptr+1
+	rts
+
+; A = a MIDI note -> numBuf = its name and octave ("C4", "F#3"; C4 = 60)
+; and a space; ptr = numBuf
+NoteBuf:
+	subroutine
+	ldx #0
+.oc:
+	cmp #12
+	bcc .nm
+	sbc #12
+	inx
+	bne .oc
+.nm:
+	asl
+	tay
+	lda noteNames,y
+	sta numBuf
+	lda noteNames+1,y
+	ldy #1
+	cmp #$20
+	beq .ov
+	sta numBuf,y
+	iny
+.ov:
+	dex
+	txa
+	ora #$30
+	sta numBuf,y
+	iny
+	lda #$20
+	sta numBuf,y
+	iny
+	lda #0
+	sta numBuf,y
 	lda #<numBuf
 	sta ptr
 	lda #>numBuf

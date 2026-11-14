@@ -1,0 +1,573 @@
+------- FILE src/main.asm LEVEL 1 PASS 3
+      1  0bce ????						; Fat Chip 64 - main program
+      2  0bce ????						; A live rig controller: plays the SID and drives a Game Boy (Fat Chip GB)
+      3  0bce ????						; and an NES (MidiNES) over the Kerberos MIDI out, as one fat instrument.
+      4  0bce ????						; Build: dasm src/main.asm -f1 -obin/fatchip64.prg -sbin/fatchip64.sym -lbin/fatchip64.lst
+      5  0bce ????
+      6  0bce ????				      processor	6502
+src/main.asm (7): error: Unable to open file.
+      7  0bce ????				      include	"defs.asm"
+      8  0bce ????
+      9  0bce ????				      seg	code
+     10  0801					      org	$0801
+     11  0801							; BASIC stub: 10 SYS 2064
+     12  0801		       0b 08 0a 00*	      .byte.b	$0B,$08,$0A,$00,$9E,"2064",$00,$00,$00
+     13  0810					      org	$0810
+     14  0810
+     15  0810				   Start
+     16  0810					      subroutine
+     17  0810		       78		      sei
+     18  0811		       d8		      cld
+     19  0812		       a2 ff		      ldx	#$FF
+     20  0814		       9a		      txs
+     21  0815		       a9 35		      lda	#$35	; RAM at $A000/$E000, I/O on (no BASIC/KERNAL)
+     22  0817		       85 01		      sta	$01
+     23  0819		       20 50 09 	      jsr	HiCopy	; (first: the tables may sit where the variables go)
+     24  081c		       20 02 09 	      jsr	InitHardware
+     25  081f		       20 79 09 	      jsr	InitState
+     26  0822		       20 00 00 	      jsr	ScreenInit
+     27  0825		       20 00 00 	      jsr	SidInit
+     28  0828		       20 00 00 	      jsr	SoundSid
+     29  082b		       20 00 00 	      jsr	MidiInit
+     30  082e		       58		      cli
+     31  082f				   StartDevices 		; (the tests can move the channels here)
+     32  082f		       20 00 00 	      jsr	GbStartup
+     33  0832		       20 00 00 	      jsr	NesStartup
+     34  0835		       20 00 00 	      jsr	ScreenDrawAll
+     35  0838
+     36  0838							;------------------------------------------------------------- main loop
+     37  0838				   Loop
+     38  0838					      subroutine
+     39  0838		       20 00 00 	      jsr	TxService
+     40  083b							; keyboard scan every SCAN_EVERY ms
+     41  083b		       a9 00		      lda	#0
+     42  083d		       8d 00 00 	      sta	scanned
+     43  0840		       ad 00 00 	      lda	scanAt	; due unless 1..SCAN_EVERY ms to go
+     44  0843		       38		      sec
+     45  0844		       ed 00 00 	      sbc	ticks
+     46  0847		       f0 04		      beq	.scan
+     47  0849		       c9 01		      cmp	#SCAN_EVERY+1
+     48  084b		       90 1f		      bcc	.noScan
+     49  084d				   .scan
+     50  084d		       ad 00 00 	      lda	ticks
+     51  0850		       18		      clc
+     52  0851		       69 00		      adc	#SCAN_EVERY
+     53  0853		       8d 00 00 	      sta	scanAt
+     54  0856		       ee 00 00 	      inc	scanned
+     55  0859		       38		      sec
+     56  085a		       e9 fe		      sbc	#SCAN_EVERY-2	; (A = ticks + SCAN_EVERY): the screen step at ticks + 2
+     57  085c		       d0 02		      bne	.sa
+     58  085e		       a9 01		      lda	#1	; (0 means none)
+     59  0860				   .sa
+     60  0860		       8d 00 00 	      sta	scrAt
+     61  0863		       20 00 00 	      jsr	SidRetrig
+     62  0866		       20 00 00 	      jsr	KeyScan
+     63  0869		       20 00 00 	      jsr	RestoreCheck
+     64  086c				   .noScan
+     65  086c		       20 00 00 	      jsr	MidiInService	; notes from the Kerberos MIDI IN (before the
+     66  086f							;  arp, which starts on a key change)
+     67  086f		       20 00 00 	      jsr	ArpTick	; every pass, so arp steps land on time
+     68  0872		       20 00 00 	      jsr	NesEnvTick	; MidiNES envelopes (PADS)
+     69  0875		       20 00 00 	      jsr	BendTick	; SPACE bend
+     70  0878		       20 00 00 	      jsr	ClockTick	; the keytar's clock: tempo
+     71  087b		       20 00 00 	      jsr	BeatTick	; beat demos
+     72  087e		       20 00 00 	      jsr	DrumTick	; noise hits end
+     73  0881		       20 00 00 	      jsr	StutterTick	; STUTTER held
+     74  0884		       20 00 00 	      jsr	RepeatTick	; REPEAT's echoes
+     75  0887		       ad 00 00 	      lda	reallocFlag
+     76  088a		       f0 15		      beq	.noAlloc
+     77  088c		       a9 00		      lda	#0
+     78  088e		       8d 00 00 	      sta	reallocFlag
+     79  0891		       8d 00 00 	      sta	applyRetry
+     80  0894		       20 00 00 	      jsr	Allocate
+     81  0897		       20 00 00 	      jsr	ApplyVoices
+     82  089a		       a9 01		      lda	#1
+     83  089c		       8d 00 00 	      sta	screenDirty
+     84  089f		       d0 0d		      bne	.alloced
+     85  08a1				   .noAlloc
+     86  08a1		       ad 00 00 	      lda	applyRetry	; a voice change was waiting for a device queue
+     87  08a4		       f0 08		      beq	.alloced
+     88  08a6		       a9 00		      lda	#0
+     89  08a8		       8d 00 00 	      sta	applyRetry
+     90  08ab		       20 00 00 	      jsr	ApplyVoices
+     91  08ae				   .alloced
+     92  08ae							; one screen step per keyboard scan, 2 ms after it, on a pass of its
+     93  08ae							; own (a scan and a screen step in one pass would stretch it)
+     94  08ae							; (v0.12: the SID effects take a non-scan pass the screen doesn't need)
+     95  08ae							; when both are due they take turns (a redraw after a key press would
+     96  08ae							; otherwise freeze vibrato and glides for 70 ms)
+     97  08ae		       ad 00 00 	      lda	scanned
+     98  08b1		       d0 4c		      bne	.x
+     99  08b3		       ad 00 00 	      lda	scrAt
+    100  08b6		       f0 44		      beq	.fx	; done for this scan
+    101  08b8		       38		      sec
+    102  08b9		       ed 00 00 	      sbc	ticks
+    103  08bc		       f0 04		      beq	.sdue
+    104  08be		       c9 03		      cmp	#3
+    105  08c0		       90 3a		      bcc	.fx	; 1-2 ms to go
+    106  08c2				   .sdue
+    107  08c2		       ad 00 00 	      lda	scrStage	; nothing to draw: the pass is the effects'
+    108  08c5		       0d 00 00 	      ora	screenDirty
+    109  08c8		       0d 00 00 	      ora	vizOn
+    110  08cb		       d0 05		      bne	.draw
+    111  08cd		       8d 00 00 	      sta	scrAt
+    112  08d0		       f0 2a		      beq	.fx
+    113  08d2				   .draw
+    114  08d2		       ad 00 00 	      lda	fxTurn
+    115  08d5		       2d 00 00 	      and	fxBusy	; (only sounds with SID effects need the turns)
+    116  08d8		       f0 12		      beq	.scr
+    117  08da		       ad 00 00 	      lda	ticks
+    118  08dd		       38		      sec
+    119  08de		       ed 00 00 	      sbc	fxLast
+    120  08e1		       c9 00		      cmp	#FX_EVERY
+    121  08e3		       90 07		      bcc	.scr	; effects not due: the screen
+    122  08e5		       a9 00		      lda	#0
+    123  08e7		       8d 00 00 	      sta	fxTurn
+    124  08ea		       f0 10		      beq	.fx
+    125  08ec				   .scr
+    126  08ec		       a9 00		      lda	#0
+    127  08ee		       8d 00 00 	      sta	scrAt
+    128  08f1		       a9 01		      lda	#1
+    129  08f3		       8d 00 00 	      sta	fxTurn
+    130  08f6		       20 00 00 	      jsr	ScreenStep
+    131  08f9		       4c 38 08 	      jmp	Loop
+    132  08fc				   .fx
+    133  08fc		       20 00 00 	      jsr	FxTick	; SID vibrato, glide, filter, width; duty steps
+    134  08ff				   .x
+    135  08ff		       4c 38 08 	      jmp	Loop
+    136  0902
+    137  0902							;------------------------------------------------------------- init
+    138  0902				   InitHardware
+    139  0902					      subroutine
+    140  0902		       a9 7f		      lda	#$7F
+    141  0904		       8d 00 00 	      sta	CIA1_ICR	; no CIA1 interrupts yet
+    142  0907		       8d 00 00 	      sta	CIA2_ICR	; no CIA2 NMIs: only RESTORE raises an NMI
+    143  090a		       ad 00 00 	      lda	CIA1_ICR
+    144  090d		       ad 00 00 	      lda	CIA2_ICR
+    145  0910		       a9 00		      lda	#0
+    146  0912		       8d 00 00 	      sta	VIC_IRQEN
+    147  0915		       a9 ff		      lda	#$FF
+    148  0917		       8d 00 00 	      sta	VIC_IRQ
+    149  091a		       8d 00 00 	      sta	CIA1_DDRA	; port A = keyboard columns out
+    150  091d		       a9 00		      lda	#0
+    151  091f		       8d 00 00 	      sta	CIA1_DDRB	; port B = rows in
+    152  0922		       a9 ff		      lda	#$FF
+    153  0924		       8d 00 00 	      sta	CIA1_PRA
+    154  0927							; vectors (KERNAL is banked out)
+    155  0927		       a9 13		      lda	#<Irq
+    156  0929		       8d fe ff 	      sta	$FFFE
+    157  092c		       a9 0b		      lda	#>Irq
+    158  092e		       8d ff ff 	      sta	$FFFF
+    159  0931		       a9 ad		      lda	#<Nmi
+    160  0933		       8d fa ff 	      sta	$FFFA
+    161  0936		       a9 0b		      lda	#>Nmi
+    162  0938		       8d fb ff 	      sta	$FFFB
+    163  093b							; 1 ms timer
+    164  093b		       a9 00		      lda	#<TICK_LATCH
+    165  093d		       8d 00 00 	      sta	CIA1_TALO
+    166  0940		       a9 00		      lda	#>TICK_LATCH
+    167  0942		       8d 00 00 	      sta	CIA1_TAHI
+    168  0945		       a9 11		      lda	#$11	; start, force load, continuous
+    169  0947		       8d 00 00 	      sta	CIA1_CRA
+    170  094a		       a9 81		      lda	#$81	; enable timer A interrupt
+    171  094c		       8d 00 00 	      sta	CIA1_ICR
+    172  094f		       60		      rts
+    173  0950
+    174  0950							; the tables for $E000 (loaded after the program) to $E000
+    175  0950				   HiCopy
+    176  0950					      subroutine
+    177  0950		       a9 ce		      lda	#<hiPhys
+    178  0952		       8d 00 00 	      sta	ptr
+    179  0955		       a9 0b		      lda	#>hiPhys
+    180  0957		       8d 01 00 	      sta	ptr+1
+    181  095a		       a9 00		      lda	#<hiStart
+    182  095c		       8d 00 00 	      sta	ptr2
+    183  095f		       a9 e0		      lda	#>hiStart
+    184  0961		       8d 01 00 	      sta	ptr2+1
+    185  0964		       a2 00		      ldx	#>(hiEnd - hiStart + 255)
+    186  0966		       a0 00		      ldy	#0
+    187  0968				   .c
+    188  0968		       b1 00		      lda	(ptr),y
+    189  096a		       91 00		      sta	(ptr2),y
+    190  096c		       c8		      iny
+    191  096d		       d0 f9		      bne	.c
+    192  096f		       ee 01 00 	      inc	ptr+1
+    193  0972		       ee 01 00 	      inc	ptr2+1
+    194  0975		       ca		      dex
+    195  0976		       d0 f0		      bne	.c
+    196  0978		       60		      rts
+    197  0979
+    198  0979				   InitState
+    199  0979					      subroutine
+    200  0979							; clear zero page variables and the RAM block
+    201  0979		       a9 00		      lda	#0
+    202  097b		       a2 10		      ldx	#$10
+    203  097d				   .zp
+    204  097d		       95 00		      sta	$00,x
+    205  097f		       e8		      inx
+    206  0980		       e0 80		      cpx	#$80
+    207  0982		       d0 f9		      bne	.zp
+    208  0984		       aa		      tax
+    209  0985				   .ram
+    210  0985		       9d 00 c0 	      sta	$C000,x
+    211  0988		       9d 00 c1 	      sta	$C100,x
+    212  098b		       9d 00 c2 	      sta	$C200,x
+    213  098e		       9d 00 c3 	      sta	$C300,x
+    214  0991		       9d 00 c4 	      sta	$C400,x
+    215  0994		       9d 00 c5 	      sta	$C500,x
+    216  0997		       9d 00 c6 	      sta	$C600,x
+    217  099a		       9d 00 c7 	      sta	$C700,x	; (v0.21: the variables reach into $C7xx)
+    218  099d		       9d 00 c8 	      sta	$C800,x	; (v0.22: and $C8xx)
+    219  09a0		       9d 00 c9 	      sta	$C900,x	; (v0.28: and $C9xx)
+    220  09a3		       e8		      inx
+    221  09a4		       d0 df		      bne	.ram
+    222  09a6		       a2 ff		      ldx	#NUM_VOICES-1
+    223  09a8		       a9 00		      lda	#NO_NOTE
+    224  09aa				   .v
+    225  09aa		       9d 00 00 	      sta	vNote,x
+    226  09ad		       9d 00 00 	      sta	vWant,x
+    227  09b0		       9d 00 00 	      sta	vOut,x
+    228  09b3		       ca		      dex
+    229  09b4		       10 f4		      bpl	.v
+    230  09b6		       8d 00 00 	      sta	lastInNote	; (NO_NOTE: nothing received yet)
+    231  09b9		       a9 01		      lda	#1
+    232  09bb		       8d 00 00 	      sta	devOn+DEV_SID
+    233  09be		       8d 00 00 	      sta	devOn+DEV_GB
+    234  09c1		       8d 00 00 	      sta	devOn+DEV_NES
+    235  09c4		       a9 00		      lda	#GB_BASE_DEFAULT	; Game Boy on 11-15 (Fat Chip 64 moves it there: CC 113)
+    236  09c6		       8d 00 00 	      sta	gbBase
+    237  09c9		       a9 00		      lda	#NES_BASE_DEFAULT	; MidiNES on 1-5, its power-on default
+    238  09cb		       8d 00 00 	      sta	nesBase
+    239  09ce		       a9 ff		      lda	#$FF
+    240  09d0		       8d 00 00 	      sta	dmcBank
+    241  09d3		       8d 00 00 	      sta	nzNote
+    242  09d6		       8d 00 00 	      sta	dmcNote
+    243  09d9		       a9 80		      lda	#$80	; drums: the last hits were long ago
+    244  09db		       8d 01 00 	      sta	dmcAt+1
+    245  09de		       8d 01 00 	      sta	nzAt+1
+    246  09e1		       a9 00		      lda	#VELOCITY
+    247  09e3		       8d 00 00 	      sta	mtVel
+    248  09e6		       a9 00		      lda	#A_VIB	; the keytar buttons: vibrato, glide, sustain
+    249  09e8		       8d 00 00 	      sta	btnTask
+    250  09eb		       a9 00		      lda	#A_GLIDE
+    251  09ed		       8d 01 00 	      sta	btnTask+1
+    252  09f0		       a9 00		      lda	#A_SUS
+    253  09f2		       8d 02 00 	      sta	btnTask+2
+    254  09f5		       a9 01		      lda	#1	; v0.24: the SHS-10 in use, as before
+    255  09f7		       8d 00 00 	      sta	useShs
+    256  09fa		       a9 08		      lda	#8	; Synthcart TRIM 0
+    257  09fc		       8d 00 00 	      sta	scTrim
+    258  09ff		       a9 01		      lda	#1	; Synthcart: TUNE TO SQUARE, MATCH KEY ON (once in use)
+    259  0a01		       8d 00 00 	      sta	scSound
+    260  0a04		       8d 00 00 	      sta	scKey
+    261  0a07		       8d 00 00 	      sta	okpOn	; ONE KEY PLAY on: PENTATONIC PAIRS, PING PONG, SOME turns, CUTS
+    262  0a0a		       a9 02		      lda	#2
+    263  0a0c		       8d 00 00 	      sta	okpMotion
+    264  0a0f		       8d 00 00 	      sta	okpTurn
+    265  0a12		       a9 01		      lda	#1	; SMART CHORD: TRIAD
+    266  0a14		       8d 00 00 	      sta	spice
+    267  0a17		       a9 32		      lda	#50	; FINE TUNE 0
+    268  0a19		       8d 00 00 	      sta	fineTune
+    269  0a1c		       a9 40		      lda	#64	; (the Game Boy's master tune: 0 cents)
+    270  0a1e		       8d 00 00 	      sta	gbTune
+    271  0a21		       a9 03		      lda	#3	; WANDER TIME 3 s
+    272  0a23		       8d 00 00 	      sta	wanderT
+    273  0a26		       a9 ff		      lda	#$FF
+    274  0a28		       8d 00 00 	      sta	okpPos
+    275  0a2b		       8d 00 00 	      sta	clChordIdx	; CHORD + LEAD: nothing yet; the lead's patch LEADS 1
+    276  0a2e		       8d 00 00 	      sta	clLeadIdx
+    277  0a31		       a9 0c		      lda	#12	; SPLIT KEY: the middle of the overlay; SPLIT NOTE: C4
+    278  0a33		       8d 00 00 	      sta	splitKey
+    279  0a36		       a9 3c		      lda	#60
+    280  0a38		       8d 00 00 	      sta	splitNote
+    281  0a3b		       a9 03		      lda	#3	; LEAD OCTAVE +1
+    282  0a3d		       8d 00 00 	      sta	leadOct
+    283  0a40		       a9 02		      lda	#2
+    284  0a42		       8d 00 00 	      sta	leadBank
+    285  0a45		       ad 0a 00 	      lda	bankSlot+10
+    286  0a48		       20 00 00 	      jsr	LeadLoad
+    287  0a4b		       a9 7f		      lda	#127	; full breath until the DH-100 says otherwise
+    288  0a4d		       8d 00 00 	      sta	breath
+    289  0a50		       a9 01		      lda	#1	; BREATH FEEL NORMAL
+    290  0a52		       8d 00 00 	      sta	dhFeel
+    291  0a55		       a9 00		      lda	#A_GLIDE	; the DH-100's portamento button: GLIDE
+    292  0a57		       8d 00 00 	      sta	dhPort
+    293  0a5a		       a9 00		      lda	#A_BENDDN	; SPACE bends down
+    294  0a5c		       8d 00 00 	      sta	spaceAct
+    295  0a5f		       a9 00		      lda	#ARP_UNISON	; ARP (held) uses UNISON until A picks another
+    296  0a61		       8d 00 00 	      sta	arpLast
+    297  0a64		       a9 01		      lda	#1	; bend range 2 semitones
+    298  0a66		       8d 00 00 	      sta	bendRange
+    299  0a69		       8d 00 00 	      sta	beatFresh	; (the first beat start sets its tempo)
+    300  0a6c		       a2 ff		      ldx	#NUM_VOICES-1	; (no NES note to glide from yet)
+    301  0a6e		       a9 00		      lda	#NO_NOTE
+    302  0a70				   .nl
+    303  0a70		       9d 00 00 	      sta	nesLast,x
+    304  0a73		       ca		      dex
+    305  0a74		       10 fa		      bpl	.nl
+    306  0a76		       a9 08		      lda	#8	; (NesFxTick goes round NES voices 2, 5, 8)
+    307  0a78		       8d 00 00 	      sta	nfxV
+    308  0a7b		       a9 01		      lda	#1
+    309  0a7d							; ADVANCED SOUND: what the menu's ON switches use until changed
+    310  0a7d		       8d 00 00 	      sta	uVibDep	; 1/4 semitone
+    311  0a80		       8d 00 00 	      sta	uGlide	; MEDIUM
+    312  0a83		       8d 00 00 	      sta	uDet	; FAT
+    313  0a86		       8d 00 00 	      sta	uWarb	; MEDIUM
+    314  0a89		       8d 00 00 	      sta	uRpTime	; 1/8 dotted
+    315  0a8c		       a9 02		      lda	#2
+    316  0a8e		       8d 00 00 	      sta	uTremDep	; DEEP
+    317  0a91		       8d 00 00 	      sta	uTremRate	; 6 HZ
+    318  0a94		       8d 00 00 	      sta	uRpCount	; 3 repeats
+    319  0a97		       a9 03		      lda	#3
+    320  0a99		       8d 00 00 	      sta	uRpLevel	; 70 %
+    321  0a9c		       a9 04		      lda	#4
+    322  0a9e		       8d 00 00 	      sta	uVibRate	; 6 HZ
+    323  0aa1		       ae 00 00 	      ldx	soundMode
+    324  0aa4		       20 00 00 	      jsr	PatchLoad	; FAT
+    325  0aa7		       20 00 00 	      jsr	SoundVars	;  and its settings
+    326  0aaa		       a9 00		      lda	#OCT_DEFAULT
+    327  0aac		       8d 00 00 	      sta	octBase
+    328  0aaf		       a9 01		      lda	#1
+    329  0ab1		       8d 00 00 	      sta	arpOct	; SPARKLE arp an octave up
+    330  0ab4		       a9 78		      lda	#120
+    331  0ab6		       8d 00 00 	      sta	bpm
+    332  0ab9		       a9 f4		      lda	#<500
+    333  0abb		       8d 00 00 	      sta	beatMs
+    334  0abe		       a9 01		      lda	#>500
+    335  0ac0		       8d 01 00 	      sta	beatMs+1
+    336  0ac3		       a9 40		      lda	#<8000	; (x 16)
+    337  0ac5		       8d 00 00 	      sta	beat16L
+    338  0ac8		       a9 1f		      lda	#>8000
+    339  0aca		       8d 00 00 	      sta	beat16H
+    340  0acd		       a9 00		      lda	#ARP_FREE	; FREE, 30 ms
+    341  0acf		       8d 00 00 	      sta	arpLen
+    342  0ad2		       a9 00		      lda	#FREE_DEFAULT
+    343  0ad4		       8d 00 00 	      sta	freeIdx
+    344  0ad7		       a9 ff		      lda	#$FF
+    345  0ad9		       8d 00 00 	      sta	arpIdx
+    346  0adc		       20 00 00 	      jsr	StepCalc
+    347  0adf							; keyUsed: per column, the rows whose keys do something
+    348  0adf		       a0 3f		      ldy	#63
+    349  0ae1				   .ku
+    350  0ae1		       b9 00 00 	      lda	keymap,y
+    351  0ae4		       c9 00		      cmp	#K_NONE
+    352  0ae6		       f0 1d		      beq	.kn
+    353  0ae8		       98		      tya
+    354  0ae9		       4a		      lsr
+    355  0aea		       4a		      lsr
+    356  0aeb		       4a		      lsr
+    357  0aec		       aa		      tax
+    358  0aed		       98		      tya
+    359  0aee		       29 07		      and	#7
+    360  0af0		       8d 00 00 	      sta	t0
+    361  0af3		       8c 00 00 	      sty	t1
+    362  0af6		       ac 00 00 	      ldy	t0
+    363  0af9		       b9 00 00 	      lda	rowBit,y
+    364  0afc		       1d 00 00 	      ora	keyUsed,x
+    365  0aff		       9d 00 00 	      sta	keyUsed,x
+    366  0b02		       ac 00 00 	      ldy	t1
+    367  0b05				   .kn
+    368  0b05		       88		      dey
+    369  0b06		       10 d9		      bpl	.ku
+    370  0b08		       a9 ff		      lda	#$FF
+    371  0b0a		       8d 00 00 	      sta	lastStatus
+    372  0b0d		       a9 80		      lda	#$80	; "long ago": the first RESTORE press is a single tap
+    373  0b0f		       8d 01 00 	      sta	lastRestore+1
+    374  0b12		       60		      rts
+    375  0b13
+    376  0b13							;------------------------------------------------------------- interrupts
+    377  0b13							; Every 1/4 ms: take a MIDI-in byte, feed the ACIA one byte (fast path).
+    378  0b13							; Every fourth time (1 ms):
+    379  0b13							; count a tick and move paced messages onto the wire.
+    380  0b13				   Irq
+    381  0b13					      subroutine
+    382  0b13		       48		      pha
+    383  0b14		       8a		      txa
+    384  0b15		       48		      pha
+    385  0b16		       ad 00 00 	      lda	CIA1_ICR	; acknowledge
+    386  0b19		       ad 00 00 	      lda	ACIA_STAT	; MIDI in: a received byte? (quick check inline)
+    387  0b1c		       4a		      lsr
+    388  0b1d		       90 03		      bcc	.noRx
+    389  0b1f		       20 00 00 	      jsr	RxGot
+    390  0b22				   .noRx
+    391  0b22		       ae 00 00 	      ldx	wireTail
+    392  0b25		       ec 00 00 	      cpx	wireHead
+    393  0b28		       f0 10		      beq	.noByte
+    394  0b2a		       ad 00 00 	      lda	ACIA_STAT
+    395  0b2d		       29 00		      and	#ACIA_TDRE
+    396  0b2f		       f0 09		      beq	.noByte
+    397  0b31		       bd 00 00 	      lda	wireBuf,x
+    398  0b34		       8d 00 00 	      sta	ACIA_TX
+    399  0b37		       ee 00 00 	      inc	wireTail
+    400  0b3a				   .noByte
+    401  0b3a		       ce 00 00 	      dec	subTick
+    402  0b3d		       10 1a		      bpl	.out
+    403  0b3f		       a9 03		      lda	#3
+    404  0b41		       8d 00 00 	      sta	subTick
+    405  0b44		       98		      tya
+    406  0b45		       48		      pha
+    407  0b46		       ee 00 00 	      inc	ticks
+    408  0b49		       d0 03		      bne	.t
+    409  0b4b		       ee 01 00 	      inc	ticks+1
+    410  0b4e				   .t
+    411  0b4e		       20 00 00 	      jsr	Schedule
+    412  0b51		       20 00 00 	      jsr	TxByte	; start a just-scheduled message now if the ACIA is free
+    413  0b54		       20 00 00 	      jsr	RxByte	; (again: this pass was long, a byte may be in)
+    414  0b57		       68		      pla
+    415  0b58		       a8		      tay
+    416  0b59				   .out
+    417  0b59		       68		      pla
+    418  0b5a		       aa		      tax
+    419  0b5b		       68		      pla
+    420  0b5c		       40		      rti
+    421  0b5d
+    422  0b5d							; With the MIDI chip's interrupts (midiIrq, v0.16): the chip interrupts when
+    423  0b5d							; a byte has come in or the next can go out; the CIA timer ticks each ms.
+    424  0b5d				   IrqMidi
+    425  0b5d					      subroutine
+    426  0b5d		       48		      pha
+    427  0b5e		       8a		      txa
+    428  0b5f		       48		      pha
+    429  0b60		       ad 00 00 	      lda	ACIA_STAT
+    430  0b63		       10 26		      bpl	.tim	; (not the MIDI chip)
+    431  0b65		       4a		      lsr		; a byte in?
+    432  0b66		       90 03		      bcc	.tx
+    433  0b68		       20 00 00 	      jsr	RxGot
+    434  0b6b				   .tx
+    435  0b6b		       ad 00 00 	      lda	ACIA_STAT
+    436  0b6e		       29 00		      and	#ACIA_TDRE
+    437  0b70		       f0 19		      beq	.tim
+    438  0b72		       ae 00 00 	      ldx	wireTail
+    439  0b75		       ec 00 00 	      cpx	wireHead
+    440  0b78		       f0 0c		      beq	.quiet
+    441  0b7a		       bd 00 00 	      lda	wireBuf,x
+    442  0b7d		       8d 00 00 	      sta	ACIA_TX
+    443  0b80		       ee 00 00 	      inc	wireTail
+    444  0b83		       4c 8b 0b 	      jmp	.tim
+    445  0b86				   .quiet
+    446  0b86		       a9 00		      lda	#ACIA_MODE_RX	; nothing to send: no more "ready" interrupts
+    447  0b88		       8d 00 00 	      sta	ACIA_CTRL
+    448  0b8b				   .tim
+    449  0b8b		       ad 00 00 	      lda	CIA1_ICR	; the 1 ms tick?
+    450  0b8e		       4a		      lsr
+    451  0b8f		       90 18		      bcc	.out
+    452  0b91		       98		      tya
+    453  0b92		       48		      pha
+    454  0b93		       ee 00 00 	      inc	ticks
+    455  0b96		       d0 03		      bne	.t
+    456  0b98		       ee 01 00 	      inc	ticks+1
+    457  0b9b				   .t
+    458  0b9b		       20 00 00 	      jsr	Schedule
+    459  0b9e		       20 00 00 	      jsr	RxByte	; (a long tick: a byte may be waiting, and
+    460  0ba1		       20 00 00 	      jsr	TxByte	;  the MIDI chip holds only one)
+    461  0ba4		       20 00 00 	      jsr	RxByte
+    462  0ba7		       68		      pla
+    463  0ba8		       a8		      tay
+    464  0ba9				   .out
+    465  0ba9		       68		      pla
+    466  0baa		       aa		      tax
+    467  0bab		       68		      pla
+    468  0bac		       40		      rti
+    469  0bad
+    470  0bad							; RESTORE: the only NMI source. Count presses; the main loop acts on them.
+    471  0bad							; (A MIDI chip wired to NMI instead could fire one during MidiIrqTest: that
+    472  0bad							; isn't a press.)
+    473  0bad				   Nmi
+    474  0bad					      subroutine
+    475  0bad		       48		      pha
+    476  0bae		       ad 00 00 	      lda	ACIA_STAT
+    477  0bb1		       10 07		      bpl	.r
+    478  0bb3		       a9 00		      lda	#ACIA_MODE
+    479  0bb5		       8d 00 00 	      sta	ACIA_CTRL
+    480  0bb8		       68		      pla
+    481  0bb9		       40		      rti
+    482  0bba				   .r
+    483  0bba		       ad 00 00 	      lda	CIA2_ICR	; acknowledge anything CIA 2 holds, so the NMI
+    484  0bbd							; line is free for the next RESTORE edge
+    485  0bbd		       ee 00 00 	      inc	nmiCount
+    486  0bc0		       ad 00 00 	      lda	ticks
+    487  0bc3		       8d 00 00 	      sta	nmiTick
+    488  0bc6		       ad 01 00 	      lda	ticks+1
+    489  0bc9		       8d 01 00 	      sta	nmiTick+1
+    490  0bcc		       68		      pla
+    491  0bcd		       40		      rti
+    492  0bce
+src/main.asm (493): error: Unable to open file.
+    493  0bce					      include	"midi.asm"
+src/main.asm (494): error: Unable to open file.
+    494  0bce					      include	"keys.asm"
+src/main.asm (495): error: Unable to open file.
+    495  0bce					      include	"voices.asm"
+src/main.asm (496): error: Unable to open file.
+    496  0bce					      include	"arp.asm"
+src/main.asm (497): error: Unable to open file.
+    497  0bce					      include	"pads.asm"
+src/main.asm (498): error: Unable to open file.
+    498  0bce					      include	"nesenv.asm"
+src/main.asm (499): error: Unable to open file.
+    499  0bce					      include	"bend.asm"
+src/main.asm (500): error: Unable to open file.
+    500  0bce					      include	"midiin.asm"
+src/main.asm (501): error: Unable to open file.
+    501  0bce					      include	"sounds.asm"
+src/main.asm (502): error: Unable to open file.
+    502  0bce					      include	"repeat.asm"
+src/main.asm (503): error: Unable to open file.
+    503  0bce					      include	"drums.asm"
+src/main.asm (504): error: Unable to open file.
+    504  0bce					      include	"sync.asm"
+src/main.asm (505): error: Unable to open file.
+    505  0bce					      include	"menu.asm"
+src/main.asm (506): error: Unable to open file.
+    506  0bce					      include	"patchedit.asm"
+src/main.asm (507): error: Unable to open file.
+    507  0bce					      include	"devices.asm"
+src/main.asm (508): error: Unable to open file.
+    508  0bce					      include	"wander.asm"
+src/main.asm (509): error: Unable to open file.
+    509  0bce					      include	"lead.asm"
+src/main.asm (510): error: Unable to open file.
+    510  0bce					      include	"attack.asm"
+src/main.asm (511): error: Unable to open file.
+    511  0bce					      include	"screen.asm"
+src/main.asm (512): error: Unable to open file.
+    512  0bce					      include	"viz.asm"
+src/main.asm (513): error: Unable to open file.
+    513  0bce					      include	"nesfx.asm"
+src/main.asm (514): error: Unable to open file.
+    514  0bce					      include	"data.asm"
+src/main.asm (515): error: Unable to open file.
+    515  0bce					      include	"tables.asm"
+src/main.asm (516): error: Unable to open file.
+    516  0bce					      include	"nestables.asm"
+src/main.asm (517): error: Unable to open file.
+    517  0bce					      include	"soundtab.asm"
+src/main.asm (518): error: Unable to open file.
+    518  0bce					      include	"menutab.asm"
+src/main.asm (519): error: Unable to open file.
+    519  0bce					      include	"beats.asm"
+src/main.asm (520): error: Unable to open file.
+    520  0bce					      include	"bendtab.asm"
+    521  0bce				   codeEnd
+    522  0bce				  -	      if	codeEnd > $C000
+    523  0bce				  -	      echo	"the program runs past $C000"
+    524  0bce				  -	      err
+    525  0bce					      endif
+    526  0bce
+    527  0bce							; ---- tables that live under the KERNAL: loaded here, copied to $E000 at
+    528  0bce							; start (before the variables at $C000-$C9FF are cleared: they may load there)
+    529  0bce				   hiPhys
+    530  0bce					      rorg	$E000
+    531  0bce				   hiStart
+src/main.asm (532): error: Unable to open file.
+    532  0bce					      include	"menuhi.asm"
+    533  0bce				   hiEnd
+    534  0bce					      rend
+    535  0bce				  -	      if	hiEnd > $FFFA
+    536  0bce				  -	      echo	"the $E000 tables run into the CPU's vectors"
+    537  0bce				  -	      err
+    538  0bce					      endif
+    539  0bce				  -	      if	hiPhys + hiEnd - hiStart > $D000
+    540  0bce				  -	      echo	"the program file runs into the I/O at $D000"
+    541  0bce				  -	      err
+    542  0bce					      endif

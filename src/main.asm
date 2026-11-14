@@ -274,6 +274,12 @@ InitState:
 	sta okpPos
 	sta clChordIdx          ; CHORD + LEAD: nothing yet; the lead's patch LEADS 1
 	sta clLeadIdx
+	lda #12                 ; SPLIT KEY: the middle of the overlay; SPLIT NOTE: C4
+	sta splitKey
+	lda #60
+	sta splitNote
+	lda #3                  ; LEAD OCTAVE +1
+	sta leadOct
 	lda #2
 	sta leadBank
 	lda bankSlot+10

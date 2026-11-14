@@ -712,7 +712,7 @@ fineTune    ds 1               ; PLAYING FINE TUNE: 0-100 (50 = 0 cents)
 tuneC       ds 1               ; the whole tuning in cents (signed, -100..+100)
 tuneN       ds 1               ;   in 1/64 semitones (the NES)
 gbTune      ds 1               ;   as the Game Boy's CC 103 value
-chgMode     ds 1               ; CHORD CHANGE: 0 AS MODE, 1 ATTACK, 2 GLIDE, 3 SPLIT, 4 WANDER
+chgMode     ds 1               ; CHORD CHANGE: 0 AS MODE, 1 ATTACK, 2 GLIDE, 3 STAGGER, 4 WANDER
 wanderT     ds 1               ; WANDER TIME (wanderU)
 droneVc     ds 1               ; DRONE VOICING: 0 FIFTHS, 1 + 9TH, 2 SUS4
 sndGlideK   ds 1               ; the patch's own glide (glideK may add CHORD CHANGE's)
@@ -742,7 +742,13 @@ exFifth     ds 1               ; Expand: 5TH (tones 0 and 2)
 exKK        ds 1
 numBuf      ds 16              ; the menu: a number to print
 ; v0.28: Chord + Lead
-clMode      ds 1               ; CHORD + LEAD: 0 OFF, 1 LOW NOTE, 2 LATCH 3
+clMode      ds 1               ; SPLIT: 0 OFF, 1 KEY, 2 LOW NOTE, 3 LATCH 3 (v0.32)
+splitKey    ds 1               ; SPLIT KEY: the C64 overlay key (0-23) the lead starts at
+splitNote   ds 1               ; SPLIT NOTE: the MIDI note in (as sent) the lead starts at
+leadOct     ds 1               ; LEAD OCTAVE (KEY): 0-4 = -2..+2
+clKeyOn     ds 1               ; SPLIT is KEY (the menu shows its rows)
+spArm       ds 1               ; C= + V held: a note sets the split point
+spUsed      ds 1               ;   and one did (so letting go doesn't cycle SPLIT)
 clChordIdx  ds 1               ; LOW NOTE: the chord's key ($FF: none)
 clLeadIdx   ds 1               ; the lead's key ($FF: none)
 clBurst     ds 1               ; LATCH 3: keys pressed close together
