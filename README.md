@@ -6,6 +6,10 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.33:** TREMOLO on the SID.
+- A patch's **TREMOLO** now plays on the SID as well as the NES: the SID's master volume follows it, with LFO, PUMP and the GATE patterns, in sync with the tempo when SYNC is on. Every tremolo patch has it by default (TREMOLO GATE, BREATHING PAD, ELECTRIC PIANO, VIBRAPHONE, and Chip Lab's PUMP / GATE patches); Chip Lab's SID / NES buttons on TREMOLO choose the chips.
+- The SID has one volume for all three voices, so in SPLIT the lead and the chord pulse together. Volume steps can click a little (most on a 6581), which suits the GATEs. Mute and VINYL STOP still win.
+
 **v0.32:** SPLIT, with a keyboard split.
 - **CHORD + LEAD is now SPLIT** (PLAYING, or **C= + V**): **OFF**, **KEY**, **LOW NOTE**, **LATCH 3**. LOW NOTE and LATCH 3 work as before.
 - **KEY** is a keyboard split: keys below the split point play the chord (as the notes mode plays them: SMART CHORD makes the left side one-finger chords), keys from it up play the lead's patch on the lead's voices, **LEAD OCTAVE** up (+1 at first, −2…+2). On the C64's keys the split is a key, so it stays put when F1 / F3 change the octave; over MIDI it's a note as the keyboard sends it (before MIDI IN OCTAVE). Row 3 shows SPLIT AT and the note the split key plays now.
@@ -25,7 +29,7 @@ out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 - **BEND IN** (all chips): each new note starts AMOUNT semitones away and bends to its pitch over TIME (5 ms – 1 s). Above is a drop, below a scoop. The SID bends each voice; the NES uses its glide; the Game Boy uses its own pitch envelope (CC 80 / 81), so its time is the nearest of its sixteen. Legato notes don't bend in.
 - **BEND OUT** (SID; every chip from v0.31): a note you let go sags AMOUNT semitones over TIME while its release rings.
 - **REPEAT** gains **SHIFT** (−12 … +12) and **SHIFT IN** (SEMITONES or SCALE STEPS of the key): each echo moves on from the last, so +12 climbs in octaves and −1 SCALE STEPS walks down the key; echoes stop at the top or bottom of the range. **ECHOES**: GB + NES (as before), **ALL CHIPS** (SID 3 joins in, so the echo hops SID → GB → NES), or **ONE CHIP** (one voice, each echo cuts the last).
-- **TREMOLO** gains **SYNC** (FREE, or 1 BAR … 1/32 of the tempo, including dotted and triplets; with the beat running it starts each bar on the downbeat) and **MODE**: LFO, **PUMP** (a sidechain-style duck on each cycle, swelling back) or one of three **GATE** patterns (X.X.XX.X, XX.XX.X., X..X..X.). As before, a patch's tremolo plays on the NES (and the SID with the tremolo key); the Game Boy has none.
+- **TREMOLO** gains **SYNC** (FREE, or 1 BAR … 1/32 of the tempo, including dotted and triplets; with the beat running it starts each bar on the downbeat) and **MODE**: LFO, **PUMP** (a sidechain-style duck on each cycle, swelling back) or one of three **GATE** patterns (X.X.XX.X, XX.XX.X., X..X..X.). A patch's tremolo plays on the NES (from v0.33 the SID too); the Game Boy has none.
 - The menu's tables moved into the RAM under the KERNAL (copied there at start), which freed about 8 KB for code.
 - Patches are 96 bytes now (Chip Lab's SysEx too).
 
@@ -417,7 +421,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.32)
+## Not yet (v0.33)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

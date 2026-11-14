@@ -433,6 +433,8 @@ TremLevel:
 	subroutine
 	ldy envY
 	lda envLvH,y
+	ldx tremNes             ; (a patch's tremolo on the SID only: not here)
+	beq .x
 	ldx tremA
 	beq .x
 	sta exS                 ; (not t0-t3: MidiTo holds the channel in t1)
@@ -632,14 +634,22 @@ TremTick:
 	sta exD                 ; square?
 	lda nesTremMode
 	sta tremMode            ; LFO, PUMP, GATEs
+	lda tremChips           ; (the patch's: which chips)
+	sta tremMask
+	and #1
+	sta tremNes
 	jmp .btn
 .user:
 	lda #0
 	sta tremMode
 	jsr TremUser
+	lda #1
+	sta tremNes
 .btn:
 	lda tremBtn
 	beq .d
+	lda #1                  ; (held: every chip)
+	sta tremNes
 	lda exS
 	bne .d
 	jsr TremUser
@@ -718,6 +728,13 @@ TremTick:
 	lda tremLock
 	cmp #1
 	beq .td
+	lda tremMask            ; the patch's tremolo on the SID (v0.33)
+	and #2
+	beq .ns
+	lda exS
+	beq .ns
+	jmp TremSid
+.ns:
 	lda tremWas
 	beq .r
 	jmp TremEnd
@@ -799,17 +816,7 @@ TremUser:
 ; TREMOLO held: the SID's volume and envelope-less NES pulses follow tremA
 TremDirect:
 	subroutine
-	lda #1
-	sta tremWas
-	lda devOn+DEV_SID
-	beq .nes
-	lda muteNow
-	bne .nes
-	lda #15
-	sec
-	sbc tremA
-	ora sidFilt
-	sta SID_VOL
+	jsr TremSid
 .nes:
 	lda nesEnvOn
 	bne .x
@@ -824,6 +831,27 @@ TremDirect:
 	asl
 	asl
 	jmp TremCC7
+.x:
+	rts
+
+; the SID's master volume follows tremA (not while it's off, muted or a
+; VINYL STOP fades it)
+TremSid:
+	subroutine
+	lda #1
+	sta tremWas
+	lda devOn+DEV_SID
+	beq .x
+	lda muteNow
+	bne .x
+	lda vinylLvl
+	cmp #192
+	bcs .x
+	lda #15
+	sec
+	sbc tremA
+	ora sidFilt
+	sta SID_VOL
 .x:
 	rts
 

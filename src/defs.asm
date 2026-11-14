@@ -773,6 +773,8 @@ nesK        ds NUM_VOICES      ; per NES voice: its own glide k now (BEND IN)
 nesRd       ds NUM_VOICES      ; per NES voice: BEND OUT's drop (-semitones; the glide eases it in)
 nesFoT      ds NUM_VOICES      ; per NES voice: a fall-off's 10 ms steps left (then the note-off)
 foAny       ds 1               ; fall-offs running
+tremNes     ds 1               ; v0.33: the NES follows tremA now
+tremMask    ds 1               ;   the patch's tremolo chips (1 NES, 2 SID)
 gbCcS       ds 16              ; the Game Boy's CC 80 / 81 / 87 / 88 last sent, per channel
 gbK         ds 1
 gbCc        ds 1

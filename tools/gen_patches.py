@@ -210,7 +210,7 @@ def fields(p):
     f["nesRel"] = 0 if flat else r
     f["nesDuty1"] = tone["nesDuty1"] * 32
     f["nesDuty2"] = tone["nesDuty2"] * 32
-    t = on.get("tremolo") if has("tremolo", "nes") else None
+    t = on.get("tremolo") if has("tremolo", "nes") or has("tremolo", "sid") else None
     f["nesTrem"] = round(t["depth"] * 15 / 100) if t else 0
     r = int(round(t["tremRate"] * 65536 / 100)) if t else 0      # per 10 ms
     f["nesTremRL"], f["nesTremRH"] = r & 255, r >> 8
@@ -241,6 +241,8 @@ def fields(p):
     rg = ra if has("rdrop", "gb") else None
     f["gbRdA"] = rg["amount"] if rg else 0
     f["gbRdT"] = gb_penv_t(rg["time"]) * 8 if rg else 0
+    # ---- v0.33: the patch's tremolo on the SID too (its master volume): bit 0 the NES, bit 1 the SID
+    f["tremChips"] = (1 if has("tremolo", "nes") else 0) | (2 if has("tremolo", "sid") else 0)
     return f
 
 
