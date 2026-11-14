@@ -131,6 +131,15 @@ def build_params():
                 steps = q["values"]
             ctx = {("tone", "gbWaveShape"): {"gbWaveMode": 0}, ("filter", "filtLfoRate"): {"lfoDepth": 32}}.get((eid, pid), {})
             rows = [G.fields(base_patch(eid, {**ctx, pid: v})) for v in steps]
+            # steps the C64 can't tell apart (e.g. the GB LFO's TRI and SINE) would stick the
+            # menu on the first of them: keep only the first of each (v0.34)
+            keep, sigs = [], set()
+            for i, r in enumerate(rows):
+                sig = tuple(r[n] & 255 for n in FIELDS)
+                if sig not in sigs:
+                    sigs.add(sig)
+                    keep.append(i)
+            steps, rows = [steps[i] for i in keep], [rows[i] for i in keep]
             if eid == "env":
                 fld, mask = {"attack": ("sndAD", 0xF0), "decay": ("sndAD", 0x0F),
                              "sustain": ("sndSR", 0xF0), "release": ("sndSR", 0x0F)}[pid]
@@ -148,6 +157,15 @@ def build_params():
                 for a, b in (("L", "H"), ("Lo", "Hi")):
                     if k.endswith(a) and k[:-len(a)] + b in vary:
                         partner = k[:-len(a)] + b
+                if partner is None and len({r[k] & 255 for r in rows}) < len(rows):
+                    # (v0.34) the first field can't tell every step apart: the one that can,
+                    # else two together (the second as the key's high byte)
+                    best = [n for n in vary if len({r[n] & 255 for r in rows}) == len(rows)]
+                    if best:
+                        k = best[0]
+                    else:
+                        k, partner = next((a, b) for a in vary for b in vary if a != b and
+                                          len({(r[a] & 255, r[b] & 255) for r in rows}) == len(rows))
                 key = (FI[k], FI[partner] if partner else 0xFF, 0xFF)
             all_vary |= set(vary)
             keyvals = []
@@ -158,6 +176,7 @@ def build_params():
                     lo = r[FIELDS[key[0]]] & 255
                     hi = r[FIELDS[key[1]]] & 255 if key[1] != 0xFF else 0
                     keyvals.append(hi << 8 | lo)
+            assert len(set(keyvals)) == len(keyvals) or eid == "env", (eid, pid, keyvals)
             dv = q["default"]
             default = min(range(len(steps)), key=lambda i: abs((steps[i] if not isinstance(steps[i], str) else 0) - dv)) \
                 if not isinstance(dv, list) else 0

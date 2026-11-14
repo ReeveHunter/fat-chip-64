@@ -302,6 +302,8 @@ class C64:
                 self._legacy_action(k)
             else:
                 plain.append(k)
+        if any(k in self.LEG_CBM for k in keys):
+            ms = max(ms, 40)                     # (and held long enough to outlast a long pass)
         self._raw_press(*plain, ms=ms)
 
     def release(self, *keys, ms=12):

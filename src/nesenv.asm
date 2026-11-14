@@ -608,6 +608,7 @@ Mul16:
 ; ADVANCED SOUND values). TREMOLO OFF: none. The Game Boy has no tremolo yet.
 TremTick:
 	subroutine
+	jsr RelClock            ; (v0.34: the SID's release clocks)
 	ldx soundMode
 	ldy tremLock
 	beq .snd
@@ -630,8 +631,8 @@ TremTick:
 	lda tremSyncH
 	sta exK
 .fr:
-	lda nesTremSq
-	sta exD                 ; square?
+	lda nesTremShp
+	sta exD                 ; SHAPE
 	lda nesTremMode
 	sta tremMode            ; LFO, PUMP, GATEs
 	lda tremChips           ; (the patch's: which chips)
@@ -657,7 +658,7 @@ TremTick:
 	lda exS
 	bne .on
 	sta tremA
-	beq .out
+	jmp .out
 .on:
 	lda tremPhL
 	clc
@@ -666,6 +667,11 @@ TremTick:
 	lda tremPhH
 	adc exK
 	sta tremPhH
+	bcc .nw                 ; (a new cycle: RANDOM's next level)
+	jsr Random
+	sta tremRnd
+	lda tremPhH
+.nw:
 	ldx tremMode            ; PUMP / GATE
 	beq .lfo
 	dex
@@ -694,16 +700,41 @@ TremTick:
 	lda exS
 	jmp .st
 .lfo:
-	lda tremPhH
-	ldy exD
+	lda exD                 ; SHAPE (v0.34: every one): TRI SINE SAW UP SAW DOWN SQUARE RANDOM
 	beq .tri
+	cmp #4
+	beq .sq
+	bcs .rnd
+	cmp #2
+	bcc .sin
+	beq .sup
+	lda tremPhH             ; SAW DOWN: the volume falls through the cycle
+	lsr
+	jmp .sc
+.sup:
+	lda tremPhH             ; SAW UP: it rises
+	eor #$FF
+	lsr
+	jmp .sc
+.rnd:
+	lda tremRnd             ; RANDOM: a new level each cycle
+	jmp .sc
+.sq:
+	lda tremPhH
 	cmp #128                ; square: full depth half the time
 	lda #0
 	bcs .st
 	lda exS
 	bne .st
+.sin:
+	lda tremPhH
+	jsr Tri
+	jsr Smooth
+	jmp .sc
 .tri:
+	lda tremPhH
 	jsr Tri                 ; 0-127
+.sc:
 	ldy exS
 	jsr Mul8
 	asl mt16
@@ -741,6 +772,28 @@ TremTick:
 .td:
 	jmp TremDirect
 .r:
+	rts
+
+; A = 0-127 -> the same, eased at both ends (3t^2 - 2t^3: near enough a sine)
+Smooth:
+	subroutine
+	sta sinX
+	tay
+	jsr Mul8
+	asl mt16
+	lda mt16+1
+	rol                     ; x^2 / 128
+	sta sinT
+	lda #190
+	sec
+	sbc sinX
+	ldy sinT
+	jsr Mul8                ; x 2 x (1.5 - x / 127)...
+	asl mt16
+	rol mt16+1
+	asl mt16
+	lda mt16+1
+	rol                     ; / 64
 	rts
 
 tremGates:  .byte %10101101, %11011010, %10010010   ; X.X.XX.X, XX.XX.X., X..X..X.
@@ -847,13 +900,68 @@ TremSid:
 	lda vinylLvl
 	cmp #192
 	bcs .x
+	ldx #2                  ; v0.34: nothing sounding on the SID (no gate, no
+.a:                             ;  release ringing): full volume, still - no
+	lda sidRelT,x           ;  tremolo ticking in the silence
+	bne .on
+	lda sidGate,x
+	and #1
+	bne .on
+	dex
+	bpl .a
+	lda #15
+	bne .t
+.on:
 	lda #15
 	sec
 	sbc tremA
-	ora sidFilt
-	sta SID_VOL
+.t:
+	sta sidVolTgt           ; (VolSlew takes it there)
 .x:
 	rts
+
+; every 10 ms: the SID voices' release clocks (50 ms steps)
+RelClock:
+	subroutine
+	dec relDiv
+	bpl .x
+	lda #4
+	sta relDiv
+	ldx #2
+.v:
+	lda sidRelT,x
+	beq .n
+	dec sidRelT,x
+.n:
+	dex
+	bpl .v
+.x:
+	rts
+
+; SID voice Y let go: how long its release rings (the longer of the chord's
+; and the lead's, in 50 ms steps). Keeps X, Y.
+RelStart:
+	subroutine
+	lda sndSR
+	and #$0F
+	sta exD
+	lda clMode
+	beq .c
+	lda leadPatch+sndSR-livePatch
+	and #$0F
+	cmp exD
+	bcc .c
+	sta exD
+.c:
+	stx exI
+	ldx exD
+	lda relSteps,x
+	sta sidRelT,y
+	ldx exI
+RelRts:
+	rts
+
+relSteps:   .byte 2,2,2,3,4,5,6,6,7,16,31,49,61,181,255,255   ; the SID's release times / 50 ms, + 1
 
 ; TREMOLO let go: volumes back
 TremEnd:
@@ -862,7 +970,7 @@ TremEnd:
 	sta tremSent
 	jsr SidVolume
 	lda nesEnvOn
-	bne .x
+	bne RelRts
 	lda #127
 TremCC7:                        ; A = CC7 value on both NES pulses
 	subroutine

@@ -282,9 +282,15 @@ FxOff:
 
 ; X = effect: peMode for writing its settings (PWM leaves the LFO to LfoFix)
 FxMode:
+	subroutine
 	lda #0
 	cpx #FX_PWM
 	bne .m
+	ldx #FX_VIB             ; (v0.34: only while VIBRATO has the LFO; otherwise
+	jsr FxIsOn              ;  PWM's SHAPE is the LFO's and must be written)
+	ldx #FX_PWM
+	cmp #0
+	beq .m
 	lda #2
 .m:
 	sta peMode

@@ -65,8 +65,35 @@ SidVolume:
 .off:
 	lda #0
 .z:
+	sta sidVolTgt           ; (the IRQ steps the volume there: VolSlew)
+	php
+	sei
+	lda sidVolNow           ; the filter mode at once, the volume as it is
 	ora sidFilt
 	sta SID_VOL
+	plp
+	rts
+
+; IRQ, each 1 ms: every 2 ms the SID's volume one step nearer its target, so
+; it never jumps (a jump in the 6581's volume thumps). Keeps X, Y.
+VolSlew:
+	subroutine
+	lda ticks
+	lsr
+	bcs .x
+	lda sidVolNow
+	cmp sidVolTgt
+	beq .x
+	bcc .up
+	sbc #1
+	bcs .w
+.up:
+	adc #1
+.w:
+	sta sidVolNow
+	ora sidFilt
+	sta SID_VOL
+.x:
 	rts
 
 ; M or SPACE changed: muteNow = mute xor momentary. The SID goes to volume 0;
@@ -865,6 +892,7 @@ VoiceSet:
 	ldx t2
 	sta SID+4,x
 	ldx t0
+	jsr RelStart            ; (v0.34: the tremolo knows the release rings)
 	jmp RelDrop             ; (BEND OUT: the release sags)
 .sidOn:
 	jsr SidPitch            ; -> ptr

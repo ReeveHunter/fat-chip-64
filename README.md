@@ -6,6 +6,12 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.34:** a smoother SID volume, a quiet tremolo in the silence, every SHAPE.
+- **No more volume thumps:** the SID's master volume never jumps now. Wherever it's going (the tremolo, mute, VINYL STOP, a new patch), it moves one step every 2 ms, so a full swing takes about 30 ms. On a 6581 every jump in the volume thumps (it moves the chip's DC offset); small, spread-out steps don't. The GATEs still chop, PUMP still ducks, just without the click; mute fades out quickly instead of popping.
+- **Tremolo holds still in the silence:** with nothing sounding on the SID (no key down, no release still ringing) its volume stays at full and the tremolo doesn't touch it, so there's no ticking between notes. It picks up again with the next note and carries on through the release.
+- **TREMOLO SHAPE:** every shape plays on the SID and NES now: TRI, SINE, SAW UP (each cycle swells up), SAW DOWN (fades away), SQUARE, RANDOM (a new level each cycle).
+- **SHAPE wasn't changeable in the menu** (stuck on TRI). Fixed: the Game Boy plays SINE as TRI, so VIBRATO and PWM leave SINE out (it was sticking the menu); PWM's SHAPE now changes when it has the Game Boy's LFO (VIBRATO off); TREMOLO has all six. The menu tools now check that every step of every setting can be told apart.
+
 **v0.33:** TREMOLO on the SID.
 - A patch's **TREMOLO** now plays on the SID as well as the NES: the SID's master volume follows it, with LFO, PUMP and the GATE patterns, in sync with the tempo when SYNC is on. Every tremolo patch has it by default (TREMOLO GATE, BREATHING PAD, ELECTRIC PIANO, VIBRAPHONE, and Chip Lab's PUMP / GATE patches); Chip Lab's SID / NES buttons on TREMOLO choose the chips.
 - The SID has one volume for all three voices, so in SPLIT the lead and the chord pulse together. Volume steps can click a little (most on a 6581), which suits the GATEs. Mute and VINYL STOP still win.
@@ -421,7 +427,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.33)
+## Not yet (v0.34)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

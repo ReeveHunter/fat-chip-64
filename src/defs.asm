@@ -774,6 +774,13 @@ nesRd       ds NUM_VOICES      ; per NES voice: BEND OUT's drop (-semitones; the
 nesFoT      ds NUM_VOICES      ; per NES voice: a fall-off's 10 ms steps left (then the note-off)
 foAny       ds 1               ; fall-offs running
 tremNes     ds 1               ; v0.33: the NES follows tremA now
+sidVolNow   ds 1               ; v0.34: the SID's master volume now (the IRQ moves it
+sidVolTgt   ds 1               ;   a step every 2 ms towards this: no big jumps, no thump)
+sidRelT     ds 3               ; per SID voice: 50 ms steps its release still rings
+relDiv      ds 1               ; (counts 10 ms steps to 50)
+tremRnd     ds 1               ; TREMOLO RANDOM: this cycle's level
+sinX        ds 1               ; Smooth's
+sinT        ds 1
 tremMask    ds 1               ;   the patch's tremolo chips (1 NES, 2 SID)
 gbCcS       ds 16              ; the Game Boy's CC 80 / 81 / 87 / 88 last sent, per channel
 gbK         ds 1

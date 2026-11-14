@@ -214,7 +214,7 @@ def fields(p):
     f["nesTrem"] = round(t["depth"] * 15 / 100) if t else 0
     r = int(round(t["tremRate"] * 65536 / 100)) if t else 0      # per 10 ms
     f["nesTremRL"], f["nesTremRH"] = r & 255, r >> 8
-    f["nesTremSq"] = 1 if t and DEF["lists"]["shapes"][t["shape"]] == "SQUARE" else 0
+    f["nesTremShp"] = t["shape"] if t else 0      # v0.34: every SHAPE (was 1 = SQUARE)
     # ---- v0.30
     f["nesTremSync"] = t["tremSync"] if t else 0
     f["nesTremMode"] = t["mode"] if t else 0

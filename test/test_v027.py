@@ -59,7 +59,7 @@ def since(c, t0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.33", "V0.33" in c.screen_row(0), c.screen_row(0))
+check("header V0.34", "V0.34" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- FINE TUNE
 c.midi_in(0x90, 60, 100, ms=80)
@@ -162,7 +162,7 @@ check("let go: silent", held(c) == [], held(c))
 steps = []
 for i in range(30):
     k = "crsrdown" if i % 2 == 0 else "crsrright"
-    c._raw_press(k, ms=25)
+    c._raw_press(k, ms=45)                   # (a quick press; a busy MIDI link can hold a pass up ~36 ms)
     steps.append(tuple(held(c)))
     c._raw_release(k, ms=10)
 ok = all(len(s) == 2 and s[0] in pent and s[1] in pent and pent.index(s[1]) == pent.index(s[0]) + 2 for s in steps)

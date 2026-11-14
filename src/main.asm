@@ -408,6 +408,11 @@ Irq:
 	bne .t
 	inc ticks+1
 .t:
+	lda sidVolNow           ; (the SID's volume: a step towards its target)
+	cmp sidVolTgt
+	beq .vs
+	jsr VolSlew
+.vs:
 	jsr Schedule
 	jsr TxByte              ; start a just-scheduled message now if the ACIA is free
 	jsr RxByte              ; (again: this pass was long, a byte may be in)
@@ -455,6 +460,11 @@ IrqMidi:
 	bne .t
 	inc ticks+1
 .t:
+	lda sidVolNow           ; (the SID's volume: a step towards its target)
+	cmp sidVolTgt
+	beq .vs
+	jsr VolSlew
+.vs:
 	jsr Schedule
 	jsr RxByte              ; (a long tick: a byte may be waiting, and
 	jsr TxByte              ;  the MIDI chip holds only one)

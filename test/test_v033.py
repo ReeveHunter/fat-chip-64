@@ -40,7 +40,7 @@ def vols(c, n=80, ms=10):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.33", "V0.33" in c.screen_row(0), c.screen_row(0))
+check("header V0.34", "V0.34" in c.screen_row(0), c.screen_row(0))
 check("no tremolo: the SID's volume steady at 15", set(vols(c, 20)) == {15})
 
 # the built-in TREMOLO GATE patch: SID and NES by default
@@ -55,7 +55,8 @@ c.midi_in(0x80, 60, 0, ms=300)
 send(c, 0, tremolo={"depth": 90, "tremSync": 3, "mode": 1})
 c.midi_in(0x90, 60, 100, ms=100)
 v = vols(c, 60)
-rises = sum(1 for a, b in zip(v, v[1:]) if b < a - 5)
+big = [b < a - 2 for a, b in zip(v, v[1:])]           # (v0.34: the duck takes a few steps now)
+rises = sum(1 for i, x in enumerate(big) if x and (i == 0 or not big[i - 1]))
 check("PUMP on the SID: a duck each beat, swelling back", max(v) >= 13 and min(v) <= 3 and rises in (1, 2), v)
 c.midi_in(0x80, 60, 0, ms=300)
 
