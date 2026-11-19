@@ -23,6 +23,7 @@ NesFxDue:
 	lda vibDepth
 	ora nfxGlide
 	ora nfxRun
+	ora nfxWarb
 	beq .x
 	lda ticks
 	sec
@@ -44,6 +45,7 @@ NesFxTick:
 	lda vibDepth
 	ora nfxGlide
 	ora nfxRun
+	ora nfxWarb
 	bne .on
 .q:
 	rts
@@ -380,6 +382,17 @@ NesFxVal:
 	adc #1
 .up:
 	jsr .add
+	lda nfxWarb             ; v0.42: WARBLE's drift (lane = pulse 0 / 1): / 4
+	beq .nw
+	ldy nfxK
+	lda wCurH,y
+	eor #$80
+	cmp #$80
+	ror
+	cmp #$80
+	ror
+	jsr .add
+.nw:
 	; vibrato: after the delay, the SID's LFO (pulse 2 a quarter turn on
 	; when the sound spreads it): vibNow / 16 sixteenths
 	lda vibDepth

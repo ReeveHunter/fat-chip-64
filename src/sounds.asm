@@ -302,6 +302,12 @@ FxVars:
 	lda #CHG_K
 	sta glideK
 .gd:
+	lda effMode             ; v0.42: DRONE: slow glides (Stumped's pads)
+	cmp #MODE_DRONE
+	bne .gd2
+	lda #DRONE_K
+	sta glideK
+.gd2:
 	; ---- detune
 	ldy detLock
 	beq .ds
@@ -350,12 +356,19 @@ FxVars:
 	ora t0
 	ora sndPenv
 	ora sndRdrop
+	ora sndWarbA            ; (v0.42: WARBLE)
 	beq .b
 	lda #1
 .b:
 	sta fxBusy
 	lda #6                  ; the NES voices catch up (nesfx.asm)
 	sta nfxRun
+	lda warbChips           ; v0.42: WARBLE on the NES keeps its bends coming
+	and #2
+	beq .nw
+	lda sndWarbA
+.nw:
+	sta nfxWarb
 	jmp TremSyncCalc        ; (TREMOLO SYNC: this patch's division)
 
 ; the ADVANCED SOUND vibrato (keeps X)
@@ -536,11 +549,16 @@ GbGlideVal:
 	lda gbGlideT,y
 .b:
 	ldy glideBtn
-	beq .x
+	beq .d
 	cmp #0
 	bne .x
 	ldy uGlide
 	lda gbGlideT,y
+.d:
+	ldy effMode             ; v0.42: DRONE: the slowest glide
+	cpy #MODE_DRONE
+	bne .x
+	lda #120
 .x:
 	rts
 
@@ -1113,6 +1131,7 @@ FxTick:
 .st:
 	sta fxN
 	jsr SeqTick
+	jsr WarbTick            ; (v0.42: WARBLE on the SID and NES)
 	lda devOn+DEV_SID
 	bne SidFx
 	rts
@@ -1278,6 +1297,7 @@ SidFx:
 	; IN / OUT)
 	lda vibDepth
 	ora glideK
+	ora sndWarbA
 	ora sndClick
 	ora sndPenv
 	ora sndRdrop
@@ -1478,7 +1498,7 @@ VibStep:
 	lda #0
 	sta vibAmt,y
 	lda vibDepth
-	beq .x
+	beq .w
 	lda vibT,y
 	cmp vibDel
 	bcs .on
@@ -1499,7 +1519,97 @@ VibStep:
 .same:
 	lda vibNow
 	sta vibAmt,y
+.w:
+	lda warbChips           ; v0.42: WARBLE's drift on top (lane = SID voice)
+	lsr
+	bcc .x
+	lda wCurH,y
+	eor #$80                ; (unbias: signed)
+	clc
+	adc vibAmt,y
+	bvc .s                  ; (past either end: the end)
+	lda #$7F
+	bcc .s
+	lda #$81
+.s:
+	sta vibAmt,y
 .x:
+	rts
+
+; v0.42 WARBLE (the SID and NES; the Game Boy has its own): each of three
+; lanes slides at sndWarbR / 256 steps per 4 ms toward a random target within
+; +-sndWarbA, then picks another. A slow drift, each voice its own.
+WarbTick:
+	subroutine
+	lda sndWarbA
+	bne .go
+	lda #$80                ; (none: centred)
+	ldx #2
+.z:
+	sta wCurH,x
+	sta wTgt,x
+	dex
+	bpl .z
+	rts
+.go:
+	ldx #2
+.l:
+	ldy fxN
+.st:
+	lda wTgt,x
+	cmp wCurH,x
+	bne .mv
+	stx wbX                 ; there: a new target, 128 - A + r x A / 64
+	sty wbY
+	jsr Random              ; 0-127
+	tay
+	lda sndWarbA
+	jsr Mul8
+	lda mt16
+	asl
+	lda mt16+1
+	rol
+	asl mt16
+	rol
+	clc
+	adc #128
+	sec
+	sbc sndWarbA
+	ldx wbX
+	ldy wbY
+	sta wTgt,x
+	jmp .nx
+.mv:
+	bcc .dn
+	lda wCurL,x             ; up toward it
+	clc
+	adc sndWarbR
+	sta wCurL,x
+	lda wCurH,x
+	adc #0
+	sta wCurH,x
+	cmp wTgt,x
+	bcc .nx
+	lda wTgt,x
+	sta wCurH,x
+	jmp .nx
+.dn:
+	lda wCurL,x             ; down toward it
+	sec
+	sbc sndWarbR
+	sta wCurL,x
+	lda wCurH,x
+	sbc #0
+	sta wCurH,x
+	cmp wTgt,x
+	bcs .nx
+	lda wTgt,x
+	sta wCurH,x
+.nx:
+	dey
+	bne .st
+	dex
+	bpl .l
 	rts
 
 ; ---- duty sequence: SID widths and / or NES CC1, one step per sndSeqMs

@@ -1379,7 +1379,7 @@ ApplySettings:
 	pha
 	tya
 	pha
-	jsr FxVars
+	jsr FxButtons           ; (v0.42: and the Game Boy's glide: DRONE's)
 	pla
 	tay
 	pla

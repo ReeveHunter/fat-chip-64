@@ -6,6 +6,12 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.42:** WARBLE on the SID and NES, a DRONE that drifts like Stumped's pads, longer clicks, PUMP and GATE as tremolo shapes.
+- **WARBLE** now plays on the SID and the NES too (it was the Game Boy's alone): a slow random drift, each voice its own, up to AMOUNT cents, moving at SPEED (40: about a second from one side to the other). It stacks with VIBRATO.
+- **DRONE**: a new drone note moves every voice by gliding (no voice starts again), slowly (about 1.5 s on the SID and NES, the Game Boy at its slowest glide), each voice at its own moment within WANDER TIME; the voices are led to the nearest notes of the new drone (the root stays the bass).
+- **BEND IN's CLICK**: OFF, SHORT (20 ms) or LONG (as long as TIME). STEP (the blip) already takes TIME, up to 1 s.
+- **TREMOLO SHAPE** now has PUMP and the three GATEs after the six LFO shapes; MODE is gone (older patches move over).
+
 **v0.41:** a packed program file, and ATTACK folded into BEND IN.
 - **The program file is packed** (`tools/crunch.py`): the menu's $E000 tables, and as much of the code as it takes, unpack at start (a fraction of a second; up to about 1.3 s once the code is much bigger). The code can now grow to $C000, about 4 KB more than before. Flash and run `bin/fatchip64.prg` as always.
 - **BEND IN has a SHAPE and a CLICK:** SLIDE (as before) or STEP: held AMOUNT away for TIME, then the note: the old ATTACK BLIP (AMOUNT 12 = an octave). CLICK: the first 20 ms as noise (AMOUNT 0: just the click). The ATTACK effect is gone; older patches with it turn into BEND IN STEP / CLICK when loaded (here and in Chip Lab). C= + K is free.

@@ -6,7 +6,8 @@
 ;   it (the SID per voice, the NES with its glide), the Game Boy has its own
 ;   pitch envelope (CC 80 / 81). STEP: the SID and NES hold it there for TIME,
 ;   then jump (the chip-tune BLIP); the Game Boy slides as fast as it can.
-;   CLICK (the SID): the first 20 ms of each note as noise.
+;   CLICK (the SID): the start of each note as noise: SHORT 20 ms, LONG
+;   (v0.42) as long as TIME.
 ; BEND OUT (the SID): a note let go sags AMOUNT semitones over TIME while its
 ;   release rings.
 
@@ -24,9 +25,16 @@ AtkStep:
 	sta atkT,y
 	lda clickOn,y
 	beq .s
-	lda atkT,y
-	cmp #5                  ; (20 ms of noise)
-	bcc .s
+	lda #5                  ; (SHORT: 20 ms of noise; v0.42: LONG: TIME)
+	ldx sndClick
+	cpx #2
+	bcc .cl
+	lda sndStepT
+.cl:
+	cmp atkT,y
+	beq .ce
+	bcs .s
+.ce:
 	lda #0
 	sta clickOn,y
 	ldx sidOfs,y

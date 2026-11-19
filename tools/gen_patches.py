@@ -90,9 +90,16 @@ BLIP_MS = [10, 15, 20, 30, 40]
 def migrate(fx):
     """v0.41: an older patch's ATTACK (BLIP, CLICK) -> BEND IN's SHAPE STEP and CLICK
     (a patch with both keeps its BEND IN; the BLIP goes). Chip Lab does the same."""
-    if "attack" not in fx:
-        return fx
     out = dict(fx)
+    tr = out.get("tremolo")
+    if tr and "mode" in tr:                       # v0.42: TREMOLO's MODE folded into SHAPE
+        tr = dict(tr)
+        m = tr.pop("mode")
+        if m:
+            tr["shape"] = 5 + m
+        out["tremolo"] = tr
+    if "attack" not in out:
+        return out
     at = out.pop("attack")
     blip, ms, click = at.get("blip", 1), BLIP_MS[at.get("blipMs", 2)], at.get("click", 0)
     if "penv" in out:
@@ -234,10 +241,10 @@ def fields(p):
     f["nesTrem"] = round(t["depth"] * 15 / 100) if t else 0
     r = int(round(t["tremRate"] * 65536 / 100)) if t else 0      # per 10 ms
     f["nesTremRL"], f["nesTremRH"] = r & 255, r >> 8
-    f["nesTremShp"] = t["shape"] if t else 0      # v0.34: every SHAPE (was 1 = SQUARE)
+    f["nesTremShp"] = t["shape"] if t and t["shape"] < 6 else 0      # v0.34: every SHAPE (was 1 = SQUARE)
     # ---- v0.30
     f["nesTremSync"] = t["tremSync"] if t else 0
-    f["nesTremMode"] = t["mode"] if t else 0
+    f["nesTremMode"] = t["shape"] - 5 if t and t["shape"] >= 6 else 0    # (v0.42: PUMP, the GATEs are SHAPEs)
     f["sndRpShift"] = rp["shift"] & 255 if rp else 0
     f["sndRpMode"] = rp["shiftIn"] | rp["hop"] << 1 if rp else 0
     # ---- v0.41: BEND IN's SHAPE (STEP: held, then the note) and CLICK (was ATTACK's BLIP and CLICK)
@@ -263,6 +270,11 @@ def fields(p):
     f["gbRdT"] = gb_penv_t(rg["time"]) * 8 if rg else 0
     # ---- v0.33: the patch's tremolo on the SID too (its master volume): bit 0 the NES, bit 1 the SID
     f["tremChips"] = (1 if has("tremolo", "nes") else 0) | (2 if has("tremolo", "sid") else 0)
+    # ---- v0.42: WARBLE on the SID and the NES (a slow random drift): f / 4096 steps, a rate per 4 ms
+    wv = on.get("warble") if has("warble", "sid") or has("warble", "nes") else None
+    f["sndWarbA"] = min(120, round(wv["amount"] * 4096 * math.log(2) / 1200)) if wv else 0
+    f["sndWarbR"] = max(1, wv["speed"]) if wv else 0
+    f["warbChips"] = (1 if has("warble", "sid") else 0) | (2 if has("warble", "nes") else 0)
     return f
 
 

@@ -59,7 +59,7 @@ def since(c, t0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.41", "V0.41" in c.screen_row(0), c.screen_row(0))
+check("header V0.42", "V0.42" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- FINE TUNE
 c.midi_in(0x90, 60, 100, ms=80)
@@ -118,7 +118,9 @@ check("... within WANDER TIME (3 s) all of them are there", list(c.v("vNote", 9)
 open_page(c, "PLAYING"); sel(c, "DRONE VOICING"); c.tap("f7", ms=60)
 back(c, 2)
 c.tap("q", ms=200)
-check("DRONE VOICING FIFTHS + 9TH: C G C D G", held(c) == [48, 55, 60, 62, 67], held(c))
+h = held(c)                                  # (v0.42: voice-led from the G drone, within two octaves of C)
+check("DRONE VOICING FIFTHS + 9TH: C on the bottom, then G C D G in some octaves (five notes)",
+      h[0] == 48 and len(h) == 5 and sorted({n % 12 for n in h}) == [0, 2, 7] and max(h) <= 72, h)
 c.tap("l", ms=40)                            # latch off
 c.run_ms(4000)
 for _ in range(1):

@@ -824,6 +824,19 @@ beatBank    ds 1               ; RUN/STOP + A-G: the beat bank
 undoTag     ds 1               ; the param last saved for undo ($FF: none)
 undoSound   ds 1               ; the patch number before the last change
 chanNew     ds 1
+; v0.42: WARBLE on the SID and NES: three lanes (SID voice 0-2; the NES
+; pulses take lanes 0 and 1), each drifting to a random target; +128 biased,
+; in f / 4096 steps
+wCurL       ds 3
+wCurH       ds 3
+wTgt        ds 3
+droneLast   ds 6               ; DRONE: the notes it played last, voicing order (voice leading)
+droneN      ds 1               ;   how many (0: none yet)
+droneTop    ds 1               ; DroneNear: the root + 2 octaves
+exK2        ds 1               ; DroneNear's tries
+nfxWarb     ds 1               ; the NES warbles (not 0)
+wbX         ds 1               ; WarbTick's
+wbY         ds 1
 colDirty    ds 1               ; the menu: a colour not light green somewhere
 scrFx       ds 1               ; ScrFx's effect
 scrFxP      ds 1               ;   and setting               ; GbChanTo / NesChanTo

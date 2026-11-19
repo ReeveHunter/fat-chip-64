@@ -19,6 +19,7 @@ CHG_GLIDE   equ 2
 CHG_STAGGER   equ 3
 CHG_WANDER  equ 4
 CHG_K       equ 6               ; CHORD CHANGE's glide (as a patch's glideK)
+DRONE_K     equ 7               ; v0.42: DRONE's glide, slower (about 1.5 s; the Game Boy's slowest)
 
 ; A = the chord change style now (keeps X, Y)
 ChgEff:
@@ -110,6 +111,9 @@ ChgStyle:
 	bmi .wait
 	lda #0
 	sta vWaitOn,x
+	lda effMode             ; (v0.42: DRONE: every voice glides, none starts again)
+	cmp #MODE_DRONE
+	beq .glide
 	jsr IsBass              ; the bass glides; the others: either way
 	beq .glide
 	jsr Random
@@ -211,19 +215,143 @@ DroneExpand:
 	sta exR
 	lda #0
 	sta heldCount
+	sta exI                 ; (the voicing's tones so far)
 	ldx droneVc
 	ldy droneAt,x
 .n:
 	lda droneIvs,y
-	bmi .x
+	bmi .done
 	sty exK
 	clc
 	adc exR
+	ldx exI
+	beq .put                ; the root stays the root (the bass)
+	cpx droneN
+	bcc .lead
+	sta droneLast,x         ; (nothing to lead from: near itself)
+.lead:
+	jsr DroneNear           ; v0.42: the tone nearest this voice's last note
+.put:
+	ldx exI
+	sta droneLast,x
 	jsr InsertNote
+	inc exI
 	ldy exK
 	iny
 	bne .n
+.done:
+	lda exI
+	sta droneN
 .x:
+	rts
+
+; v0.42: A = a drone tone, X = its place in the voicing -> the same note
+; name in the octave nearest droneLast,x, within two octaves above the root
+; and not one an earlier tone took. Like Stumped's pads: a new root moves
+; each voice the least it can.
+DroneNear:
+	subroutine
+	sta exD
+	lda exR
+	clc
+	adc #24
+	sta droneTop                 ; (the top: two octaves above the root)
+.lo:
+	lda exD                 ; into the range first
+	cmp exR
+	beq .r1
+	bcs .hi
+.r1:
+	clc
+	adc #12
+	sta exD
+	jmp .lo
+.hi:
+	lda exD
+	cmp droneTop
+	bcc .dn
+	beq .dn
+	sbc #12
+	sta exD
+	jmp .hi
+.dn:
+	lda exD                 ; down an octave while that's nearer the last note
+	sec
+	sbc #12
+	cmp exR
+	bcc .up
+	beq .up
+	jsr .dist
+	sta exS
+	lda exD
+	jsr .dist
+	cmp exS
+	bcc .up
+	beq .up
+	lda exD
+	sec
+	sbc #12
+	sta exD
+	jmp .dn
+.up:
+	lda exD                 ; up while that's nearer (and in range)
+	clc
+	adc #12
+	cmp droneTop
+	beq .u0
+	bcs .t
+.u0:
+	jsr .dist
+	sta exS
+	lda exD
+	jsr .dist
+	cmp exS
+	bcc .t
+	beq .t
+	lda exD
+	clc
+	adc #12
+	sta exD
+	jmp .up
+.t:
+	lda #3                  ; taken already (by an earlier tone)? another octave
+	sta exK2
+.tk0:
+	ldy #0
+.tk:
+	cpy exI
+	bcs .ok
+	lda droneLast,y
+	cmp exD
+	beq .bump
+	iny
+	bne .tk
+.bump:
+	dec exK2
+	beq .ok                 ; (no room: the same note twice)
+	lda exD
+	clc
+	adc #12
+	cmp droneTop
+	bcc .b1
+	beq .b1
+	sbc #24
+	cmp exR
+	beq .ok
+	bcc .ok
+.b1:
+	sta exD
+	jmp .tk0
+.ok:
+	lda exD
+	rts
+.dist:                          ; A = |A - droneLast,x|
+	sec
+	sbc droneLast,x
+	bcs .d
+	eor #$FF
+	adc #1
+.d:
 	rts
 
 droneAt:    .byte 0,5,11
