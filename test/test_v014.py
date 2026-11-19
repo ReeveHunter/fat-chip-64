@@ -46,11 +46,11 @@ c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.43") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.44") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])
-check("key, mode, latch on one line", rows[9].rstrip() == "KEY C  MAJOR      POLY      LATCH OFF", rows[9])
+check("key, mode, latch on one line (v0.44: in POLY, SMART's size in dark grey)", rows[9].rstrip() == "KEY C  MAJOR      SMART TRI LATCH OFF", rows[9])
 check("help line: F keys (v0.40: F5 FAT BASS, F7 VOICES, C= FX, STOP BEAT)", rows[24].startswith("F5 FAT BASS  F7 VOICES  C= FX  STOP BEAT"), rows[24])
 check("no N / NEW CHORD left on the screen", not any("NEW" in r or "N NEXT" in r for r in rows), rows)
 c.press("q", "e", "t", ms=200)

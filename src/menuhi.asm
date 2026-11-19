@@ -18,8 +18,8 @@ mL13:      .byte "/ RANDOM  <- UNDO  = TAP  , . NUDGE ",0
 mL14:      .byte "F1 F3 OCT  F5 FAT BASS  F7 VOICES ",0
 mL15:      .byte "SPACE FX  CRSR 1-KEY  RESTORE SCREEN ",0
 mL16:      .byte "SHIFT  A-G Z-B : ; LEAD PATCH ",0
-mL17:      .byte "  K SPLIT POINT  F5 MODE  F7 ON/OFF ",0
-mL18:      .byte "  F1 F3 LEAD OCT  , . TRANSPOSE ",0
+mL17:      .byte "  K SPLIT POINT  F5 ON/OFF  F7 MODE ",0
+mL18:      .byte "  F1 F3 LEAD + 1-KEY OCT  , . TRANSPOSE ",0
 mL19:      .byte "C=  A ARP S RPT D DUTY F FILT G GLIDE ",0
 mL20:      .byte "  H DETUNE J WARBLE K BLIP Z ATK X REL ",0
 mL21:      .byte "  C TREM V VIB B BEND IN N OUT M PWM ",0

@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.44:** F5 is on / off and F7 the cycle in every layer (SHIFT + F5 SPLIT on / off, SHIFT + F7 its mode); C= + F1 / F3 arp octave up / down (F1 up everywhere); in POLY and MONO, row 9 shows SMART CHORD's size in dark grey (N sets it for later); One Key Play moves with the lead's octave (SHIFT + F1 / F3; at the usual LEAD +1 it plays where it always did).
+
 **v0.43:** the menu takes only the cursor keys (CRSR DOWN a line, SHIFT: up; CRSR RIGHT a value, SHIFT: back), RETURN and SHIFT+RETURN; the F keys keep their play jobs while it's open. "The dice" is RANDOMIZE on the screens (/ RANDOM; SHIFT+/ in the menu: RANDOMIZE IT).
 
 **v0.42:** WARBLE on the SID and NES, a DRONE that drifts like Stumped's pads, longer clicks, PUMP and GATE as tremolo shapes.
@@ -326,8 +328,8 @@ too, each layer in its colour.
 | A S D F G / Z X C V B | The lead's bank / patch (SPLIT on or off) |
 | : / ; | The lead's previous / next patch |
 | K, then a note | The split point (SPLIT KEY); row 3 shows ? while it waits |
-| F5 / F7 | SPLIT's mode (KEY, BASS, TRIAD) / SPLIT on or off |
-| F1 / F3 | The lead an octave up / down |
+| F5 / F7 | SPLIT on or off / its mode (KEY, BASS, TRIAD) (v0.43: F5 is on / off and F7 the cycle in every layer) |
+| F1 / F3 | The lead and One Key Play an octave up / down (they share it) |
 | , / . | Transpose everything a semitone down / up (−12..+12; row 13 shows TRANS) |
 
 | C= + | Does |
@@ -341,7 +343,7 @@ too, each layer in its colour.
 | , / . | The last effect slower / faster (its rate or time; the arp's speed) |
 | L | The last effect's tempo sync on / off (TREMOLO SYNC; the arp) |
 | SPACE | VINYL while held |
-| F1 / F3 | SPARKLE arp octave down / up |
+| F1 / F3 | SPARKLE arp octave up / down |
 | F5 | The arp FREE ↔ tempo synced |
 | F7 | The arp type: UNISON ↔ SPARKLE |
 

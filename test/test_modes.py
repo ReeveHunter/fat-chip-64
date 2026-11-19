@@ -33,7 +33,7 @@ def chord(*keys, ms=80):
     return h
 
 
-check("key line: key C MAJOR, POLY; sound line: FAT", c.screen_row(9).startswith("KEY C  MAJOR      POLY")
+check("key line: key C MAJOR, POLY; sound line: FAT", c.screen_row(9).startswith("KEY C  MAJOR      SMART TRI")
       and c.screen_row(2).startswith("FAT   1 FAT "), (c.screen_row(9), c.screen_row(2)))
 check("POLY: one key, one note", chord("w") == [50])
 

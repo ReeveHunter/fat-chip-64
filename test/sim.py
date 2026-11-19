@@ -408,7 +408,7 @@ class C64:
                     self._focus_arp()
                     self._with(keys=["."])
             elif k == "f":                                # SPARKLE octave, round
-                self._with(keys=["f3"] if self.v("arpOct") < 2 else ["f1", "f1"])
+                self._with(keys=["f1"] if self.v("arpOct") < 2 else ["f3", "f3"])
             elif k == "z":                                # POLY, SMART CHORD, DRONE
                 m = self.v("playMode")
                 self.set("playLast", 1 if m == 0 else 0)
@@ -459,8 +459,6 @@ class C64:
                 self._with(off=self.SHIFTS, on=["runstop"], keys=[k] * (1 if sc else 10), ms=10)
             elif k == "f5":                               # SPLIT on / off; held + a note: the split point
                 self._with(keys=["k"])
-            elif k == "f7":                               # SPLIT's mode
-                return "f5"
             else:
                 return False
             return True
@@ -482,7 +480,7 @@ class C64:
 
     def _xlat_release(self, k):
         if k == "f5" and self.v("spArm"):                 # SHIFT + F5 let go, no note: SPLIT on / off
-            self._with(on=["lshift"], keys=["k", "f7"])
+            self._with(on=["lshift"], keys=["k", "f5"])
 
     def _raw_tap(self, *keys, ms=12):
         self._raw_press(*keys, ms=ms)

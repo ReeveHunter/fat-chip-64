@@ -11,7 +11,7 @@ Tri:
 
 pwPhase:    .byte 0,85,170
 
-; C= + F1 / F3: SPARKLE arp octave down / up (0 / +1 / +2)
+; C= + F1 / F3: SPARKLE arp octave up / down (0 / +1 / +2)
 ArpOctUp:
 	subroutine
 	ldx arpOct

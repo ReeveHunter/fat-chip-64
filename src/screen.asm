@@ -503,10 +503,8 @@ ScrKey:
 	ldx #6
 	bne .m1
 .m0:
-	cpx #MODE_CHORD
-	bne .m1
-	ldx spice               ; SMART CHORD: its size
-	inx
+	ldx spice               ; SMART CHORD: its size (v0.43: shown in POLY and
+	inx                     ;  MONO too, dark grey: N sets it for later)
 .m1:
 	lda modeTxtLo,x
 	sta ptr
@@ -515,6 +513,25 @@ ScrKey:
 	ldx #18
 	ldy #9
 	jsr PrintAt
+	ldy #9
+	ldx #0
+	jsr ScreenAddr
+	lda ptr2+1
+	clc
+	adc #>(COLRAM-SCREEN)
+	sta ptr2+1
+	lda #13
+	ldx playMode
+	cpx #MODE_POLY
+	bne .mc
+	lda #11
+.mc:
+	ldy #18
+.mcl:
+	sta (ptr2),y
+	iny
+	cpy #28
+	bne .mcl
 	ldy latch
 	lda newPending
 	beq .l

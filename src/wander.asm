@@ -395,17 +395,28 @@ OkpPress:
 	jsr OkpStep
 	ldx okpPos
 	lda okpList,x
+	jsr LeadOfs             ; (v0.43: the lead's octave, SHIFT + F1 F3)
 	sta okpNotes
 	lda #NO_NOTE
 	ldy okpSrc
 	bne .one
 	lda okpList+2,x         ; pairs: two scale notes up
+	jsr LeadOfs
 .one:
 	sta okpNotes+1
 	lda #1
 	sta okpHit
 	sta reallocFlag
 	rts
+
+; v0.44: A = a note -> moved with the lead's octave (SHIFT + F1 F3 move both;
+; at the lead's usual +1, One Key Play plays where it always has); keeps X
+LeadOfs:
+	ldy leadOct
+	clc
+	adc leadOfsT,y
+	rts
+leadOfsT:   .byte 256-36,256-24,256-12,0,12
 
 ; A = 1 / 2 (which cursor key) let go
 OkpRelease:

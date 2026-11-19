@@ -40,7 +40,7 @@ def cutoffs(c, ms):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.43", "V0.43" in c.screen_row(0), c.screen_row(0))
+check("header V0.44", "V0.44" in c.screen_row(0), c.screen_row(0))
 
 for cut, want in ((1, 0x29), (128, 0x28 + 100), (255, 0xEF)):           # (0: no filter)
     send(c, BY["RAW"], filter={"cutoff": cut, "resonance": 8})
@@ -68,7 +68,7 @@ c.midi_in(0x80, 60, 0, ms=300)
 # the dice: the envelope rolls too, and the newer effects come up
 send(c, BY["FAT"])
 envs, fx = set(), set()
-for i in range(40):
+for i in range(80):
     c._raw_press("lshift", ms=10)
     c._raw_tap("/", ms=40)
     c._raw_release("lshift", ms=30)

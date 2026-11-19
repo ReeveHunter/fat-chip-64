@@ -7,8 +7,8 @@
 ;             they're held (v0.36: with LATCH on, it keeps sounding after you
 ;             let go); every other key is the lead.
 ; v0.36: the lead is LEAD OCTAVE up in every mode (+1 at first; SHIFT + F1 /
-; F3). v0.40: SHIFT + F7 SPLIT on / off, SHIFT + F5 its mode, SHIFT + K then
-; a note: the split point. LATCH holds KEY's chord side and TRIAD's chord.
+; F3; v0.43: One Key Play too). v0.43: SHIFT + F5 SPLIT on / off, SHIFT + F7
+; its mode, SHIFT + K then a note: the split point. LATCH holds KEY's chord side and TRIAD's chord.
 ; The lead is one note (the last key pressed) on one voice per chip (SID 3,
 ; Game Boy pulse 1, NES pulse 1), only while it plays: the rest of the time
 ; those voices are the chord's. Its patch: SHIFT + A S D F G / Z X C V B.
@@ -220,7 +220,7 @@ LeadSide:
 	cmp splitNote
 	rts
 
-; SHIFT + F5: SPLIT's next mode (KEY, BASS, TRIAD; on if it was off)
+; SHIFT + F7: SPLIT's next mode (KEY, BASS, TRIAD; on if it was off)
 SplitNext:
 	subroutine
 	ldx clMode
@@ -237,7 +237,7 @@ SplitNext:
 	stx clLast
 	jmp ClHook
 
-; SHIFT + F7: SPLIT on (its last mode) / off
+; SHIFT + F5: SPLIT on (its last mode) / off
 SplitToggle:
 	subroutine
 	lda clMode

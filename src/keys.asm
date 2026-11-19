@@ -334,9 +334,9 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	lda ctrlDown
 	bne .ctrlF              ; CTRL + F1 F3: MIDI in octave up / down
 	lda cbmDown
-	bne .cbmF               ; C= + F1 F3: arp octave down / up, F5 sync / free, F7 type
+	bne .cbmF               ; C= + F1 F3: arp octave up / down, F5 sync / free, F7 type
 	lda shiftDown
-	bne .leadF              ; SHIFT + F1 F3: the lead's octave, F5 SPLIT's mode, F7 on / off
+	bne .leadF              ; SHIFT + F1 F3: the lead's (and OKP's) octave, F5 SPLIT on / off, F7 its mode
 	cpx #2
 	bcc .oct
 	beq .fat
@@ -363,9 +363,9 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 .x:
 	rts
 .cbmF:
-	cpx #1
-	bcc .ad
-	beq .au
+	cpx #1                  ; (v0.43: F1 up, F3 down, as in every layer)
+	bcc .au
+	beq .ad
 	cpx #2
 	beq .as
 	jmp ArpTypeKey
@@ -381,13 +381,13 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	beq .ld
 	cpx #2
 	beq .ls
-	jmp SplitToggle
+	jmp SplitNext           ; (v0.43: F5 on / off, F7 the cycle, in every layer)
 .lu:
 	jmp LeadOctUp
 .ld:
 	jmp LeadOctDown
 .ls:
-	jmp SplitNext
+	jmp SplitToggle
 .ctrlF:
 	cpx #1
 	bcc .mu
