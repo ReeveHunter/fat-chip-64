@@ -301,8 +301,7 @@ DhTone:
 	rts
 
 ; ------------------------------------------------------------ Synthcart tempo
-; , / . with SYNTHCART SYNC: nudge (held) or, with SHIFT, the next of the ten.
-; Carry set = handled.
+; RUN/STOP + , / . with SYNTHCART SYNC: the next of the ten. Carry set = handled.
 ScTempoKey:
 	subroutine
 	ldy syncTempo
@@ -312,8 +311,6 @@ ScTempoKey:
 	rts
 .sc:
 	sta t3                  ; 0 down (slower), 1 up
-	lda shiftDown
-	beq .nudge
 	ldy scIdx               ; a slower tempo is a longer beat: up the list
 	lda t3
 	bne .faster
@@ -333,9 +330,14 @@ ScTempoKey:
 .done:
 	sec
 	rts
-.nudge:
+
+; , / . (v0.40: any tempo, was Synthcart sync only): a DJ nudge, the beat
+; about 3% longer / shorter while held. A = 0 slower, 1 faster.
+TempoNudge:
+	subroutine
+	sta t3
 	lda nudgeOn
-	bne .done               ; (already nudged: the key repeats)
+	bne .x                  ; (already nudged: the key repeats)
 	lda beat16L
 	sta nudgeL
 	lda beat16H
@@ -373,8 +375,8 @@ ScTempoKey:
 	tax
 	pla
 .go:
-	jsr SetBeat16
-	sec
+	jmp SetBeat16
+.x:
 	rts
 
 ; , or . let go: the nudge ends

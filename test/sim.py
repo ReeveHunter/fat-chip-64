@@ -67,6 +67,8 @@ class C64:
         self.raw = raw
         self.mem = ObservableMemory(subject=raw)
         self.pressed = set()
+        self._virt = set()
+        self._ren = {}
         self.dc00 = 0xFF
         self.tx = []            # (cycle, byte)
         self.tx_busy_until = 0
@@ -91,6 +93,11 @@ class C64:
             cols = (~self.dc00) & 0xFF
             rows = 0
             keys = [KEYS[k] for k in self.pressed]
+            if self._xl_busy:                    # (v0.40's keys standing in for an old one: as
+                for c, rw in keys:               #  that one key was, no ghosts from it)
+                    if cols & c:
+                        rows |= rw
+                return (~rows) & 0xFF
             while True:
                 nrows = rows
                 for c, rw in keys:
@@ -269,13 +276,194 @@ class C64:
 
     def _raw_press(self, *keys, ms=12):
         for k in keys:
+            if self.keys_039 and not self._xl_busy:
+                x = self._xlat_press(k)
+                if isinstance(x, str):                 # (the same job on another key)
+                    self._ren[k] = x
+                    self.pressed.add(x)
+                    continue
+                if x:
+                    self._virt.add(k)
+                    continue
             self.pressed.add(k)
         self.run_ms(ms)
 
     def _raw_release(self, *keys, ms=12):
         for k in keys:
+            if k in self._ren:
+                self.pressed.discard(self._ren.pop(k))
+                continue
+            if k in self._virt:
+                self._virt.discard(k)
+                self._xlat_release(k)
+                continue
             self.pressed.discard(k)
         self.run_ms(ms)
+
+    # ------------------------------------------------------------ v0.40's keys
+    # keys_039: tests written before v0.40's layout (Reeve's Fat Chip Shortcuts)
+    # press the v0.39 keys; each old key (with the modifiers held) does the
+    # same job with the new keys. test_v040 and later turn it off.
+    keys_039 = True
+    _xl_busy = False
+    _virt = set()
+    SHIFTS = {"lshift", "rshift"}
+
+    def _with(self, off=(), on=(), keys=(), ms=20, settle=10):
+        """take modifiers `off` up and hold `on`, tap `keys`, then put them back"""
+        self._xl_busy = True
+        saved = self.pressed & set(off)
+        added = set(on) - self.pressed
+        self.pressed -= saved
+        self.pressed |= added
+        if saved or added:
+            self.run_ms(settle)
+        for k in keys:
+            self.pressed.add(k)
+            self.run_ms(ms)
+            self.pressed.discard(k)
+            self.run_ms(ms)
+        self.pressed -= added
+        self.pressed |= saved
+        if saved or added:
+            self.run_ms(settle)
+        self._xl_busy = False
+
+    def _focus_arp(self):
+        self.set("fxFocus", self.sym["FOCUS_ARP"])
+
+    def _menu_chan(self, label):
+        """the menu's DEVICES page: LABEL a block on (was CTRL + F3 / F5)"""
+        self._xl_busy = True
+        saved = self.pressed & {"ctrl"}
+        self.pressed -= saved
+        self.run_ms(30)
+        self._raw_tap("return", ms=60)
+        for want in ("DEVICES", label):
+            for _ in range(40):
+                if any(self.screen_row(r).startswith("> " + want) for r in range(25)):
+                    break
+                self._raw_tap("crsrdown", ms=25)
+            if want == "DEVICES":
+                self._raw_tap("return", ms=60)
+        self._raw_tap("crsrright", ms=150)
+        self.pressed.add("lshift")
+        self.run_ms(10)
+        self._raw_tap("return", ms=50)
+        self._raw_tap("return", ms=50)
+        self.pressed.discard("lshift")
+        self.run_ms(60)
+        self.pressed |= saved
+        self._xl_busy = False
+
+    def _xlat_press(self, k):
+        """k pressed with the old layout in mind: True if it was done another way"""
+        p = self.pressed
+        shift, cbm, stop, ctrl = bool(p & self.SHIFTS), "cbm" in p, "runstop" in p, "ctrl" in p
+        menu = self.v("menuOn")
+        if menu and (k in ("f1", "f3", "f5", "f7", "crsrdown", "crsrright", "return") or (k == "/" and shift)):
+            return False
+        if ctrl:
+            if k == "f3":
+                self._menu_chan("GAME BOY CHANNELS")
+                return True
+            if k == "f5":
+                self._menu_chan("MIDINES CHANNELS")
+                return True
+            return False
+        if cbm:
+            if k == "a":                                  # the arp's type
+                return "f7"
+            elif k == "s":                                # its pattern (as ArpPatKey does)
+                self.set("arpPat", (self.v("arpPat") + 1) % 5)
+                self.set("arpIdx", 255)
+                self.set("screenDirty", 1)
+            elif k == "d":                                # its length: 1/4 .. 1/32, FREE, round
+                n = self.v("arpLen")
+                if n == 5:
+                    self.set("arpSyncLen", 0 ^ 3)
+                    self._with(keys=["f5"])
+                elif n == 4:
+                    self._with(keys=["f5"])
+                else:
+                    self._focus_arp()
+                    self._with(keys=["."])
+            elif k == "f":                                # SPARKLE octave, round
+                self._with(keys=["f3"] if self.v("arpOct") < 2 else ["f1", "f1"])
+            elif k == "z":                                # POLY, SMART CHORD, DRONE
+                m = self.v("playMode")
+                self.set("playLast", 1 if m == 0 else 0)
+                if m == 0:
+                    self.set("playMode", 2)
+                self._with(off=["cbm"], on=["ctrl"], keys=["crsrdown"])
+            elif k == "x":                                # the chord's size
+                self._with(off=["cbm"], keys=["n"])
+            elif k == "c":                                # POLY <-> MONO
+                if self.v("monoMode") == 0 and self.v("playMode") == 0:
+                    self._with(off=["cbm"], keys=["f7"])
+                elif self.v("monoMode") == 1 and self.v("playMode") == 0:
+                    self._with(off=["cbm"], keys=["f7", "f7"])
+                else:
+                    self.set("monoMode", self.v("monoMode") ^ 1)
+            elif k == "l":
+                self._with(off=["cbm"], on=["ctrl"], keys=["l"])
+            elif k in (",", "."):                         # SPACE's action
+                self._with(off=["cbm"], on=["ctrl"], keys=[k])
+            elif k in (";", ":"):                         # MIDI in octave down / up
+                self._with(off=["cbm"], on=["ctrl"], keys=["f3" if k == ";" else "f1"])
+            elif k == "/":                                # undo the dice
+                if self.v("undoOk"):
+                    self._with(off=["cbm"], keys=["left"])
+            elif k in ("f1", "f3", "f5"):                 # the chips
+                self._with(off=["cbm"], on=["ctrl"], keys=[{"f1": "a", "f3": "s", "f5": "d"}[k]])
+            elif k == "f7":                               # panic
+                self._with(off=["cbm"], on=["ctrl"], keys=["m"])
+            else:
+                return False
+            return True
+        if stop:
+            if k in "asdfgh" and len(k) == 1:
+                i = "asdfgh".index(k)
+                if i == 5:
+                    self._with(keys=["s"])
+                else:
+                    if self.v("beatBank") != 0:
+                        self._with(keys=["a"])
+                    self._with(keys=["zxcvb"[i]])
+                return True
+            return False
+        sc = self.v("syncTempo") == 2
+        if shift:
+            if k == "/":                                  # the dice
+                self._with(off=self.SHIFTS, keys=["/"])
+            elif k in (",", "."):                         # tempo 10 (Synthcart: its next)
+                self._with(off=self.SHIFTS, on=["runstop"], keys=[k] * (1 if sc else 10), ms=10)
+            elif k == "f5":                               # SPLIT on / off; held + a note: the split point
+                self._with(keys=["k"])
+            elif k == "f7":                               # SPLIT's mode
+                return "f5"
+            else:
+                return False
+            return True
+        if k == "/":                                      # mute
+            return "m"
+        elif k in (",", ".") and not sc:                  # tempo 1
+            self._with(on=["runstop"], keys=[k])
+        elif k in (";", ":"):                             # the arp: FREE, then faster / slower
+            if self.v("arpLen") != 5:
+                self._with(on=["cbm"], keys=["f5"])
+            else:
+                self._focus_arp()
+                self._with(on=["cbm"], keys=["." if k == ";" else ","])
+        elif k == "f7":                                   # the arp on / off
+            self._with(on=["cbm"], keys=["a"])
+        else:
+            return False
+        return True
+
+    def _xlat_release(self, k):
+        if k == "f5" and self.v("spArm"):                 # SHIFT + F5 let go, no note: SPLIT on / off
+            self._with(on=["lshift"], keys=["k", "f7"])
 
     def _raw_tap(self, *keys, ms=12):
         self._raw_press(*keys, ms=ms)
@@ -316,7 +504,7 @@ class C64:
         for k in keys:
             if k in self.LEG_CBM:
                 self._raw_press("cbm", ms=30)          # (C= well before the key, as hands do: a busy MIDI link can hold a scan up 25 ms)
-                self.pressed.add(self.LEG_CBM[k])
+                self._raw_press(self.LEG_CBM[k], ms=0)
             elif k == "f5" and self.pressed & {"ctrl", "lshift", "rshift"}:
                 plain.append(k)                  # (CTRL / SHIFT + F5 kept their jobs)
             elif k in self.LEG_SAME:
@@ -336,7 +524,7 @@ class C64:
         plain, cbm = [], False
         for k in keys:
             if k in self.LEG_CBM:
-                self.pressed.discard(self.LEG_CBM[k])
+                self._raw_release(self.LEG_CBM[k], ms=0)
                 cbm = True
             elif k == "f5" and "runstop" not in self.pressed:
                 plain.append(k)
@@ -347,7 +535,7 @@ class C64:
             else:
                 plain.append(k)
         if cbm:
-            self.pressed.discard("cbm")
+            self._raw_release("cbm", ms=0)
         self._raw_release(*plain, ms=ms)
 
     def tap(self, *keys, ms=12):

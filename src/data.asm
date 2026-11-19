@@ -18,13 +18,13 @@ keymap:
 	; col 3: 7 Y G 8 B H U V
 	.byte 10,9,K_G,N_,K_B,K_H,11,K_V
 	; col 4: 9 I J 0 M K O N
-	.byte 13,12,K_J,15,K_M,K_K,14,N_
+	.byte 13,12,K_J,15,K_M,K_K,14,K_N
 	; col 5: + P L - . : @ ,
 	.byte N_,16,K_L,18,K_PERIOD,K_COLON,17,K_COMMA
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
 	.byte 20,19,K_SEMI,22,K_RSHIFT,K_EQUALS,21,K_SLASH
 	; col 7: 1 <- CTRL 2 SPACE C= Q RUN/STOP
-	.byte N_,N_,K_CTRL,1,K_SPACE,K_CBM,0,K_STOP
+	.byte N_,K_LEFT,K_CTRL,1,K_SPACE,K_CBM,0,K_STOP
 
 ; SID voice register offsets
 sidOfs:     .byte 0,7,14
@@ -35,7 +35,7 @@ vIdx:       .byte 0,0,0, 1,1,1, 2,2,2      ; SID voice / channel offset from the
 vBass:      .byte 0,0,0, 0,0,0, 0,1,1      ; GB wave and NES triangle: bass, octave down
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64  V0.39        RETURN: MENU ",0
+txtHeader:  .byte " FAT CHIP 64  V0.40        RETURN: MENU ",0
 txtBlank6:  .byte "       ",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -50,7 +50,10 @@ txtTempo:   .byte "TEMPO     BPM  BEAT",0
 txtSpaceLn: .byte "SPACE           OCTAVE",0
 txtMute:    .byte "MUTE",0
 txtNoMute:  .byte "    ",0
-txtHelp:    .byte "F1/F3 OCT F5 FAT BASS F7 ARP STOP BEAT",0
+txtTrBlank: .byte "         ",0
+txtTrans:   .byte "TRANS",0
+txtFxLn:    .byte "C=",0
+txtHelp:    .byte "F5 FAT BASS  F7 VOICES  C= FX  STOP BEAT",0
 txtLatchLo: .byte <txtLOff,<txtLSmart,<txtLHold,<txtLAdd,<txtLNext
 txtLatchHi: .byte >txtLOff,>txtLSmart,>txtLHold,>txtLAdd,>txtLNext
 txtLNext:   .byte "NEXT ",0

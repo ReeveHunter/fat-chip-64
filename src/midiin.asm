@@ -347,9 +347,17 @@ IdxNote:
 .up:
 	clc                     ; OCTAVE UP held: + 12 (not past 127)
 	adc octUpAdd
+	clc                     ; v0.40: SHIFT + , . TRANSPOSE (back an octave
+	adc transp              ;  in past either end)
 	bpl .x
+	bit transp
+	bmi .lo
 	sec
 	sbc #12
+	rts
+.lo:
+	clc
+	adc #12
 .x:
 	rts
 

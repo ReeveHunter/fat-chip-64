@@ -11,17 +11,25 @@ Tri:
 
 pwPhase:    .byte 0,85,170
 
-; F: SPARKLE arp octave 0 / +1 / +2
-ArpOctKey:
+; C= + F1 / F3: SPARKLE arp octave down / up (0 / +1 / +2)
+ArpOctUp:
 	subroutine
 	ldx arpOct
+	cpx #2
+	bcs .x
 	inx
-	cpx #3
-	bcc .s
-	ldx #0
+	bne .s
+ArpOctDown:
+	ldx arpOct
+	beq .x
+	dex
 .s:
 	stx arpOct
+	lda #FOCUS_ARP
+	sta fxFocus
 	lda #1
 	sta reallocFlag
 	sta screenDirty
+	rts
+.x:
 	rts

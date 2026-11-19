@@ -61,7 +61,7 @@ def name(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.39", "V0.39" in c.screen_row(0), c.screen_row(0))
+check("header V0.40", "V0.40" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)
@@ -80,7 +80,7 @@ check("F1: up a line (SID)", c.screen_row(4).startswith("> SID"))
 c.tap("f1", ms=30)
 c.tap("return", ms=60)
 r = rows(c)
-check("HELP: the keys, as text (no cursor, F keys stay put)", "HELP" in r[0] and r[2].startswith(" ASDFG BANK")
+check("HELP: the keys, as text (no cursor, F keys stay put)", "HELP" in r[0] and r[2].startswith(" A-G BANK")
       and not any(x.startswith(">") for x in r), r[2:4])
 c.tap("f3", ms=30); c.tap("f7", ms=30)
 check("... F3 / F7 do nothing there", not any(x.startswith(">") for x in rows(c)) and c.v("menuPage") == 1)
@@ -179,7 +179,7 @@ rolls = []
 for _ in range(6):
     shift(c, "/", ms=120)
     rolls.append(patch(c))
-check("SHIFT + /: the patch rolled (effects change), a * on the name", any(x != p0 for x in rolls) and name(c).endswith("*"), name(c))
+check("SHIFT + /: the patch rolled (effects change), named RANDOM PATCH (v0.40)", any(x != p0 for x in rolls) and name(c).startswith("RANDOM PATCH"), name(c))
 check("... the tone stays (mono, Fat Bass, SID wave); v0.39: the envelope rolls too",
       all(x[0] == p0[0] and x[5] == p0[5] and x[8] == p0[8] for x in rolls)
       and len({tuple(x[6:8]) for x in rolls}) > 1, (p0[:8], [x[:8] for x in rolls]))
@@ -250,7 +250,7 @@ check("tone button 2: the PADS bank", c.screen_row(2).startswith("PADS"), c.scre
 c.midi_in(0xC0, 3, ms=300)
 check("tone button 4: the BASS bank", c.screen_row(2).startswith("BASS"), c.screen_row(2))
 c.midi_in(0xC0, 5, ms=300)
-check("tone button 6: the dice", name(c).endswith("*") and c.v("undoOk") == 1, name(c))
+check("tone button 6: the dice", name(c).startswith("RANDOM PATCH") and c.v("undoOk") == 1, name(c))
 c.midi_in(0xC0, 0, ms=300)
 c.tap("return", ms=60); sel(c, "CASIO"); c.tap("return", ms=60); sel(c, "BREATH FX2"); c.tap("crsrright", ms=60)
 back(c, 2)

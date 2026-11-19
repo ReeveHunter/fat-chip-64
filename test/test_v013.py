@@ -83,7 +83,7 @@ check("SHIFT+RETURN: back to the main page, on PLAYING", c.v("menuPage") == 0 an
       c.screen_row(9))
 c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=250)
 check("SHIFT+RETURN again: back to play, the screen redrawn", c.v("menuOn") == 0 and "FAT CHIP 64" in c.screen_row(0)
-      and c.screen_row(2).startswith("FAT   1 FAT") and c.screen_row(24).startswith("F1/F3"), (c.screen_row(0), c.screen_row(2)))
+      and c.screen_row(2).startswith("FAT   1 FAT") and c.screen_row(24).startswith("F5 FAT BASS"), (c.screen_row(0), c.screen_row(2)))
 c.set("latchStyle", 0)
 
 # ---------------------------------------------------------------- keytar clock: tempo

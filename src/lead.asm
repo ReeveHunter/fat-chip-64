@@ -7,8 +7,8 @@
 ;             they're held (v0.36: with LATCH on, it keeps sounding after you
 ;             let go); every other key is the lead.
 ; v0.36: the lead is LEAD OCTAVE up in every mode (+1 at first; SHIFT + F1 /
-; F3). SHIFT + F5 SPLIT on / off (held + a note: the split point), SHIFT + F7
-; its mode. LATCH holds KEY's chord side and TRIAD's chord.
+; F3). v0.40: SHIFT + F7 SPLIT on / off, SHIFT + F5 its mode, SHIFT + K then
+; a note: the split point. LATCH holds KEY's chord side and TRIAD's chord.
 ; The lead is one note (the last key pressed) on one voice per chip (SID 3,
 ; Game Boy pulse 1, NES pulse 1), only while it plays: the rest of the time
 ; those voices are the chord's. Its patch: SHIFT + A S D F G / Z X C V B.
@@ -220,7 +220,7 @@ LeadSide:
 	cmp splitNote
 	rts
 
-; SHIFT + F7: SPLIT's next mode (KEY, BASS, TRIAD; on if it was off)
+; SHIFT + F5: SPLIT's next mode (KEY, BASS, TRIAD; on if it was off)
 SplitNext:
 	subroutine
 	ldx clMode
@@ -237,7 +237,7 @@ SplitNext:
 	stx clLast
 	jmp ClHook
 
-; SHIFT + F5 let go with no note: SPLIT on (its last mode) / off
+; SHIFT + F7: SPLIT on (its last mode) / off
 SplitToggle:
 	subroutine
 	lda clMode
@@ -270,9 +270,11 @@ LeadOctS:
 LeadOctX:
 	rts
 
-; C= + V held, note index X pressed: the split point there; SPLIT is KEY
+; SHIFT + K tapped, note index X pressed: the split point there; SPLIT is KEY
 SplitSet:
 	subroutine
+	lda #0
+	sta spArm               ; (SHIFT + K: just the one note)
 	lda #1
 	sta spUsed
 	cpx #MIDI_FIRST
@@ -288,14 +290,6 @@ SplitSet:
 	sta clLast
 	jmp ClHook
 
-; SHIFT + F5 pressed
-SplitArm:
-	subroutine
-	lda #1
-	sta spArm
-	lda #0
-	sta spUsed
-	rts
 
 ; Allocate: the lead's voices (before anything else is shared out)
 LeadVoices:
@@ -595,6 +589,16 @@ ScrLead:
 	ldy #3
 	jsr PrintAt
 .l:
+	lda spArm               ; SHIFT + K: waiting for the note
+	beq .l2
+	lda #<txtSpQ
+	sta ptr
+	lda #>txtSpQ
+	sta ptr+1
+	ldx #10
+	ldy #3
+	jsr PrintAt
+.l2:
 	lda leadOct             ; (8 bytes each)
 	asl
 	asl
@@ -636,6 +640,7 @@ ScrLead:
 	rts
 
 splitTxt:   .word txtSpOff,txtSpKey,txtSpBass,txtSpTriad
+txtSpQ:     .byte "?   ",0
 txtSpOff:   .byte "SPLIT OFF     ",0
 txtSpKey:   .byte "SPLIT KEY     ",0
 txtSpBass:  .byte "SPLIT BASS    ",0

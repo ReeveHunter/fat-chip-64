@@ -7,7 +7,8 @@
 ;  row 9      key, notes mode, latch
 ;  row 10     arp
 ;  row 12     tempo, beat, mute
-;  row 13     SPACE's action, octave (the lowest key)
+;  row 13     SPACE's action, octave (the lowest key), transpose
+;  row 14     v0.40: the effect the C= keys work on, its setting
 ;  row 15     held notes
 ;  row 16     MIDI in
 ;  row 24     F keys
@@ -213,9 +214,9 @@ ScreenStep:
 .call:
 	jmp (ptr)
 
-SCR_STAGES equ 10
-stageLo:	.byte <ScrSound,<ScrSid,<ScrGb,<ScrNes,<ScrKey,<ScrArpLine,<ScrTempo,<ScrSpace,<ScrHeld,<ScrMidiIn
-stageHi:	.byte >ScrSound,>ScrSid,>ScrGb,>ScrNes,>ScrKey,>ScrArpLine,>ScrTempo,>ScrSpace,>ScrHeld,>ScrMidiIn
+SCR_STAGES equ 11
+stageLo:	.byte <ScrSound,<ScrSid,<ScrGb,<ScrNes,<ScrKey,<ScrArpLine,<ScrTempo,<ScrSpace,<ScrHeld,<ScrMidiIn,<ScrFx
+stageHi:	.byte >ScrSound,>ScrSid,>ScrGb,>ScrNes,>ScrKey,>ScrArpLine,>ScrTempo,>ScrSpace,>ScrHeld,>ScrMidiIn,>ScrFx
 
 ; ---- row 2: sound, POLY / MONO, Fat Bass
 ScrSound:
@@ -666,7 +667,111 @@ ScrSpace:
 	jsr ScreenAddr
 	ldx #23
 	lda octBase
-	jmp PutMidiNote
+	jsr PutMidiNote
+	PRINT 13, 27, txtTrBlank
+	lda transp              ; v0.40: TRANS +3 (nothing when 0)
+	beq .x
+	PRINT 13, 27, txtTrans
+	ldy #13
+	ldx #0
+	jsr ScreenAddr
+	lda #"+"
+	ldx transp
+	bpl .p
+	lda #"-"
+.p:
+	ldx #33
+	jsr PutChar
+	lda transp
+	bpl .n
+	eor #$FF
+	clc
+	adc #1
+.n:
+	ldx #34
+	jmp PutNum
+.x:
+	rts
+
+; ---- row 14 (v0.40): the effect the C= keys work on now, the setting
+; C= + : ; steps and its value; dark grey while the effect is off
+ScrFx:
+	subroutine
+	lda #0
+	sta t2
+	PRINT 14, 0, txtBlank
+	ldx fxFocus
+	bne .f
+	rts
+.f:
+	PRINT 14, 0, txtFxLn
+	ldx fxFocus
+	cpx #FOCUS_ARP
+	bne .e
+	PRINT 14, 4, txtArp
+	lda arpMode
+	jmp .col
+.e:
+	dex
+	stx scrFx
+	lda efPage,x            ; the effect's name: its menu page's title
+	tay
+	lda pgTitleLo,y
+	sta ptr
+	lda pgTitleHi,y
+	sta ptr+1
+	ldx #4
+	ldy #14
+	jsr PrintAt
+	ldx scrFx
+	lda efPage,x            ; the setting's name: its line on that page
+	tay
+	lda pgFirst,y
+	clc
+	adc fxParam
+	tay
+	lda mLblLo,y
+	sta ptr
+	lda mLblHi,y
+	sta ptr+1
+	ldx #17
+	ldy #14
+	jsr PrintAt
+	ldx scrFx
+	lda efP0,x
+	clc
+	adc fxParam
+	sta scrFxP
+	tax
+	jsr ParamNearest
+	ldy scrFxP
+	jsr StepLabel
+	ldx #29
+	ldy #14
+	jsr PrintAt
+	ldx scrFx
+	jsr FxIsOn
+.col:
+	sta scrFxP              ; A = on (not 0) / off
+	ldy #14
+	ldx #0
+	jsr ScreenAddr
+	lda ptr2+1
+	clc
+	adc #>(COLRAM-SCREEN)
+	sta ptr2+1
+	lda #13
+	ldx scrFxP
+	bne .c
+	lda #11
+.c:
+	ldy #4
+.cc:
+	sta (ptr2),y
+	iny
+	cpy #40
+	bne .cc
+	rts
 
 ; ---- row 15: held notes
 ScrHeld:

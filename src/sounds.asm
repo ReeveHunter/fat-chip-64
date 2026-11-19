@@ -40,6 +40,7 @@ SoundKey:
 
 ; X = sound (the keytar's voice buttons)
 SoundSet:
+	jsr SaveUndo            ; (v0.40: <- goes back to the patch before; keeps X)
 	txa
 	pha
 	jsr SoundRelease
@@ -48,8 +49,21 @@ SoundSet:
 SoundSetX:
 	stx soundMode
 	lda #0
-	sta undoOk              ; (a roll on the old patch can't be undone now)
-	lda patchSlot,x         ; its bank and slot, for the A-G / Z-B keys
+	sta tglSave             ; (C= + Z X L: nothing saved from the last patch)
+	sta tglSave+1
+	sta tglSave+2
+	jsr SlotOf
+	jsr PatchLoad
+	jsr SoundVars
+	jsr SoundApply          ; ...and come back with the new one
+	jmp Dirty
+
+; patch X: its bank and slot, for the A-G / Z-B keys (keeps X)
+SlotOf:
+	subroutine
+	cpx #$FF
+	beq .nb
+	lda patchSlot,x
 	cmp #$FF
 	beq .nb
 	ldy #0
@@ -63,10 +77,7 @@ SoundSetX:
 	sta curSlot
 	sty curBank
 .nb:
-	jsr PatchLoad
-	jsr SoundVars
-	jsr SoundApply          ; ...and come back with the new one
-	jmp Dirty
+	rts
 
 ;  built-in patch X -> livePatch, the patch everything plays from (keeps X)
 PatchLoad:
@@ -82,17 +93,6 @@ PatchLoad:
 	dey
 	bpl .src
 	rts
-
-; C: POLY <-> MONO (each sound picks one when chosen; this overrides it)
-MonoKey:
-	subroutine
-	lda monoMode
-	eor #1
-	sta monoMode
-	jsr GbLegato
-	lda #1
-	sta reallocFlag
-	jmp Dirty
 
 ; F5 (v0.37): Fat Bass on / off (until the next sound)
 FatKey:
@@ -1691,22 +1691,7 @@ SidVib:
 ; ------------------------------------------------------------ the dice
 ; (DiceRoll: patchedit.asm)
 
-; C= + /: back to the patch before the last roll
-DiceUndo:
-	subroutine
-	lda undoOk
-	beq .x
-	lda #0
-	sta undoOk
-	ldy #127
-.c:
-	lda diceUndo,y
-	sta livePatch,y
-	dey
-	bpl .c
-	jmp PatchApply
-.x:
-	rts
+; (<- undoes it: UndoKey in keys.asm)
 
 ; the live patch changed (dice, undo, SysEx): heard at once
 PatchApply:

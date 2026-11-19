@@ -313,7 +313,7 @@ ArpModeApply:
 	sta screenDirty
 	rts
 
-; F5: the arp on (in the type C= + A chose) or off
+; C= + A: the arp on (in the type C= + F7 chose) or off
 ArpToggle:
 	subroutine
 	lda arpMode
@@ -330,10 +330,12 @@ ArpToggle:
 	sta arpTemp
 	jmp ArpModeApply
 
-; C= + A: the arp type, UNISON <-> SPARKLE (doesn't start it; F5 and the ARP
+; C= + F7: the arp type, UNISON <-> SPARKLE (doesn't start it; F5 and the ARP
 ; action use it). While it runs, it changes at once.
 ArpTypeKey:
 	subroutine
+	lda #FOCUS_ARP
+	sta fxFocus
 	lda arpLast
 	cmp #ARP_UNISON
 	beq .sp
@@ -356,9 +358,9 @@ ArpPatKey:
 	ldx arpPat
 	inx
 	cpx #5
-	bcc .s
+	bcc ArpPatSet
 	ldx #0
-.s:
+ArpPatSet:
 	stx arpPat
 	lda #$FF
 	sta arpIdx              ; next step starts the pattern
@@ -366,15 +368,23 @@ ArpPatKey:
 	sta screenDirty
 	rts
 
-ArpLenKey:
+; C= + F5 (C= + L on the arp): FREE <-> the synced length it had (1/16 at first)
+ArpSyncKey:
 	subroutine
-	ldx arpLen
-	inx
-	cpx #ARP_FREE+1
-	bcc .s
-	ldx #0
+	lda #FOCUS_ARP
+	sta fxFocus
+	lda arpLen
+	cmp #ARP_FREE
+	beq .sync
+	eor #3
+	sta arpSyncLen
+	lda #ARP_FREE
+	bne .s
+.sync:
+	lda arpSyncLen
+	eor #3
 .s:
-	stx arpLen
+	sta arpLen
 	jmp ArpRateChanged
 
 ; ; : free rate slower

@@ -70,7 +70,7 @@ def lead_notes(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.39", "V0.39" in c.screen_row(0), c.screen_row(0))
+check("header V0.40", "V0.40" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- C= + V: KEY
 cv_tap(c)
@@ -138,8 +138,8 @@ c._raw_press("cbm", ms=30); c._raw_tap(";", ms=40); c._raw_release("cbm", ms=40)
 c.tap("return", ms=60)
 sel(c, "PLAYING")
 c.tap("return", ms=60)
-check("PLAYING: SPLIT (SHIFT F5) KEY, SPLIT KEY E3, SPLIT NOTE (MIDI) G3, LEAD OCTAVE +1",
-      "KEY" in row_of(c, "SPLIT (SHIFT F5)") and "E3" in row_of(c, "SPLIT KEY") and "G3" in row_of(c, "SPLIT NOTE (MIDI)")
+check("PLAYING: SPLIT (SHIFT F5/F7) KEY, SPLIT KEY E3, SPLIT NOTE (MIDI) G3, LEAD OCTAVE +1",
+      "KEY" in row_of(c, "SPLIT (SHIFT F5/F7)") and "E3" in row_of(c, "SPLIT KEY") and "G3" in row_of(c, "SPLIT NOTE (MIDI)")
       and "+1" in row_of(c, "LEAD OCTAVE"), [r for r in rows(c) if "SPLIT" in r or "LEAD" in r])
 sel(c, "CHORD CHANGE")
 for _ in range(3):
@@ -152,9 +152,9 @@ check("SPLIT KEY F7: F3", "F3" in row_of(c, "SPLIT KEY") and c.v("splitKey") == 
 sel(c, "LEAD OCTAVE")
 c.tap("f5", ms=40)
 check("LEAD OCTAVE F5: 0", row_of(c, "LEAD OCTAVE").rstrip().endswith("0") and c.v("leadOct") == 2, row_of(c, "LEAD OCTAVE"))
-sel(c, "SPLIT (SHIFT F5)")
+sel(c, "SPLIT (SHIFT F5/F7)")
 c.tap("f7", ms=40)
-check("SPLIT BASS: the KEY rows go, LEAD OCTAVE stays", "BASS" in row_of(c, "SPLIT (SHIFT F5)") and row_of(c, "SPLIT KEY") == ""
+check("SPLIT BASS: the KEY rows go, LEAD OCTAVE stays", "BASS" in row_of(c, "SPLIT (SHIFT F5/F7)") and row_of(c, "SPLIT KEY") == ""
       and row_of(c, "LEAD OCTAVE") != "", [r for r in rows(c) if r.strip()][-5:])
 c.tap("f5", ms=40)
 back(c, 2)

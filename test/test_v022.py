@@ -27,7 +27,7 @@ def mod(c, m, key, ms=60):
 c = C64(channels=None)
 c.run_ms(400)
 row = lambda r: c.screen_row(r)
-check("header V0.39", "V0.39" in row(0), row(0))
+check("header V0.40", "V0.40" in row(0), row(0))
 check("sound line: bank, slot, patch (FAT   1 FAT)", row(2).startswith("FAT   1 FAT "), row(2))
 
 # ---- banks and slots
@@ -99,7 +99,7 @@ for _ in range(4):
     if c.v("livePatch", size)[:-17] != before[:-17]:
         changed += 1
 check("SHIFT + / : the dice change the patch (most rolls)", changed >= 3, changed)
-check("... and mark the name with *", row(2)[8:24].rstrip().endswith("*"), row(2))
+check("... and name it RANDOM PATCH (v0.40)", row(2)[8:24].rstrip() == "RANDOM PATCH", row(2))
 rolled = c.v("livePatch", size)
 mod(c, "lshift", "/", ms=120)
 mod(c, "cbm", "/", ms=120)

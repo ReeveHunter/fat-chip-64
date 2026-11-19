@@ -16,6 +16,7 @@ MENU_VALCOL equ 23
 MenuOpen:
 	jsr GlitchCalm          ; (GLITCH may have the picture shaking)
 	lda #1
+	sta colDirty            ; (the play screen's dark rows: light green again)
 	sta menuOn
 	lda #0
 	sta menuRow
@@ -66,6 +67,10 @@ MenuPage:
 MenuDraw:
 	subroutine
 	jsr ClearScreen
+	lda colDirty            ; (v0.40: after the help's colours, or the play screen)
+	beq .cd
+	jsr ColourReset
+.cd:
 	lda #$80
 	sta t2
 	PRINT 0, 0, mBar
@@ -117,6 +122,12 @@ MenuDraw:
 	ldx #2
 	bne .lb
 .txt:
+	lda exK                 ; (v0.40: the help's lines in their group's colour)
+	sec
+	sbc #HELP_FIRST
+	tax
+	lda helpCol,x
+	jsr RowColour
 	ldx #1                  ; (text: from column 1)
 .lb:
 	stx t0
@@ -145,11 +156,16 @@ MenuDraw:
 ; line X shown? (Z clear = yes). Keeps X.
 ItemShown:
 	subroutine
-	lda mShowHi,x
+	lda mShowI,x
 	beq .yes
+	sty .ry+1               ; (keeps Y)
+	tay
+	lda showLHi,y
 	sta .v+2
-	lda mShowLo,x
+	lda showLLo,y
 	sta .v+1
+.ry:
+	ldy #0
 .v:
 	lda $FFFF
 	rts
@@ -185,6 +201,7 @@ MenuClose:
 	lda #0
 	sta menuOn
 	jsr ClearScreen
+	jsr ColourReset
 	lda vizOn
 	beq .play
 	jmp VizDraw
@@ -208,6 +225,43 @@ ClearScreen:
 	sta SCREEN+$2E8,x
 	inx
 	bne .c
+	rts
+
+; every colour light green again
+ColourReset:
+	subroutine
+	lda #0
+	sta colDirty
+	lda #13
+	ldx #0
+.c:
+	sta COLRAM,x
+	sta COLRAM+$100,x
+	sta COLRAM+$200,x
+	sta COLRAM+$2E8,x
+	inx
+	bne .c
+	rts
+
+; A = colour: all of row mvRow (keeps nothing but mvRow)
+RowColour:
+	subroutine
+	pha
+	lda #1
+	sta colDirty
+	ldy mvRow
+	ldx #0
+	jsr ScreenAddr
+	lda ptr2+1
+	clc
+	adc #>(COLRAM-SCREEN)
+	sta ptr2+1
+	pla
+	ldy #39
+.c:
+	sta (ptr2),y
+	dey
+	bpl .c
 	rts
 
 ; every value on the page and the cursor (and the patch name, on its pages)
@@ -674,10 +728,11 @@ MenuKey:
 	sbc #0                  ; (carry clear: count - 1)
 .set:
 	sta (ptr),y
-	lda mHookHi,x
+	ldy mHookI,x
 	beq .drawn
+	lda hookLHi,y
 	sta ptr+1
-	lda mHookLo,x
+	lda hookLLo,y
 	sta ptr
 	jsr .call
 .drawn:
@@ -780,6 +835,38 @@ DevHook:
 	eor #1
 	sta devOn,x
 	jmp ToggleDevice
+
+; GAME BOY / MIDINES CHANNELS: the value already stepped; back, then move
+; the voices properly
+GbChanHook:
+	ldx gbBase
+	jsr ChanOld
+	sta gbBase
+	jmp GbChanTo
+NesChanHook:
+	ldx nesBase
+	jsr ChanOld
+	sta nesBase
+	jmp NesChanTo
+; X = the block now -> A = the one before the step (keeps X)
+ChanOld:
+	subroutine
+	txa
+	ldy mvBack
+	bne .b
+	sec
+	sbc #1
+	bpl .x
+	lda #11
+	rts
+.b:
+	clc
+	adc #1
+	cmp #12
+	bcc .x
+	lda #0
+.x:
+	rts
 
 mHelp1:     .byte "F1 / F3 (CRSR): CHOOSE A LINE",0
 mHelp2:     .byte "F5 / F7 (CRSR RIGHT): CHANGE IT",0

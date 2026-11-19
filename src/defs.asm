@@ -107,7 +107,8 @@ K_PERIOD    equ $A0           ; . (>) SPACE mode on
 K_C         equ $A1           ; C: POLY / MONO
 K_CBM       equ $A2           ; v0.22: C= (a modifier: how you play)
 K_STOP      equ $A3           ; v0.22: RUN/STOP (tap: beat; held: beat keys)
-K_SLASH     equ $A4           ; v0.22: / mute, SHIFT+/ dice
+K_SLASH     equ $A4           ; v0.22: / mute, SHIFT+/ dice (v0.40: / dice)
+K_LEFT      equ $A5           ; v0.40: <- undo
 GCC_CHANNELS equ 113          ; Fat Chip GB v0.08: 64 + n moves its voices to channels n+1..n+5 (any channel)
 GB_BASE_DEFAULT equ 10        ; Game Boy on channels 11-15
 NES_BASE_DEFAULT equ 0        ; MidiNES on channels 1-5 (its power-on default)
@@ -810,6 +811,23 @@ brWarb      ds 1
 brDet       ds 1
 brFilt      ds 1
 brAtt       ds 1               ; BREATH VOLUME's drop, 0-15
+; v0.40: the new key layout
+fxFocus     ds 1               ; the effect C= + : ; , . L RETURN work on (+1; 0 none, FOCUS_ARP)
+fxParam     ds 1               ;   its setting for C= + : ; (from its first)
+tglSave     ds 3               ; C= + Z, X, L: the step before it went to 0
+tglDef      ds 1               ;   ParamToggle's "on" step when there's none saved
+tglY        ds 1               ;   which tglSave
+stDir       ds 1               ; ParamStep: 0 down, 1 up
+arpSyncLen  ds 1               ; the arp's synced length before FREE (eor 3: 0 = 1/16)
+playLast    ds 1               ; the play mode before DRONE
+transp      ds 1               ; SHIFT + , . : semitones (signed)
+beatBank    ds 1               ; RUN/STOP + A-G: the beat bank
+undoTag     ds 1               ; the param last saved for undo ($FF: none)
+undoSound   ds 1               ; the patch number before the last change
+chanNew     ds 1
+colDirty    ds 1               ; the menu: a colour not light green somewhere
+scrFx       ds 1               ; ScrFx's effect
+scrFxP      ds 1               ;   and setting               ; GbChanTo / NesChanTo
 ramEnd      ds 0
   if ramEnd > $CA00
     echo "RAM variables run past $CA00: clear more in Start"

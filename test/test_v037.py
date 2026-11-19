@@ -28,7 +28,7 @@ def shown(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.39", "V0.39" in c.screen_row(0), c.screen_row(0))
+check("header V0.40", "V0.40" in c.screen_row(0), c.screen_row(0))
 check("NORMAL at start: the play screen, shown", c.v("vidState") == 0 and shown(c) and c.v("vizOn") == 0)
 
 t0 = c.cpu.processorCycles

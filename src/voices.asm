@@ -810,6 +810,8 @@ NoteWasPressed:
 	sbc octBase
 	sec
 	sbc octUpAdd            ; (OCTAVE UP held)
+	sec
+	sbc transp              ; (TRANSPOSE)
 	cmp #MIDI_FIRST
 	bcs .midi
 	tay
@@ -823,6 +825,8 @@ NoteWasPressed:
 	lda midiNote,y
 	clc
 	adc octUpAdd
+	clc
+	adc transp
 	bpl .c
 	sec
 	sbc #12
@@ -1212,20 +1216,17 @@ ToggleDevice:
 	rts
 
 ; Release one device's voices, change its base channel, start it again.
-NextGbChannel:
+; X = the Game Boy's channel block, 0-11 (1-5 ... 12-16; v0.40: the menu's DEVICES)
+GbChanTo:
 	subroutine
+	stx chanNew
 	lda devOn+DEV_GB
 	pha
 	lda #0
 	sta devOn+DEV_GB
 	jsr Allocate
 	jsr ApplyVoices         ; note-offs on the old channels
-	ldx gbBase
-	inx
-	cpx #12                 ; 1-5 ... 12-16
-	bcc .ok
-	ldx #0
-.ok:
+	ldx chanNew
 	stx gbBase
 	pla
 	sta devOn+DEV_GB
@@ -1235,20 +1236,16 @@ NextGbChannel:
 	sta screenDirty
 	rts
 
-NextNesChannel:
+NesChanTo:
 	subroutine
+	stx chanNew
 	lda devOn+DEV_NES
 	pha
 	lda #0
 	sta devOn+DEV_NES
 	jsr Allocate
 	jsr ApplyVoices
-	ldx nesBase
-	inx
-	cpx #12
-	bcc .ok
-	ldx #0
-.ok:
+	ldx chanNew
 	stx nesBase
 	pla
 	sta devOn+DEV_NES
@@ -1258,7 +1255,7 @@ NextNesChannel:
 	sta screenDirty
 	rts
 
-; SHIFT+F7: everything off, held and latched notes forgotten, latch off,
+; CTRL + M: everything off, held and latched notes forgotten, latch off,
 ; devices set up again.
 Panic:
 	subroutine

@@ -61,6 +61,11 @@ STEPS = {
     "repeat": [("time", [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14]), ("repeats", list(range(1, 9))), ("level", [50, 60, 70, 80, 90, 100]),
                ("shift", [-12, -7, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 7, 12]), ("shiftIn", [0, 1]), ("hop", [0, 1, 2])],
 }
+# v0.40: the setting C= + , . makes faster (+1: a higher step is faster) and C= + L syncs
+RATE = {"vibrato": ("vibRate", 1), "warble": ("speed", 1), "tremolo": ("tremRate", 1), "filter": ("filtLfoRate", 1),
+        "pwm": ("pwmRate", 1), "dutyseq": ("stepMs", -1), "penv": ("time", -1), "rdrop": ("time", -1),
+        "glide": ("time", -1), "attack": ("blipMs", -1)}
+SYNC = {"tremolo": "tremSync"}
 FX_ORDER = ["patch", "tone", "env", "attack", "penv", "rdrop", "detune", "vibrato", "glide", "warble", "tremolo", "filter", "pwm",
             "dutyseq", "repeat"]
 ALWAYS = {"patch", "tone", "env"}
@@ -257,27 +262,33 @@ def text(lbl):
     return dict(kind=4, lbl=lbl)
 
 
+# v0.40: grouped by modifier (named once), each group its colour (Reeve's
+# sheet; white for none, as the screen is black): C64 colours
+W, OR, GR, BL, RD = 1, 8, 5, 14, 10
 HELP = [
-    "ASDFG BANK    ZXCVB PATCH 1-5",
-    "L LATCH       K + NOTE: KEY AND SCALE",
-    "= TAP TEMPO   , . TEMPO (SHIFT: 10)",
-    "/ MUTE  SHIFT+/ DICE  RESTORE: SCREEN",
-    "; : ARP SPEED SPACE ITS ACTION",
-    "F1 F3 OCTAVE  F5 FAT BASS  F7 ARP",
-    "RUN/STOP BEAT (HELD + A-H: PICK ONE)",
-    "CRSR DOWN / RIGHT: ONE KEY PLAY",
-    "SHIFT+ASDFG ZXCVB LEAD PATCH F1 F3 OCT",
-    "SHIFT+F5 SPLIT (+ A KEY: WHERE) F7 MODE",
-    "",
-    "C=+A ARP TYPE  S D F PATTERN/SPEED/OCT",
-    "C= + Z MODE  X CHORD SIZE  C MONO",
-    "C= + L LATCH STYLE  , . SPACE'S ACTION",
-    "C= + ; : MIDI IN OCTAVE  / UNDO DICE",
-    "C= + F1 F3 F5 CHIPS  F7 PANIC",
-    "IN THE MENU: F1 F3 LINE  F5 F7 VALUE",
-    "RETURN OPEN  SHIFT+RETURN BACK",
-    "SHIFT+/ ON A SETTING: ROLL JUST IT",
+    (W, "A-G BANK  Z-B PATCH  : ; PREV / NEXT"),
+    (W, "K KEY  L LATCH  N CHORD  M MUTE"),
+    (W, "/ DICE  <- UNDO  = TAP  , . NUDGE"),
+    (W, "F1 F3 OCT  F5 FAT BASS  F7 VOICES"),
+    (W, "SPACE FX  CRSR 1-KEY  RESTORE SCREEN"),
+    (OR, "SHIFT  A-G Z-B : ; LEAD PATCH"),
+    (OR, "  K SPLIT POINT  F5 MODE  F7 ON/OFF"),
+    (OR, "  F1 F3 LEAD OCT  , . TRANSPOSE"),
+    (GR, "C=  A ARP S RPT D DUTY F FILT G GLIDE"),
+    (GR, "  H DETUNE J WARBLE K BLIP Z ATK X REL"),
+    (GR, "  C TREM V VIB B BEND IN N OUT M PWM"),
+    (GR, "  : ; SETTING  , . SPEED  L SYNC"),
+    (GR, "  RETURN NEXT SETTING  SPACE VINYL"),
+    (GR, "  F1 F3 ARP OCT  F5 SYNC  F7 TYPE"),
+    (BL, "STOP  A-G Z-B BEAT  : ; PREV / NEXT"),
+    (BL, "  , . TEMPO  SPACE FILL  TAP: GO/STOP"),
+    (RD, "CTRL  A S D CHIPS  F SYNTHCART SYNC"),
+    (RD, "  H J TUNE  L LATCH STYLE  M PANIC"),
+    (RD, "  , . SPACE FX  F1 F3 MIDI  CRSR DRONE"),
 ]
+
+
+CHANS = [f"{i + 1}-{i + 5}" for i in range(12)]
 
 
 def page(lbl, target, show=None):
@@ -308,7 +319,7 @@ def build_pages(params, effects):
         page("CASIO DH-100", "dh", show="useDh"),
         page("ATARI SYNTHCART", "sc", show="useSc"),
     ])
-    add_page("help", "HELP: THE KEYS", None, [text(h) if h else None for h in HELP], parent="main")
+    add_page("help", "HELP: THE KEYS", None, [text(h) for c, h in HELP], parent="main")
     pl = []
     for e in effects:
         if e["eid"] == "patch":
@@ -322,7 +333,7 @@ def build_pages(params, effects):
         items = [dict(kind=3, lbl=params[e["p0"] + i]["name"], param=e["p0"] + i) for i in range(e["np"])]
         add_page("fx_" + e["eid"], FXNAME.get(e["eid"], EFF[e["eid"]]["name"]), "@NAME", items, parent="patch")
     add_page("playing", "PLAYING", None, [
-        enum("LATCH STYLE (C= L)", "latchStyle", ["SMART", "HOLD", "ADD"], hook="LatchStyleHook"),
+        enum("LATCH STYLE (CTRL L)", "latchStyle", ["SMART", "HOLD", "ADD"], hook="LatchStyleHook"),
         enum("SPACE", "spaceAct", ACTS, hook="SpaceHook"),
         enum("BEND RANGE", "bendRange", [f"{i} SEMITONE" + ("S" if i > 1 else "") for i in range(1, 25)]),
         enum("BEAT TEMPO", "beatTempo", ["DEFAULT", "IGNORE"]),
@@ -333,7 +344,7 @@ def build_pages(params, effects):
         enum("WANDER TIME", "wanderT", [f"{t} S" for t in WANDER_S]),
         enum("DRONE VOICING", "droneVc", ["FIFTHS", "FIFTHS + 9TH", "SUS4"], hook="SettingChanged"),
         None,
-        enum("SPLIT (SHIFT F5)", "clMode", ["OFF", "KEY", "BASS", "TRIAD"], hook="ClHook"),
+        enum("SPLIT (SHIFT F5/F7)", "clMode", ["OFF", "KEY", "BASS", "TRIAD"], hook="ClHook"),
         note("SPLIT KEY", "splitKey", 24, key=True, hook="Dirty", show="clKeyOn"),
         note("SPLIT NOTE (MIDI)", "splitNote", 128, show="clKeyOn"),
         number("LEAD OCTAVE", "leadOct", 2, hook="Dirty", show="clOn"),
@@ -350,6 +361,9 @@ def build_pages(params, effects):
         enum("YAMAHA SHS-10", "useShs", ["NOT USED", "IN USE"], hook="UseHook"),
         enum("CASIO DH-100", "useDh", ["NOT USED", "IN USE"], hook="UseHook"),
         enum("ATARI SYNTHCART", "useSc", ["NOT USED", "IN USE"], hook="UseHook"),
+        None,
+        enum("GAME BOY CHANNELS", "gbBase", CHANS, hook="GbChanHook"),
+        enum("MIDINES CHANNELS", "nesBase", CHANS, hook="NesChanHook"),
     ], parent="main")
     add_page("shs", "YAMAHA SHS-10", "MIDI IN", [
         enum("TEMPO", "shsTempo", ["FOLLOW", "IGNORE"], hook="SyncDerive"),
@@ -371,7 +385,7 @@ def build_pages(params, effects):
         enum("PORTAMENTO BUTTON", "dhPort", ACTS),
         enum("TONE BUTTONS", "dhTone", ["PICK BANK", "IGNORE"]),
     ], parent="main")
-    add_page("sc", "ATARI SYNTHCART", "TEMPO: , . NUDGE, SHIFT , . STEP", [
+    add_page("sc", "ATARI SYNTHCART", "TEMPO: STOP + , . STEP", [
         enum("TEMPO", "scSync", ["OFF", "SYNC"], hook="SyncDerive"),
         number("TRIM", "scTrim", 8, hook="TempoHook"),
         None,
@@ -424,6 +438,8 @@ def main():
     A(f"NUM_FX      equ {len(effects)}")
     A(f"FX_VIB      equ {[e['eid'] for e in effects].index('vibrato')}")
     A(f"FX_PWM      equ {[e['eid'] for e in effects].index('pwm')}")
+    for i, e in enumerate(effects):                     # (v0.40: the C= keys)
+        A(f"FXI_{e['eid'].upper():8s}equ {i}")
     A(f"PG_PATCH    equ {pnum['patch']}")
     for n in ["gbAtk", "gbDec", "gbRel", "nesEnv", "nesAtk", "nesDec", "nesSus", "nesRel", "sndAD", "sndSR"] + LFO:
         A(f"FLD_{n:10s}equ {FI[n]}")
@@ -455,9 +471,16 @@ def main():
     A("mCount:     .byte " + ",".join(map(str, counts)))
     lo_hi("mArg", args)
     lo_hi("mVal", vlo)
-    lo_hi("mHook", hooks)
+    # v0.40: hooks and shows by number (0: none), each name once
+    hl = ["0"] + sorted(set(h for h in hooks if h != "0"))
+    sl = ["0"] + sorted(set(h for h in shows if h != "0"))
+    A("mHookI:     .byte " + ",".join(str(hl.index(h)) for h in hooks))
+    A("mShowI:     .byte " + ",".join(str(sl.index(h)) for h in shows))
+    lo_hi("hookL", hl)
+    lo_hi("showL", sl)
     lo_hi("mLbl", lbls)
-    lo_hi("mShow", shows)
+    A(f"HELP_FIRST  equ {PAGES[pnum['help']]['first']}")
+    A("helpCol:    .byte " + ",".join(str(c) for c, h in HELP))
     pool = {}
 
     def sref(v):
@@ -486,8 +509,9 @@ def main():
     A("pgFx:       .byte " + ",".join(str(next((k for k, e in enumerate(effects) if "fx_" + e["eid"] == p["name"]), 255)) for p in PAGES))
     # fine tuning: |2^(c/1200) - 1| x 65536 for c = 0..100 cents, up and down
     import math
-    up = [round((2 ** (c / 1200) - 1) * 65536) for c in range(101)]
-    dn = [round((1 - 2 ** (-c / 1200)) * 65536) for c in range(101)]
+    # (v0.40: just as far as FINE TUNE and the Synthcart's tunings reach: -85..+60)
+    up = [round((2 ** (c / 1200) - 1) * 65536) for c in range(61)]
+    dn = [round((1 - 2 ** (-c / 1200)) * 65536) for c in range(86)]
     A("tuneUpL:    .byte " + ",".join(f"<{v}" for v in up))
     A("tuneUpH:    .byte " + ",".join(f">{v}" for v in up))
     A("tuneDnL:    .byte " + ",".join(f"<{v}" for v in dn))
@@ -530,6 +554,14 @@ def main():
     A("efProb:     .byte " + ",".join(str(e["prob"]) for e in effects))
     A("efDice:     .byte " + ",".join(str(e["dice"]) for e in effects))
     A("efAlways:   .byte " + ",".join(str(e["always"]) for e in effects))
+    # v0.40: C= + , . (its rate or time: the setting, + $80 when a higher step is slower)
+    # and C= + L (its tempo sync setting), from the effect's first; $FF: none
+    def rel(e, pid):
+        ids = [params[e["p0"] + i]["pid"] for i in range(e["np"])]
+        return ids.index(pid)
+    A("efRate:     .byte " + ",".join(str(rel(e, RATE[e["eid"]][0]) + (128 if RATE[e["eid"]][1] < 0 else 0))
+                                        if e["eid"] in RATE else "$FF" for e in effects))
+    A("efSync:     .byte " + ",".join(str(rel(e, SYNC[e["eid"]])) if e["eid"] in SYNC else "$FF" for e in effects))
     lo_hi("efOff", [f"eO{i}" for i in range(len(effects))])
     lo_hi("efOn", [f"eN{i}" for i in range(len(effects))])
     for i, e in enumerate(effects):

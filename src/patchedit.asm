@@ -425,6 +425,12 @@ ParamSet:
 	subroutine
 	sta peSet
 	stx peSP
+	cpx undoTag             ; (v0.40: a run of steps on one setting: one undo)
+	beq .t
+	jsr SaveUndo
+	ldx peSP
+	stx undoTag
+.t:
 	lda prFx,x
 	tax
 	stx peSE
@@ -458,6 +464,7 @@ ParamSet:
 ; X = effect: on <-> off, heard at once
 FxToggle:
 	subroutine
+	jsr SaveUndo
 	stx peSE
 	jsr FxIsOn
 	beq .on
@@ -546,18 +553,28 @@ DiceRoll:
 	cpx #NUM_FX
 	bne .e
 	jsr LfoFix
-	jsr MarkEdited
+	ldy #NAME_LEN-1         ; (v0.40: its name RANDOM PATCH)
+.n:
+	lda txtRandom,y
+	sta patchName,y
+	dey
+	bpl .n
 	jmp PatchApply
+txtRandom:  .byte "RANDOM PATCH    "
 
-; the live patch, for C= + /
+; the live patch, for <- (keeps X)
 SaveUndo:
 	subroutine
-	ldy #127
+	ldy #PATCH_SIZE-1
 .u:
 	lda livePatch,y
 	sta diceUndo,y
 	dey
 	bpl .u
+	lda soundMode
+	sta undoSound
+	lda #$FF
+	sta undoTag
 	lda #1
 	sta undoOk
 	rts

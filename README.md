@@ -281,51 +281,80 @@ message queues froze for another 33 s, filled up and dropped messages
 The Incredible Musical Keyboard overlay plays two octaves (C to A#); the
 lowest key (Q) starts at C3.
 
-**Plain keys (v0.22)**
+**The keys (v0.40: Reeve's Fat Chip Shortcuts sheet).** Each modifier is a
+layer: plain keys play and pick, SHIFT the split and lead, C= the effects,
+RUN/STOP the beats and tempo, CTRL the setup. The menu's HELP page lists them
+too, each layer in its colour.
 
 | Key | Does |
 |---|---|
 | Overlay keys | Play notes (through the notes mode) |
 | A S D F G | Bank: FAT, PADS, LEADS, BASS, FX. Switches at once, keeping the slot (an empty slot: the bank's first patch) |
-| Z X C V B | Patch 1–5 in the bank (an empty slot does nothing). The sound line shows bank, slot and patch: `PADS  3 BREATHING PAD` |
+| Z X C V B | Patch 1–5 in the bank (an empty slot does nothing) |
+| : / ; | The previous / next patch, on through the banks |
+| K, then a note or a shape | Key and scale, when you let go (the notes don't play): one note or a major triad = major; root + minor third / minor triad = minor; minor triad + 6th = dorian; root + flat 2nd = phrygian; root + sharp 4th = lydian; root + flat 7th = mixolydian; minor triad + major 7th = harmonic minor; root + 4th + 5th = pentatonic; augmented triad = whole tone; diminished triad = diminished. K again first: never mind |
 | L | Latch on / off (in the LATCH STYLE) |
-| K, then a note or a shape | Key and scale, when you let go (the notes don't play): one note or a major triad = major; root + minor third / minor triad = minor; minor triad + 6th = dorian; root + flat 2nd = phrygian; root + sharp 4th = lydian; root + flat 7th = mixolydian; minor triad + major 7th = harmonic minor; root + 4th + 5th = pentatonic; augmented triad = whole tone; diminished triad = diminished. K again first: never mind. SMART CHORD and EXT build in the scale |
+| N | SMART CHORD size: 5TH → TRIAD → 7TH → 9TH → 11TH |
+| M | Mute everything (border red) |
+| / | The dice: the effects and envelope roll; the patch is called RANDOM PATCH. In the menu, SHIFT + / on a patch setting rolls just it |
+| ← | Undo the last patch change (the dice, a new patch, an effect or a setting); again: redo |
 | = | Tap tempo |
-| , / . (< >) | Tempo −1 / +1 BPM; with SHIFT −10 / +10. With SYNTHCART SYNC: about 3% slower / faster while held; with SHIFT, Synthcart's next tempo |
-| / | Mute everything (border red) |
-| SHIFT + / (?) | The dice: the effects (detune, glide, warble, filter, PWM, tremolo, vibrato) roll, each on with its chance; tone, envelope and levels stay. The name gets a *. In the menu, on a patch setting: just that setting |
-| ; / : | FREE arp speed faster / slower |
-| SPACE | Its action while held |
+| , / . | A DJ nudge: about 3% slower / faster while held |
+| SPACE | Its FX while held (CTRL + , . choose it) |
 | F1 / F3 | Octave up / down |
-| F5 | Arp on / off, in the type C= + A chose |
-| F7 | The visualizer (GLITCH) on / off |
-| CRSR DOWN / CRSR RIGHT | One Key Play (when it's on): the next step of the phrase |
+| F5 | Fat Bass on / off |
+| F7 | POLY → MONO → SMART CHORD |
+| CRSR DOWN / CRSR RIGHT | One Key Play (when it's on). In the menu: a line down / a value up (SHIFT: up / down) |
 | RUN/STOP | Tapped: beat start / stop |
-| RETURN | The menu (SHIFT+RETURN backs out; F1 / F3 choose a line, F5 / F7 change it; HELP lists the keys) |
-| RESTORE (the overlay's top B) | Both screens off / on (C64 and Game Boy) |
-| CTRL + F3 / F5 | Game Boy / NES to the next block of channels |
+| RETURN | The menu (SHIFT+RETURN backs out) |
+| RESTORE (the overlay's top B) | NORMAL → VISUALIZER → SCREENS OFF |
 
-**C= held: how you play**
+| SHIFT + | Does |
+|---|---|
+| A S D F G / Z X C V B | The lead's bank / patch (SPLIT on or off) |
+| : / ; | The lead's previous / next patch |
+| K, then a note | The split point (SPLIT KEY); row 3 shows ? while it waits |
+| F5 / F7 | SPLIT's mode (KEY, BASS, TRIAD) / SPLIT on or off |
+| F1 / F3 | The lead an octave up / down |
+| , / . | Transpose everything a semitone down / up (−12..+12; row 13 shows TRANS) |
 
 | C= + | Does |
 |---|---|
-| A | Arp type: UNISON ↔ SPARKLE (doesn't start it; F5 and the ARP action use it) |
-| S / D / F | Arp pattern / speed / SPARKLE octave |
-| Z | POLY → SMART CHORD → DRONE |
-| X | SMART CHORD size: 5TH → TRIAD → 7TH → 9TH → 11TH |
-| C | POLY ↔ MONO |
-| L | Latch style: SMART / HOLD / ADD |
-| , / . | What SPACE does |
-| ; / : | Incoming MIDI notes an octave down / up (−4 to +4) |
-| / | Undo the last dice roll |
-| F1 / F3 / F5 | SID / Game Boy / NES on or off (SHIFT + F1/F3/F5 too) |
-| F7 | Panic (SHIFT + F7 too) |
+| A | The arp on / off |
+| S D F G H J K | REPEAT, DUTY STEPS, FILTER, GLIDE, DETUNE, WARBLE, ATTACK (blip) on / off |
+| C V B N M | TREMOLO, VIBRATO, BEND IN, BEND OUT, PWM on / off |
+| Z / X | The envelope's attack / release: instant ↔ as it was (or 500 ms / 750 ms) |
+| : / ; | The last effect's setting down / up (the arp: its pattern) |
+| RETURN | The last effect's next setting for : ; |
+| , / . | The last effect slower / faster (its rate or time; the arp's speed) |
+| L | The last effect's tempo sync on / off (TREMOLO SYNC; the arp) |
+| SPACE | VINYL while held |
+| F1 / F3 | SPARKLE arp octave down / up |
+| F5 | The arp FREE ↔ tempo synced |
+| F7 | The arp type: UNISON ↔ SPARKLE |
 
-**RUN/STOP held: beats** (more after the beats overhaul)
+Row 14 shows the effect the C= keys work on, the setting and its value
+(dark grey while the effect is off).
 
 | RUN/STOP + | Does |
 |---|---|
-| A S D F G H | Pick a beat: ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK, 6/8 (and its drum kit) |
+| A S D F G / Z X C V B | Beat bank / beat in it (bank 1: ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK; bank 2: 6/8) |
+| : / ; | The previous / next beat |
+| , / . | Tempo −1 / +1 BPM (SYNTHCART SYNC: its next tempo) |
+| SPACE | FILL while held |
+
+| CTRL + | Does |
+|---|---|
+| A / S / D | SID / Game Boy / NES on or off |
+| F | Synthcart tempo sync on / off |
+| H / J | Fine tune a cent down / up |
+| L | Latch style: SMART / HOLD / ADD |
+| M | Panic |
+| , / . | What SPACE does |
+| F1 / F3 | Incoming MIDI notes an octave up / down |
+| CRSR | PLAY ↔ DRONE |
+
+The Game Boy's and NES's channel blocks are in the menu's DEVICES page.
 
 **Banks**
 

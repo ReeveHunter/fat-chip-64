@@ -549,6 +549,7 @@ hiEnd:
     err
   endif
   if hiPhys + hiEnd - hiStart > $D000
-    echo "the program file runs into the I/O at $D000"
-    err
+    ; (v0.40: an unresolved name, not err: the first pass guesses the code
+    ;  long and err would stop it there; this fails only if still true)
+    .byte PROGRAM_FILE_RUNS_INTO_THE_IO_AT_D000
   endif
