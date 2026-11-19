@@ -267,6 +267,8 @@ GbPut:
 	subroutine
 	; write the slot at head first (always free: one slot stays empty),
 	; then publish head unless the queue is full. Uses only A and X.
+	lda gbDry               ; (v0.46: SoundGb's dry run after a CC 114)
+	bne .full
 	ldx gbqHead
 	lda mS
 	sta gbqS,x

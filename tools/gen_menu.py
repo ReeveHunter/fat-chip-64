@@ -362,6 +362,7 @@ def build_pages(params, effects):
         enum("CASIO DH-100", "useDh", ["NOT USED", "IN USE"], hook="UseHook"),
         enum("ATARI SYNTHCART", "useSc", ["NOT USED", "IN USE"], hook="UseHook"),
         None,
+        enum("GAME BOY", "gbFc", ["FAT CHIP GB", "OTHER (MGB)"]),
         enum("GAME BOY CHANNELS", "gbBase", CHANS, hook="GbChanHook"),
         enum("MIDINES CHANNELS", "nesBase", CHANS, hook="NesChanHook"),
     ], parent="main")

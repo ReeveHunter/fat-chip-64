@@ -19,6 +19,7 @@ def check(name, cond, info=""):
 
 c = C64()
 c.run_ms(150)
+c.set("gbFc", 1)                 # (v0.46: the CC way, which these check)
 
 
 def held():

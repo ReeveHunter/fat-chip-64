@@ -54,6 +54,8 @@ SoundSetX:
 	sta tglSave+2
 	jsr SlotOf
 	jsr PatchLoad
+	lda #1
+	sta gbFresh             ; (v0.46: SoundGb may send just CC 114)
 	jsr SoundVars
 	jsr SoundApply          ; ...and come back with the new one
 	jmp Dirty
@@ -779,6 +781,47 @@ SoundGb:
 	bne .on
 	rts
 .on:
+	lda gbFresh             ; v0.46: a built-in sound as it is, to Fat Chip GB:
+	beq .full               ;  one CC 114 (it has its own copy of the CCs below)
+	lda #0
+	sta gbFresh
+	lda gbFc
+	bne .all
+	ldx soundMode
+	cpx #NUM_SOUNDS
+	bcs .all
+	lda actCnt+A_WOBBLE     ; (nothing in play that changes them)
+	ora actCnt+A_WIDE
+	ora vibBtn
+	ora vibLock
+	ora detLock
+	ora warbLock
+	ora brWarb
+	ora glideBtn
+	bne .all
+	lda effMode
+	cmp #MODE_DRONE
+	beq .all
+	lda gbBase
+	and #15
+	ora #$B0
+	sta mS
+	lda #GCC_SOUND
+	sta mD1
+	stx mD2
+	jsr GbPut
+	lda #1                  ; the rest dry: just what SoundGb remembers sending
+	sta gbDry
+	jsr .all
+	lda #0
+	sta gbDry
+	lda monoMode            ; (its copy has the sound's own legato: the menu's
+	cmp sndMono             ;  MONO / POLY or F7 says otherwise, send it again)
+	beq .r
+	jmp GbLegato
+.r:	rts
+.full:
+.all:
 	lda #0
 	sta t3                  ; channel 0-2: pulse 1, pulse 2, wave
 .ch:

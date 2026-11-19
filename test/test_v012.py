@@ -65,6 +65,7 @@ def longest_pass(c, n=60):
 # ---------------------------------------------------------------- channels
 c = C64(channels=None)
 c.run_ms(400)
+c.set("gbFc", 1)                 # (v0.46: the CC way, which these check)
 m = c.midi()
 first = m[0]
 check("startup: the first message moves the Game Boy to 11-15 (CC 113 = 74 on ch 11)",
@@ -77,8 +78,8 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
-check("screen: header V0.45, sound line, tempo / beat line",
-      "V0.45" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
+check("screen: header V0.46, sound line, tempo / beat line",
+      "V0.46" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
       and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  BEAT ELECTRO  STOP",
       (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles

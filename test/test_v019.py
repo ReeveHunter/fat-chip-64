@@ -27,7 +27,8 @@ check("soundtab.asm is up to date with patches.json", open(os.path.join(ROOT, "s
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.45", "V0.45" in c.screen_row(0), c.screen_row(0))
+c.set("gbFc", 1)                 # (v0.46: the CC way, which these check)
+check("header V0.46", "V0.46" in c.screen_row(0), c.screen_row(0))
 
 
 def gb_ccs(c, t0):

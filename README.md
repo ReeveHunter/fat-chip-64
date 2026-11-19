@@ -6,6 +6,11 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.46:** a built-in sound goes to the Game Boy as one CC.
+- **CC 114:** choosing a built-in sound sends Fat Chip GB (v0.10 or newer) one message, CC 114 = the sound's number, instead of about 45 CCs. The Game Boy has its own copy of every built-in sound's settings and shows the sound's name on its cards. Anything that changes the Game Boy's part (a held or locked effect, DRONE, the menu's MONO / POLY against the sound's own) still sends the CCs as before, and live edits are still CCs.
+- **DEVICES > GAME BOY:** FAT CHIP GB (CC 114) or OTHER (MGB), which always sends the CCs.
+- `tools/gen_gb_sounds.py` makes the Game Boy's copy (`../fat-chip-gb/src/gen/fcsounds.c`) by running Fat Chip 64 in the simulator. Run it whenever the built-in sounds change, then rebuild both.
+
 **v0.45:** the C= keys work on the chosen effect as the menu does: C= + `:` / `;` choose the previous / next effect without switching it (ENVELOPE ... REPEAT, then the arp; row 14 shows it, dark grey while off); C= + CRSR DOWN its next setting (SHIFT: the one before); C= + CRSR RIGHT its value (SHIFT: back; the arp: its pattern); C= + RETURN opens the menu on that effect's page at that setting, and SHIFT + RETURN there goes straight back to playing.
 
 **v0.44:** F5 is on / off and F7 the cycle in every layer (SHIFT + F5 SPLIT on / off, SHIFT + F7 its mode); C= + F1 / F3 arp octave up / down (F1 up everywhere); in POLY and MONO, row 9 shows SMART CHORD's size in dark grey (N sets it for later); One Key Play moves with the lead's octave (SHIFT + F1 / F3; at the usual LEAD +1 it plays where it always did).
@@ -284,7 +289,7 @@ message queues froze for another 33 s, filled up and dropped messages
    **MIDI emulation = DATEL / Siel / JMS** (same as Cynthcart).
 2. **Wire** Kerberos MIDI OUT → a MIDI thru/splitter → the Game Boy's MIDI
    adapter and the MidiNES.
-3. **Game Boy:** Fat Chip GB **v0.08** or newer. Fat Chip 64 moves its voices
+3. **Game Boy:** Fat Chip GB **v0.10** or newer (v0.08 works with DEVICES > GAME BOY set to OTHER (MGB)). Fat Chip 64 moves its voices
    to channels **11–15** at startup (CC 113) and switches it to the FAT CHIP
    profile (header shows FC), whatever channels it was set to.
 4. **NES:** MidiNES on channels **1–5**, its power-on default (D-pad on the NES
@@ -484,6 +489,8 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
+| `test/test_v046.py` | CC 114: one message for a built-in sound, the CCs when something changes the Game Boy's part or for OTHER (MGB) |
+| `tools/gen_gb_sounds.py` | the built-in sounds' Game Boy CCs, recorded in the simulator, for Fat Chip GB's ROM |
 | `test/test_gb_channels.py` | end to end: CC 113 moves Fat Chip GB to 11–15, chord and MONO legato arrive |
 | `src/nesenv.asm`, `src/nestables.asm` | MidiNES envelopes (PADS): CC7 envelope on the pulses, triangle release drop |
 | `test/test_nesenv.py` | MidiNES startup settings, envelopes, drop, hard cuts |

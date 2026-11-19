@@ -42,7 +42,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.45", "V0.45" in c.screen_row(0), c.screen_row(0))
+check("header V0.46", "V0.46" in c.screen_row(0), c.screen_row(0))
 S = c.sym
 
 # ---------------------------------------------------------------- plain keys
@@ -165,8 +165,10 @@ check("C= + Z again: the attack the other way", a1 != a2)
 mod(c, "cbm", "c")
 check("C= + C: TREMOLO", fx_on(c, S["FXI_TREMOLO"]), c.v("fxFocus"))
 mod(c, "cbm", "l")
+c.run_ms(100)                             # (the row redrawn)
 check("C= + L: TREMOLO SYNC on (1/4)", "SYNC" in c.screen_row(14) and "1/4" in c.screen_row(14), c.screen_row(14))
 mod(c, "cbm", "l")
+c.run_ms(100)
 check("C= + L again: FREE", "FREE" in c.screen_row(14), c.screen_row(14))
 mod(c, "cbm", "c")
 

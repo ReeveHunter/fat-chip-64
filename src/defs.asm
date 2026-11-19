@@ -69,6 +69,7 @@ GCC_DOWNBEAT equ 109
 GCC_LATCH   equ 110
 GCC_PANIC   equ 111
 GCC_DISPLAY equ 112
+GCC_SOUND   equ 114           ; v0.46: Fat Chip GB v0.10 plays built-in sound n from its own copy
 PROFILE_F   equ 70
 
 ; key codes from the matrix map (keymap): 0-23 = overlay notes
@@ -838,7 +839,10 @@ nfxWarb     ds 1               ; the NES warbles (not 0)
 wbX         ds 1               ; WarbTick's
 wbY         ds 1
 menuJump    ds 1               ; v0.45: the page C= + RETURN opened (SHIFT + RETURN there: play)
-colDirty    ds 1               ; the menu: a colour not light green somewhere
+colDirty    ds 1
+gbFresh     ds 1               ; v0.46: a built-in sound just loaded, unchanged (SoundGb: CC 114)
+gbFc        ds 1               ; DEVICES GAME BOY: 0 FAT CHIP GB (CC 114), 1 OTHER (the CCs)
+gbDry       ds 1               ; GbPut sends nothing (SoundGb: just the caches)               ; the menu: a colour not light green somewhere
 scrFx       ds 1               ; ScrFx's effect
 scrFxP      ds 1               ;   and setting               ; GbChanTo / NesChanTo
 ramEnd      ds 0
