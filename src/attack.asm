@@ -1,17 +1,17 @@
-; Fat Chip 64 - ATTACK, BEND IN, BEND OUT (v0.30): how each note starts and
-; ends in pitch
+; Fat Chip 64 - BEND IN, BEND OUT (v0.30; v0.41: ATTACK folded into BEND IN):
+; how each note starts and ends in pitch
 ;
-; ATTACK (the SID): BLIP: an octave up for one BLIP STEP, then the note
-;   (OCTAVE + 5TH: an octave, a fifth, the note; 2 OCTAVES: two up, one up,
-;   the note); CLICK: the first 20 ms as noise.
 ; BEND IN: each new note starts AMOUNT semitones away (above: a drop, below:
-;   a scoop) and bends to its pitch over TIME: the SID and NES slide it (the
-;   SID per voice, the NES with its glide), the Game Boy has its own pitch
-;   envelope (CC 80 / 81).
+;   a scoop) and comes to its pitch over TIME. SLIDE: the SID and NES slide
+;   it (the SID per voice, the NES with its glide), the Game Boy has its own
+;   pitch envelope (CC 80 / 81). STEP: the SID and NES hold it there for TIME,
+;   then jump (the chip-tune BLIP); the Game Boy slides as fast as it can.
+;   CLICK (the SID): the first 20 ms of each note as noise.
 ; BEND OUT (the SID): a note let go sags AMOUNT semitones over TIME while its
 ;   release rings.
 
-; SidFxs pitch loop, SID voice envY: ATTACK's clock; the CLICK ends
+; SidFxs pitch loop, SID voice envY: the note's clock; the CLICK ends; a STEP
+; jumps to the note
 AtkStep:
 	subroutine
 	ldy envY
@@ -23,24 +23,37 @@ AtkStep:
 .t:
 	sta atkT,y
 	lda clickOn,y
-	beq .x
+	beq .s
 	lda atkT,y
 	cmp #5                  ; (20 ms of noise)
-	bcc .x
+	bcc .s
 	lda #0
 	sta clickOn,y
 	ldx sidOfs,y
 	lda sidGate,y
 	sta SID+4,x
+.s:
+	lda sK,y
+	cmp #$FF                ; (STEP: held)
+	bne .x
+	lda atkT,y
+	cmp sndStepT
+	bcc .x
+	lda sidTgtLo,y          ; TIME's up: the note
+	sta sidBaseLo,y
+	lda sidTgtHi,y
+	sta sidBaseHi,y
+	lda #0
+	sta sK,y
 .x:
 	rts
 
 ; a SID voice's gate went on (Y = SID voice, t2 = its registers): the CLICK
-; starts, the BLIP is there from the start. Keeps Y.
+; starts. Keeps Y.
 ClickOn:
 	subroutine
 	lda sndClick
-	beq .b
+	beq .x
 	lda #1
 	sta clickOn,y
 	lda sidGate,y
@@ -48,76 +61,8 @@ ClickOn:
 	ora #$80                ; noise
 	ldx t2
 	sta SID+4,x
-.b:
-	lda sndBlip
-	beq .x
-	jmp SidFreqOut
 .x:
 	rts
-
-; SidFreqOut: bT3:bT2 (and mulA) up by the BLIP's step now (Y = SID voice).
-; Keeps Y and the temps (t0-t3).
-BlipApply:
-	subroutine
-	lda atkT,y
-	ldx #0
-.d:
-	cmp sndBlipT            ; step = time / BLIP STEP
-	bcc .s
-	sbc sndBlipT
-	inx
-	cpx #2
-	bcc .d
-	rts                     ; (past the blip)
-.s:
-	txa
-	sta blT
-	lda sndBlip
-	asl
-	adc blT
-	tax
-	lda blipTab-2,x         ; 0 none, 1 x 2, 2 x 4, 3 x 1.5
-	beq .x
-	cmp #3
-	beq .f
-	tax
-.o:
-	asl bT2
-	rol bT3
-	bcc .on
-	lda #$FF                ; (the top of the SID's range)
-	sta bT2
-	sta bT3
-	bne .w
-.on:
-	dex
-	bne .o
-	beq .w
-.f:
-	lda bT3                 ; x 1.5
-	lsr
-	sta blT
-	lda bT2
-	ror
-	clc
-	adc bT2
-	sta bT2
-	lda blT
-	adc bT3
-	bcc .f1
-	lda #$FF
-	sta bT2
-.f1:
-	sta bT3
-.w:
-	lda bT2
-	sta mulA
-	lda bT3
-	sta mulA+1
-.x:
-	rts
-
-blipTab:    .byte 1,0, 1,3, 2,1     ; OCTAVE, OCTAVE + 5TH, 2 OCTAVES: steps 0 and 1
 
 ; VoiceSet, a SID voice's new note (Y = SID voice, t0 = the voice, t3 = a new
 ; press): BEND IN starts it away from its pitch
@@ -144,6 +89,10 @@ BendIn:
 	lda ptr+1
 	sta sidBaseHi,y
 	lda sndPenvK
+	ldx sndStep
+	beq .k
+	lda #$FF                ; (STEP: held; AtkStep jumps)
+.k:
 	sta sK,y
 .x:
 	rts

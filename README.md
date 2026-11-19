@@ -6,6 +6,10 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.41:** a packed program file, and ATTACK folded into BEND IN.
+- **The program file is packed** (`tools/crunch.py`): the menu's $E000 tables, and as much of the code as it takes, unpack at start (a fraction of a second; up to about 1.3 s once the code is much bigger). The code can now grow to $C000, about 4 KB more than before. Flash and run `bin/fatchip64.prg` as always.
+- **BEND IN has a SHAPE and a CLICK:** SLIDE (as before) or STEP: held AMOUNT away for TIME, then the note: the old ATTACK BLIP (AMOUNT 12 = an octave). CLICK: the first 20 ms as noise (AMOUNT 0: just the click). The ATTACK effect is gone; older patches with it turn into BEND IN STEP / CLICK when loaded (here and in Chip Lab). C= + K is free.
+
 **v0.39:** an audible SID filter, dice that roll the envelope, 43 more demo patches.
 - **The SID filter stays where a 6581 can be heard:** every cutoff (the patch's, its envelope, LFO and key track, FILTER SWEEP and the DH-100's breath) is put into the range $28–$EF. Below that the 6581's filter is all but shut, which is why the SID went quiet whenever a filter dipped there; above it, it hardly changes.
 - **The dice (SHIFT + /) roll the envelope too** (attack, decay, sustain, release, within their dice ranges), and the newer effects: ATTACK, BEND IN, BEND OUT, REPEAT and DUTY SEQ, each by its chance. The tone, levels and octaves still stay.
@@ -321,8 +325,8 @@ too, each layer in its colour.
 | C= + | Does |
 |---|---|
 | A | The arp on / off |
-| S D F G H J K | REPEAT, DUTY STEPS, FILTER, GLIDE, DETUNE, WARBLE, ATTACK (blip) on / off |
-| C V B N M | TREMOLO, VIBRATO, BEND IN, BEND OUT, PWM on / off |
+| S D F G H J | REPEAT, DUTY STEPS, FILTER, GLIDE, DETUNE, WARBLE on / off |
+| C V B N M | TREMOLO, VIBRATO, BEND IN, BEND OUT, PWM on / off (v0.41: BEND IN's SHAPE STEP is the old BLIP, its CLICK the old CLICK) |
 | Z / X | The envelope's attack / release: instant ↔ as it was (or 500 ms / 750 ms) |
 | : / ; | The last effect's setting down / up (the arp: its pattern) |
 | RETURN | The last effect's next setting for : ; |
@@ -480,7 +484,8 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 ## Building and testing
 
 ```sh
-DASM=/path/to/dasm ./build.sh          # bin/fatchip64.prg (+ .sym, .lst)
+DASM=/path/to/dasm ./build.sh          # bin/fatchip64.prg (+ .sym, .lst; v0.41: packed by tools/crunch.py,
+                                       #  it unpacks itself at start; dasm's own output: bin/fatchip64-image.prg)
 pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```

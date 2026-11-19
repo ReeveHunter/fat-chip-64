@@ -96,8 +96,8 @@ nesTremSync equ livePatch+66
 nesTremMode equ livePatch+67
 sndRpShift  equ livePatch+68
 sndRpMode   equ livePatch+69
-sndBlip     equ livePatch+70
-sndBlipT    equ livePatch+71
+sndStep     equ livePatch+70
+sndStepT    equ livePatch+71
 sndClick    equ livePatch+72
 sndPenv     equ livePatch+73
 sndPenvK    equ livePatch+74

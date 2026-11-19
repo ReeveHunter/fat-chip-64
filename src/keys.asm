@@ -999,14 +999,14 @@ SplitPointKey:
 
 ; ------------------------------------------------------------ C= + : the effects
 FOCUS_ARP   equ NUM_FX+1
-; C= + S D F G H J K C V B N M: that effect on / off (it's the one C= + : ; , . L
-; and RETURN work on now)
-fxKeyTab:   .byte K_S,K_D,K_F,K_G,K_H,K_J,K_K,K_C,K_V,K_B,K_N,K_M
-fxIdxTab:   .byte FXI_REPEAT,FXI_DUTYSEQ,FXI_FILTER,FXI_GLIDE,FXI_DETUNE,FXI_WARBLE,FXI_ATTACK
+; C= + S D F G H J C V B N M: that effect on / off (it's the one C= + : ; , . L
+; and RETURN work on now). (v0.41: K was ATTACK, now BEND IN's STEP)
+fxKeyTab:   .byte K_S,K_D,K_F,K_G,K_H,K_J,K_C,K_V,K_B,K_N,K_M
+fxIdxTab:   .byte FXI_REPEAT,FXI_DUTYSEQ,FXI_FILTER,FXI_GLIDE,FXI_DETUNE,FXI_WARBLE
 	.byte FXI_TREMOLO,FXI_VIBRATO,FXI_PENV,FXI_RDROP,FXI_PWM
 FxKey:
 	subroutine
-	ldx #11
+	ldx #10
 .f:
 	cmp fxKeyTab,x
 	beq .h

@@ -40,7 +40,7 @@ def cutoffs(c, ms):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.40", "V0.40" in c.screen_row(0), c.screen_row(0))
+check("header V0.41", "V0.41" in c.screen_row(0), c.screen_row(0))
 
 for cut, want in ((1, 0x29), (128, 0x28 + 100), (255, 0xEF)):           # (0: no filter)
     send(c, BY["RAW"], filter={"cutoff": cut, "resonance": 8})
@@ -74,7 +74,7 @@ for i in range(40):
     c._raw_release("lshift", ms=30)
     lp = c.v("livePatch", 128)
     envs.add((c.v("sndAD"), c.v("sndSR")))
-    for name in ("sndBlip", "sndClick", "sndPenv", "sndRdrop"):
+    for name in ("sndStep", "sndClick", "sndPenv", "sndRdrop"):      # (v0.41: ATTACK is BEND IN STEP / CLICK)
         if c.v(name):
             fx.add(name)
 check("SHIFT + /: the envelope (attack / decay / sustain / release) changes from roll to roll", len(envs) >= 20, len(envs))

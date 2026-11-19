@@ -1,7 +1,8 @@
 ; Fat Chip 64 - main program
 ; A live rig controller: plays the SID and drives a Game Boy (Fat Chip GB)
 ; and an NES (MidiNES) over the Kerberos MIDI out, as one fat instrument.
-; Build: dasm src/main.asm -f1 -obin/fatchip64.prg -sbin/fatchip64.sym -lbin/fatchip64.lst
+; Build: ./build.sh (dasm makes bin/fatchip64-image.prg; tools/crunch.py packs it
+; into bin/fatchip64.prg)
 
 	processor 6502
 	include "defs.asm"
@@ -20,7 +21,6 @@ Start:
 	txs
 	lda #$35                ; RAM at $A000/$E000, I/O on (no BASIC/KERNAL)
 	sta $01
-	jsr HiCopy              ; (first: the tables may sit where the variables go)
 	jsr InitHardware
 	jsr InitState
 	jsr ScreenInit
@@ -169,30 +169,6 @@ InitHardware:
 	sta CIA1_CRA
 	lda #$81                ; enable timer A interrupt
 	sta CIA1_ICR
-	rts
-
-; the tables for $E000 (loaded after the program) to $E000
-HiCopy:
-	subroutine
-	lda #<hiPhys
-	sta ptr
-	lda #>hiPhys
-	sta ptr+1
-	lda #<hiStart
-	sta ptr2
-	lda #>hiStart
-	sta ptr2+1
-	ldx #>(hiEnd - hiStart + 255)
-	ldy #0
-.c:
-	lda (ptr),y
-	sta (ptr2),y
-	iny
-	bne .c
-	inc ptr+1
-	inc ptr2+1
-	dex
-	bne .c
 	rts
 
 InitState:
@@ -532,12 +508,12 @@ Nmi:
 	include "bendtab.asm"
 codeEnd:
   if codeEnd > $C000
-    echo "the program runs past $C000"
-    err
+    ; (an unresolved name, not err: the first pass guesses the code long)
+    .byte PROGRAM_RUNS_PAST_C000_INTO_THE_VARIABLES
   endif
 
-; ---- tables that live under the KERNAL: loaded here, copied to $E000 at
-; start (before the variables at $C000-$C9FF are cleared: they may load there)
+; ---- tables that live under the KERNAL: assembled here, after the code;
+; tools/crunch.py packs them apart and they unpack straight to $E000 (v0.41)
 hiPhys:
 	rorg $E000
 hiStart:
@@ -547,9 +523,4 @@ hiEnd:
   if hiEnd > $FFFA
     echo "the $E000 tables run into the CPU's vectors"
     err
-  endif
-  if hiPhys + hiEnd - hiStart > $D000
-    ; (v0.40: an unresolved name, not err: the first pass guesses the code
-    ;  long and err would stop it there; this fails only if still true)
-    .byte PROGRAM_FILE_RUNS_INTO_THE_IO_AT_D000
   endif

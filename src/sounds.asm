@@ -344,7 +344,7 @@ FxVars:
 	ora actCnt+A_SWEEP
 	ora brFilt
 	sta t0
-	lda sndBlip             ; (v0.30: ATTACK, BEND IN / OUT)
+	lda sndStep             ; (v0.30: ATTACK, BEND IN / OUT; v0.41: BEND IN's STEP and CLICK)
 	ora sndClick
 	sta atkOn
 	ora t0
@@ -1278,7 +1278,6 @@ SidFx:
 	; IN / OUT)
 	lda vibDepth
 	ora glideK
-	ora sndBlip
 	ora sndClick
 	ora sndPenv
 	ora sndRdrop
@@ -1367,6 +1366,9 @@ GlideStep:
 	subroutine
 	ldy envY
 	lda sK,y                ; (BEND IN / OUT: this voice's own)
+	cmp #$FF
+	beq .x                  ; (BEND IN STEP: held)
+	cmp #0
 	bne .k
 	lda glideK
 	bne .k

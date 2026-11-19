@@ -50,9 +50,9 @@ STEPS = {
     "warble": [("amount", [2, 4, 6, 8, 10, 12, 16, 20, 25, 30, 40, 50]), ("speed", [10, 20, 30, 40, 50, 60, 80, 100, 127])],
     "tremolo": [("depth", [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]), ("tremRate", [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16]), ("shape", SHAPES),
                 ("tremSync", list(range(10))), ("mode", list(range(5)))],
-    "penv": [("amount", [-24, -12, -7, -5, -3, -2, -1, 1, 2, 3, 5, 7, 12, 24]), ("time", [5, 10, 20, 40, 80, 150, 300, 600, 1000])],
+    "penv": [("amount", [-24, -12, -7, -5, -3, -2, -1, 0, 1, 2, 3, 5, 7, 12, 24]), ("time", [5, 10, 20, 40, 80, 150, 300, 600, 1000]),
+             ("shape", [0, 1]), ("click", [0, 1])],
     "rdrop": [("amount", [1, 2, 3, 5, 7, 12, 24]), ("time", [50, 100, 200, 300, 500, 800, 1200, 2000])],
-    "attack": [("blip", [0, 1, 2, 3]), ("blipMs", list(range(5))), ("click", [0, 1])],
     "filter": [("cutoff", [8, 16, 24, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 255]), ("resonance", list(range(16))),
                ("envAmount", [0, 16, 32, 48, 64, 96, 127]), ("lfoDepth", [0, 8, 16, 24, 32, 48, 64, 96, 127]),
                ("filtLfoRate", [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6])],
@@ -64,13 +64,13 @@ STEPS = {
 # v0.40: the setting C= + , . makes faster (+1: a higher step is faster) and C= + L syncs
 RATE = {"vibrato": ("vibRate", 1), "warble": ("speed", 1), "tremolo": ("tremRate", 1), "filter": ("filtLfoRate", 1),
         "pwm": ("pwmRate", 1), "dutyseq": ("stepMs", -1), "penv": ("time", -1), "rdrop": ("time", -1),
-        "glide": ("time", -1), "attack": ("blipMs", -1)}
+        "glide": ("time", -1)}
 SYNC = {"tremolo": "tremSync"}
-FX_ORDER = ["patch", "tone", "env", "attack", "penv", "rdrop", "detune", "vibrato", "glide", "warble", "tremolo", "filter", "pwm",
+FX_ORDER = ["patch", "tone", "env", "penv", "rdrop", "detune", "vibrato", "glide", "warble", "tremolo", "filter", "pwm",
             "dutyseq", "repeat"]
 ALWAYS = {"patch", "tone", "env"}
 DICE = ["detune", "glide", "warble", "filter", "pwm", "tremolo", "vibrato",       # pwm before vibrato
-        "attack", "penv", "rdrop", "repeat", "dutyseq"]                            # (v0.39: the newer effects too)
+        "penv", "rdrop", "repeat", "dutyseq"]                            # (v0.39: the newer effects too)
 SHORT = {"OCTAVE + 5TH": "OCT + 5TH", "GATE X.X.XX.X": "X.X.XX.X", "GATE XX.XX.X.": "XX.XX.X.", "GATE X..X..X.": "X..X..X.",
          "SCALE STEPS": "SCALE", "SEMITONES": "SEMIS", "1/8 DOTTED": "1/8 DOT", "PULSE+SAW+TRI": "P+S+T", "PULSE+TRI": "PULS+TRI", "PULSE+SAW": "PULS+SAW", "50/25/12.5%": "SPREAD"}
 FXNAME = {"patch": "PATCH", "tone": "TONE", "env": "ENVELOPE", "dutyseq": "DUTY STEPS"}

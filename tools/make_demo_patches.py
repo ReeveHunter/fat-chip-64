@@ -18,8 +18,8 @@ SAW, PULSE, TRI, PT = 1, 2, 0, 5
 def P(name, bank, character, fx, **kw):
     p = {"name": name}
     p.update(kw)
-    p["character"] = character
-    p["fx"] = fx
+    p["character"] = list(dict.fromkeys("penv" if c == "attack" else c for c in character))
+    p["fx"] = g.migrate(fx)                      # (v0.41: ATTACK is BEND IN's STEP / CLICK now)
     return bank, p
 
 

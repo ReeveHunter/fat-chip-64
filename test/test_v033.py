@@ -40,7 +40,7 @@ def vols(c, n=80, ms=10):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.40", "V0.40" in c.screen_row(0), c.screen_row(0))
+check("header V0.41", "V0.41" in c.screen_row(0), c.screen_row(0))
 check("no tremolo: the SID's volume steady at 15", set(vols(c, 20)) == {15})
 
 # the built-in TREMOLO GATE patch: SID and NES by default

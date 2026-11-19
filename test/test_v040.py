@@ -42,7 +42,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.40", "V0.40" in c.screen_row(0), c.screen_row(0))
+check("header V0.41", "V0.41" in c.screen_row(0), c.screen_row(0))
 S = c.sym
 
 # ---------------------------------------------------------------- plain keys
@@ -140,7 +140,7 @@ c._raw_release("runstop", ms=60)
 
 # ---------------------------------------------------------------- C=
 mod(c, "cbm", "v")
-check("C= + V: VIBRATO on, the one C= works on (row 14)", fx_on(c, 7) and "VIBRATO" in c.screen_row(14), c.screen_row(14))
+check("C= + V: VIBRATO on, the one C= works on (row 14)", fx_on(c, S["FXI_VIBRATO"]) and "VIBRATO" in c.screen_row(14), c.screen_row(14))
 check("... row 14: its first setting (DEPTH)", "DEPTH" in c.screen_row(14), c.screen_row(14))
 d0 = c.screen_row(14)[29:].strip()
 mod(c, "cbm", ";")
@@ -163,7 +163,7 @@ a2 = c.v("livePatch", 128)
 check("C= + Z again: the attack the other way", a1 != a2)
 
 mod(c, "cbm", "c")
-check("C= + C: TREMOLO", fx_on(c, 10), c.v("fxFocus"))
+check("C= + C: TREMOLO", fx_on(c, S["FXI_TREMOLO"]), c.v("fxFocus"))
 mod(c, "cbm", "l")
 check("C= + L: TREMOLO SYNC on (1/4)", "SYNC" in c.screen_row(14) and "1/4" in c.screen_row(14), c.screen_row(14))
 mod(c, "cbm", "l")

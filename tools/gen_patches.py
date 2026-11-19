@@ -84,13 +84,33 @@ def nes_env(a, d, s, r, peak):
 
 
 # ------------------------------------------------------------ one patch
+BLIP_MS = [10, 15, 20, 30, 40]
+
+
+def migrate(fx):
+    """v0.41: an older patch's ATTACK (BLIP, CLICK) -> BEND IN's SHAPE STEP and CLICK
+    (a patch with both keeps its BEND IN; the BLIP goes). Chip Lab does the same."""
+    if "attack" not in fx:
+        return fx
+    out = dict(fx)
+    at = out.pop("attack")
+    blip, ms, click = at.get("blip", 1), BLIP_MS[at.get("blipMs", 2)], at.get("click", 0)
+    if "penv" in out:
+        out["penv"] = dict(out["penv"], click=click)
+    elif blip:
+        out["penv"] = {"amount": 24 if blip == 3 else 12, "time": ms if blip == 1 else 2 * ms, "shape": 1, "click": click}
+    elif click:
+        out["penv"] = {"amount": 0, "time": 20, "click": click}
+    return out
+
+
 def settings(p):
     """Patch settings and every effect's parameters, defaults filled in.
     -> (patch settings, {effect id: params} for the effects that are on, {effect id: chips})"""
     ps = {q["id"]: q["default"] for q in DEF["patch"]}
     ps.update({k: v for k, v in p.items() if k in ps})
     on, chips = {}, {}
-    fx = p.get("fx", {})
+    fx = migrate(p.get("fx", {}))
     for e in DEF["effects"]:
         if e["id"] in fx or e.get("alwaysOn"):
             given = dict(fx.get(e["id"], {}))
@@ -220,16 +240,16 @@ def fields(p):
     f["nesTremMode"] = t["mode"] if t else 0
     f["sndRpShift"] = rp["shift"] & 255 if rp else 0
     f["sndRpMode"] = rp["shiftIn"] | rp["hop"] << 1 if rp else 0
-    at = on.get("attack") if has("attack", "sid") else None
-    f["sndBlip"] = at["blip"] if at else 0
-    f["sndBlipT"] = BLIP_STEPS[at["blipMs"]] if at else 5
-    f["sndClick"] = at["click"] if at else 0
+    # ---- v0.41: BEND IN's SHAPE (STEP: held, then the note) and CLICK (was ATTACK's BLIP and CLICK)
     pe = on.get("penv") if (has("penv", "sid") or has("penv", "nes")) else None
+    f["sndStep"] = pe.get("shape", 0) if pe and pe["amount"] else 0
+    f["sndStepT"] = max(1, min(255, round(pe["time"] / 4))) if pe else 5
+    f["sndClick"] = pe.get("click", 0) if pe and has("penv", "sid") else 0
     f["sndPenv"] = pe["amount"] & 255 if pe else 0
     f["sndPenvK"] = bend_k(pe["time"]) if pe else 0
     pg = on.get("penv") if has("penv", "gb") else None
     f["gbPenvA"] = cc(pg["amount"] + 24 if pg else 24, 48)
-    f["gbPenvT"] = cc(gb_penv_t(pg["time"]) if pg else 0, 15)
+    f["gbPenvT"] = cc((1 if pg.get("shape", 0) else gb_penv_t(pg["time"])) if pg and pg["amount"] else 0, 15)
     rd = on.get("rdrop") if has("rdrop", "sid") else None
     f["sndRdrop"] = rd["amount"] if rd else 0
     ra = on.get("rdrop")
@@ -246,7 +266,6 @@ def fields(p):
     return f
 
 
-BLIP_STEPS = [3, 4, 5, 8, 10]      # ATTACK's BLIP STEP in 4 ms steps (12, 16, 20, 32, 40 ms)
 GB_PENV = [131, 156, 178, 195, 209, 221, 229, 236, 241, 245, 248, 250, 251, 253, 253, 254]   # Fat Chip GB penv_tbl
 
 

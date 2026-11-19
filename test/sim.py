@@ -50,11 +50,14 @@ def load_symbols(path):
 
 
 class C64:
-    def __init__(self, prg=None, sym=None, seed=1, channels=(0, 5), acia_irq=True, legacy_keys=None):
+    def __init__(self, prg=None, sym=None, seed=1, channels=(0, 5), acia_irq=True, legacy_keys=None, boot=True):
         """channels = (Game Boy base, NES base) set before the devices start:
         (0, 5) is v0.11's layout (Game Boy on 1-5, MidiNES on 6-10), which the
         older tests assume; None keeps the program's own (11-15, 1-5)."""
-        prg = prg or os.path.join(ROOT, "bin", "fatchip64.prg")
+        # (v0.41: bin/fatchip64.prg unpacks itself, about a second on a C64;
+        #  the tests load what it unpacks to: the image, its tables at $E000.
+        #  test_crunch runs the packed file and checks they match)
+        prg = prg or os.path.join(ROOT, "bin", "fatchip64-image.prg")
         sym = sym or os.path.join(ROOT, "bin", "fatchip64.sym")
         self.sym = load_symbols(sym)
         data = open(prg, "rb").read()
@@ -64,6 +67,9 @@ class C64:
         raw = bytearray(rnd.randrange(256) for _ in range(65536))  # RAM is random at power-on
         raw[0xD000:0xE000] = bytes(0x1000)
         raw[load:load + len(data) - 2] = data[2:]
+        if prg.endswith("-image.prg"):
+            hp, hs, he = self.sym["hiPhys"], self.sym["hiStart"], self.sym["hiEnd"]
+            raw[hs:he] = raw[hp:hp + he - hs]
         self.raw = raw
         self.mem = ObservableMemory(subject=raw)
         self.pressed = set()
@@ -189,6 +195,8 @@ class C64:
         self.cpu = MPU(memory=m)
         self.cpu.pc = 0x0810
         self.cpu.sp = 0xFF
+        if not boot:                    # (test_crunch steps it itself)
+            return
         self.run_until(self.sym["StartDevices"], limit=3_000_000)
         if channels is not None:
             self.set("gbBase", channels[0])

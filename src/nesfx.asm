@@ -156,6 +156,16 @@ NesGlideStep:
 	bne .go
 	rts
 .go:
+	lda nesK,x
+	cmp #$FF                ; (v0.41: BEND IN STEP: held for TIME, then the note)
+	bne .slide
+	lda nesVT,x
+	cmp sndStepT
+	bcs .jump
+	rts
+.jump:
+	jmp .snap
+.slide:
 	lda nesGlL,x
 	sta nfxL
 	lda nesGlH,x
@@ -268,6 +278,10 @@ NesNoteStart:
 	lda #1
 	sta nfxGlide
 	lda sndPenvK
+	ldy sndStep
+	beq .k
+	lda #$FF                ; (STEP: held; NesGlideStep jumps)
+.k:
 	sta nesK,x
 .l:
 	lda nfxK

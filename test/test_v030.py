@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fat Chip 64 v0.30: the menu's tables under the KERNAL; ATTACK (BLIP,
-CLICK), BEND IN, BEND OUT; REPEAT's PITCH SHIFT (semitones or scale steps) and
+CLICK: v0.41 BEND IN's SHAPE STEP and CLICK), BEND IN, BEND OUT; REPEAT's PITCH SHIFT (semitones or scale steps) and
 ECHOES (ALL CHIPS: SID 3 too); TREMOLO's PUMP, GATEs and tempo SYNC."""
 import copy
 import os
@@ -43,45 +43,51 @@ def note(c, n, on=True, ms=0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.40", "V0.40" in c.screen_row(0), c.screen_row(0))
+check("header V0.41", "V0.41" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- tables under the KERNAL
 hs, hp, he = c.sym["hiStart"], c.sym["hiPhys"], c.sym["hiEnd"]
 n = min(he - hs, 0xC000 - hp)                # (the load image above $C000: variables now)
-check("the menu's high tables are copied to $E000 at start", hs == 0xE000 and
+check("the menu's high tables are at $E000 (v0.41: the packed file unpacks them there)", hs == 0xE000 and
       c.raw[hs:hs + n] == c.raw[hp:hp + n], (hex(hs), hex(he)))
 c.tap("return", ms=80)
 rows = [c.screen_row(r) for r in range(25)]
 check("the menu still opens with its pages", any("PLAYING" in r for r in rows), rows[:6])
 c._raw_press("lshift", ms=8); c._raw_tap("return", ms=60); c._raw_release("lshift", ms=60)
 
-# ---------------------------------------------------------------- ATTACK: BLIP
-send(c, 2, attack={"blip": 1, "blipMs": 4})                   # OCTAVE for 40 ms
-check("ATTACK on: sndBlip 1, 40 MS (10 steps)", c.v("sndBlip") == 1 and c.v("sndBlipT") == 10)
+# ---------------------------------------------------------------- BEND IN STEP (v0.41: was ATTACK's BLIP)
+send(c, 2, penv={"amount": 12, "time": 40, "shape": 1})       # an octave up for 40 ms
+check("BEND IN STEP: sndStep 1, 40 MS (10 steps)", c.v("sndStep") == 1 and c.v("sndStepT") == 10)
 note(c, 48, ms=14)
 f_blip = sid_f(c)
 c.run_ms(200)
 f_note = sid_f(c)
-check("BLIP: an octave up at the start, then the note", abs(f_blip / f_note - 2) < 0.02, (f_blip, f_note))
+check("STEP: an octave up at the start (held, no slide), then the note", abs(f_blip / f_note - 2) < 0.02, (f_blip, f_note))
 note(c, 48, False, ms=300)
 
-send(c, 2, attack={"blip": 3, "blipMs": 4})                   # 2 OCTAVES, then 1
+send(c, 2, penv={"amount": 24, "time": 40, "shape": 1})
 note(c, 48, ms=14)
 a = sid_f(c)
-c.run_ms(40)
+gls = []
+for _ in range(4):
+    c.run_ms(4)
+    gls.append(max(c.v("nesGlH", 9)))
 b = sid_f(c)
 c.run_ms(200)
 f = sid_f(c)
-check("BLIP 2 OCTAVES: x4, then x2, then the note", abs(a / f - 4) < 0.05 and abs(b / f - 2) < 0.03, (a, b, f))
+check("STEP 24: x4 and held there, then the note", abs(a / f - 4) < 0.05 and a == b, (a, b, f))
+check("... the NES held 24 away too, then the note", 24 in gls and max(c.v("nesGlH", 9)) == 0, (gls, c.v("nesGlH", 9)))
 note(c, 48, False, ms=300)
 
-# ---------------------------------------------------------------- ATTACK: CLICK
-send(c, 2, attack={"blip": 0, "click": 1})
+# ---------------------------------------------------------------- BEND IN CLICK (v0.41: was ATTACK's)
+send(c, 2, penv={"amount": 0, "click": 1})
 note(c, 48, ms=14)
 w0 = c.raw[0xD404]
+f0 = sid_f(c)
 c.run_ms(100)
 w1 = c.raw[0xD404]
-check("CLICK: noise at the start, then the patch's waveform", w0 == 0x81 and w1 & 0xF0 == 0x40 and w1 & 1, (hex(w0), hex(w1)))
+check("CLICK (AMOUNT 0): noise at the start, then the patch's waveform, no bend",
+      w0 == 0x81 and w1 & 0xF0 == 0x40 and w1 & 1 and f0 == sid_f(c), (hex(w0), hex(w1)))
 note(c, 48, False, ms=300)
 
 # ---------------------------------------------------------------- BEND IN

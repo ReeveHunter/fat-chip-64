@@ -772,8 +772,7 @@ glK         ds 1               ; GlideStep: the k in use
 rdOn        ds 3               ; per SID voice: BEND OUT while its release rings
 atkT        ds 3               ; per SID voice: 4 ms steps since its attack (ATTACK)
 clickOn     ds 3               ; per SID voice: the CLICK's noise is on
-blT         ds 1               ; BlipApply's scratch
-atkOn       ds 1               ; this sound has a BLIP or CLICK (FxVars)
+atkOn       ds 1               ; this sound has a BEND IN STEP or CLICK (FxVars)
 nesK        ds NUM_VOICES      ; per NES voice: its own glide k now (BEND IN)
 nesRd       ds NUM_VOICES      ; per NES voice: BEND OUT's drop (-semitones; the glide eases it in)
 nesFoT      ds NUM_VOICES      ; per NES voice: a fall-off's 10 ms steps left (then the note-off)
