@@ -25,7 +25,7 @@ P = gen_patches.PATCHES
 size = json.load(open(os.path.join(os.path.dirname(__file__), "..", "patch", "c64-layout.json")))["patchSize"]
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.38", "V0.38" in c.screen_row(0), c.screen_row(0))
+check("header V0.39", "V0.39" in c.screen_row(0), c.screen_row(0))
 
 # a built-in patch sent whole matches what choosing it loads
 for i in (1, 13):
@@ -46,7 +46,7 @@ c.midi_in(*gen_patches.sysex(p), ms=200)
 check("received: counted, in the live patch", c.v("sxCount") == n0 + 1 and c.v("livePatch", size) == gen_patches.patch_bytes(p))
 check("its name on screen", "CHIP LAB TEST" in c.screen_row(2), c.screen_row(2))
 c.press("q", ms=200)
-check("it sounds at once: filter cutoff 200", c.raw[0xD416] == 200 and c.raw[0xD405] == 0xA0, (c.raw[0xD416], hex(c.raw[0xD405])))
+check("it sounds at once: filter cutoff 200 (v0.39: the register 196, in the 6581's range)", c.raw[0xD416] == 196 and c.raw[0xD405] == 0xA0, (c.raw[0xD416], hex(c.raw[0xD405])))
 c.release("q", ms=100)
 
 # broken ones are ignored
@@ -76,7 +76,7 @@ check("a program change to the number it had before still loads (PADS)", c.v("so
 # while a chord is held: the new patch takes over, the notes keep sounding
 c.press("q", "e", "t", ms=200)
 c.midi_in(*good, ms=300)
-check("chord held: the new patch sounds on it (cutoff 200, still gated)", c.raw[0xD416] == 200 and c.raw[0xD404] & 1, c.raw[0xD416])
+check("chord held: the new patch sounds on it (cutoff 200, still gated)", c.raw[0xD416] == 196 and c.raw[0xD404] & 1, c.raw[0xD416])
 c.release("q", "e", "t", ms=100)
 
 print(f"\n{fails} failure(s)")

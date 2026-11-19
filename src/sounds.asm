@@ -711,11 +711,33 @@ SidVoiceRegs:
 	sta SID+4,y
 	rts
 
+; A = a cutoff 0-255 -> the SID's cutoff register, within the range a 6581
+; can be heard in: $28 + A x 25/32 ($28-$EF). Below that its filter is all
+; but shut (the SID went quiet whenever a sweep, LFO or envelope dipped
+; there); above it, it hardly changes. Keeps X, Y.
+CutOut:
+	subroutine
+	sta cutT
+	lsr
+	lsr
+	sta cutT2               ; A / 4
+	lsr
+	lsr
+	lsr                     ; A / 32
+	clc
+	adc cutT
+	sec
+	sbc cutT2
+	clc
+	adc #$28
+	sta SID+$16
+	rts
+
 SidFilterSet:
 	subroutine
 	lda sndCut
 	beq .noFilt
-	sta SID+$16
+	jsr CutOut              ; (v0.39: into the 6581's audible range)
 	lda sndRes            ; resonance, voices 1-3 through the filter
 	sta SID+$17
 	lda #$10                ; low-pass
@@ -1178,7 +1200,7 @@ SidFx:
 .wr0:
 	lda t0
 	jsr BreathCut           ; (DH-100: the breath closes it down)
-	sta SID+$16
+	jsr CutOut              ; (v0.39: into the 6581's audible range)
 	jmp .pwm
 .noF:
 	; ---- an unfiltered sound: FILTER SWEEP switches the low-pass on and
@@ -1207,7 +1229,7 @@ SidFx:
 	sbc t1
 	eor #$FF
 	jsr BreathCut
-	sta SID+$16
+	jsr CutOut              ; (v0.39: into the 6581's audible range)
 	jmp .pwm
 .swOff:
 	lda sweepOn

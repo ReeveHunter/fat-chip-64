@@ -6,6 +6,11 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.39:** an audible SID filter, dice that roll the envelope, 43 more demo patches.
+- **The SID filter stays where a 6581 can be heard:** every cutoff (the patch's, its envelope, LFO and key track, FILTER SWEEP and the DH-100's breath) is put into the range $28–$EF. Below that the 6581's filter is all but shut, which is why the SID went quiet whenever a filter dipped there; above it, it hardly changes.
+- **The dice (SHIFT + /) roll the envelope too** (attack, decay, sustain, release, within their dice ranges), and the newer effects: ATTACK, BEND IN, BEND OUT, REPEAT and DUTY SEQ, each by its chance. The tone, levels and octaves still stay.
+- **Chip Lab: 43 more demo patches** (75 in all), built around the envelope, delayed vibrato, echoes and tremolo: swells, blooming pads, plucks and keys with tails, delayed-vibrato leads, octave and scale echoes, slow and round basses.
+
 **v0.38:** the play screen's bottom line says the new F keys (F5 FAT BASS, F7 ARP).
 
 **v0.37:** RESTORE for the screen, F5 Fat Bass, F7 the arp.
@@ -451,7 +456,7 @@ pip install py65 pyboy numpy
 ./test/run_tests.sh                    # needs ../fat-chip-gb for the end-to-end test
 ```
 
-## Not yet (v0.38)
+## Not yet (v0.39)
 
 - Saving settings (a password to type back in) waits; the menu's settings last until the C64 is switched off.
 - The DH-100 is untested on the real horn: the breath curve, the HELD threshold and how its MIDI channel mixes with the SHS-10 (both in use: the SHS-10 gets the program changes, the DH-100 gets CC 65) may want tuning.

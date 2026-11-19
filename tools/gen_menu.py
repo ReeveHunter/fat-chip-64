@@ -64,7 +64,8 @@ STEPS = {
 FX_ORDER = ["patch", "tone", "env", "attack", "penv", "rdrop", "detune", "vibrato", "glide", "warble", "tremolo", "filter", "pwm",
             "dutyseq", "repeat"]
 ALWAYS = {"patch", "tone", "env"}
-DICE = ["detune", "glide", "warble", "filter", "pwm", "tremolo", "vibrato"]       # pwm before vibrato
+DICE = ["detune", "glide", "warble", "filter", "pwm", "tremolo", "vibrato",       # pwm before vibrato
+        "attack", "penv", "rdrop", "repeat", "dutyseq"]                            # (v0.39: the newer effects too)
 SHORT = {"OCTAVE + 5TH": "OCT + 5TH", "GATE X.X.XX.X": "X.X.XX.X", "GATE XX.XX.X.": "XX.XX.X.", "GATE X..X..X.": "X..X..X.",
          "SCALE STEPS": "SCALE", "SEMITONES": "SEMIS", "1/8 DOTTED": "1/8 DOT", "PULSE+SAW+TRI": "P+S+T", "PULSE+TRI": "PULS+TRI", "PULSE+SAW": "PULS+SAW", "50/25/12.5%": "SPREAD"}
 FXNAME = {"patch": "PATCH", "tone": "TONE", "env": "ENVELOPE", "dutyseq": "DUTY STEPS"}
@@ -194,7 +195,9 @@ def build_params():
                                default=default, rlo=rlo, rhi=rhi, flags=flags))
         # the effect: off row (its fields as with it off, not the GB LFO), on row
         if eid in ALWAYS:
-            effects.append(dict(eid=eid, p0=e0, np=len(params) - e0, off=[], det=0, on=[], prob=0, dice=0, always=1))
+            # (v0.39: the dice roll the envelope's settings too: dice 2, always on)
+            effects.append(dict(eid=eid, p0=e0, np=len(params) - e0, off=[], det=0, on=[], prob=0,
+                                dice=2 if eid == "env" else 0, always=1))
             continue
         on_default = G.fields(base_patch(eid, {}))
         on_only = [n for n in FIELDS if on_default[n] != off_base[n] and n not in all_vary]

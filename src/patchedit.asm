@@ -504,8 +504,9 @@ ParamDice:
 	jmp ParamSet
 
 ; SHIFT + /: roll the patch. Each effect the dice use (efDice) goes on with
-; its chance, its settings anywhere in their dice ranges; or off. The tone,
-; envelope, levels and octaves stay. The name gets a *. C= + / undoes it.
+; its chance, its settings anywhere in their dice ranges; or off. v0.39: the
+; envelope's settings are rolled too (efDice 2). The tone, levels and octaves
+; stay. The name gets a *. C= + / undoes it.
 DiceRoll:
 	subroutine
 	jsr SaveUndo
@@ -514,11 +515,14 @@ DiceRoll:
 	stx dcE
 	lda efDice,x
 	beq .next
+	cmp #2
+	beq .roll               ; (the envelope: always there, just its settings)
 	jsr Random
 	ldx dcE
 	cmp efProb,x
 	bcs .off
 	jsr FxOn
+.roll:
 	ldx dcE
 	lda efP0,x
 	sta dcP

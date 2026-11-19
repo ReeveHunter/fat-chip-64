@@ -20,7 +20,7 @@ def check(name, cond, info=""):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.38", "V0.38" in c.screen_row(0), c.screen_row(0))
+check("header V0.39", "V0.39" in c.screen_row(0), c.screen_row(0))
 size = c.sym["PATCH_SIZE"] if "PATCH_SIZE" in c.sym else None
 n = c.sym.get("NUM_SOUNDS", 19)
 names = [l.split('"')[1].rstrip() for l in open(os.path.join(ROOT, "src", "soundtab.asm")) if l.startswith('        .byte "')]
@@ -41,7 +41,7 @@ before = c.raw[0xD416]
 c.set("sndCut", 0xC0)
 c.set("sndFDep", 0)
 c.run_ms(100)
-check("a changed cutoff in the live patch is heard at once", c.raw[0xD416] >= 0xC0 and before < 0x80,
+check("a changed cutoff in the live patch is heard at once (v0.39: $C0 is $BE in the 6581's range)", c.raw[0xD416] >= 0xBE and before < 0x80,
       (hex(before), hex(c.raw[0xD416])))
 c.release("q", ms=200)
 c.midi_in(0xC0, 0, ms=200)

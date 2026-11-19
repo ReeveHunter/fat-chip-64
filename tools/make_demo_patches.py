@@ -175,6 +175,146 @@ DEMO = [
         "penv": {"amount": -7, "time": 200}}),
 ]
 
+# ---------------------------------------------------------------- batch 2 (v0.39): the envelope, delayed
+# vibrato, echoes and tremolo, used with more space (Reeve: less "full on" or breathy)
+VIB = lambda d=20, r=5.5, delay=300, **k: {"depth": d, "vibRate": r, "delay": delay, **k}
+TONE = lambda w=SAW, gb=2, **k: {"sidWave": w, "gbWaveMode": gb, **k}
+DEMO2 = [
+    # ---- leads with shape
+    P("SOFT HORN", "LEADS", ["env", "vibrato"], {
+        "tone": TONE(SAW), "env": env(56, 750, 12, 300), "detune": {"cents": 7},
+        "vibrato": VIB(18, 5.2, 400)}, mono=1, fatBass=0),
+    P("FLUTEY", "LEADS", ["env", "vibrato"], {
+        "tone": TONE(TRI, gbDuty1=2), "env": env(80, 750, 13, 240), "detune": {"cents": 4},
+        "vibrato": VIB(22, 5.0, 500)}, mono=1, fatBass=0),
+    P("CRY LEAD", "LEADS", ["penv", "vibrato"], {
+        "tone": TONE(PULSE, 1, sidPw=900, gbDuty1=1), "env": env(16, 750, 12, 300), "detune": {"cents": 6},
+        "penv": {"amount": -2, "time": 150}, "vibrato": VIB(30, 6.0, 350)}, mono=1, fatBass=0),
+    P("WHISTLE ECHO", "LEADS", ["vibrato", "repeat"], {
+        "tone": TONE(TRI), "env": env(24, 750, 11, 240), "detune": {"cents": 3},
+        "vibrato": VIB(15, 5.5, 450), "repeat": {"time": 1, "repeats": 3, "level": 65}}, mono=1, fatBass=0),
+    P("BELL LEAD", "LEADS", ["env", "repeat"], {
+        "tone": TONE(PT, sidPw=1200), "env": env(2, 1500, 0, 1500), "detune": {"cents": 5},
+        "repeat": {"time": 2, "repeats": 2, "level": 60, "shift": 12}}, fatBass=0),
+    P("GLIDE SINGER", "LEADS", ["glide", "vibrato"], {
+        "tone": TONE(SAW), "env": env(38, 750, 12, 300), "detune": {"cents": 6},
+        "glide": {"time": 2, "mode": 1}, "vibrato": VIB(20, 5.0, 300)}, mono=1, fatBass=0),
+    P("PLUCK ECHO LEAD", "LEADS", ["env", "repeat"], {
+        "tone": TONE(PULSE, 1, sidPw=1400), "env": env(2, 240, 0, 240), "detune": {"cents": 5},
+        "repeat": {"time": 2, "repeats": 5, "level": 75, "hop": 1}}, fatBass=0),
+    P("FALLING LEAD", "LEADS", ["rdrop", "vibrato"], {
+        "tone": TONE(SAW), "env": env(16, 750, 12, 750), "detune": {"cents": 6},
+        "rdrop": {"amount": 2, "time": 500}, "vibrato": VIB(16, 5.5, 350)}, mono=1, fatBass=0),
+    P("SQUARE SOLO", "LEADS", ["vibrato", "attack"], {
+        "tone": TONE(PULSE, 1, sidPw=2048, gbDuty1=2, nesDuty1=2), "env": env(8, 750, 12, 168), "detune": {"cents": 5},
+        "attack": {"blip": 1, "blipMs": 0}, "vibrato": VIB(14, 6.0, 250)}, mono=1, fatBass=0),
+    P("OCTAVE ECHO", "LEADS", ["repeat"], {
+        "tone": TONE(PULSE, 1, sidPw=1000), "env": env(2, 300, 8, 240), "detune": {"cents": 5},
+        "repeat": {"time": 0, "repeats": 2, "level": 70, "shift": 12, "hop": 1}}, mono=1, fatBass=0),
+    # ---- pads that move
+    P("SWELL PAD", "PADS", ["env"], {
+        "tone": TONE(SAW), "env": env(1000, 750, 15, 1500), "detune": {"cents": 9},
+        "warble": {"amount": 8, "on": ["gb"]}}),
+    P("BLOOM TREMOLO", "PADS", ["env", "tremolo"], {
+        "tone": TONE(PT, sidPw=1600), "env": env(800, 750, 15, 1500), "detune": {"cents": 8},
+        "tremolo": {"depth": 55, "tremSync": 5, "shape": 1}}),
+    P("GLASS PAD", "PADS", ["env", "pwm"], {
+        "tone": TONE(PULSE, 1, sidPw=1200), "env": env(500, 1500, 13, 2400), "detune": {"cents": 6},
+        "pwm": {"depth": 50, "pwmRate": 0.3}}),
+    P("SLOW STRINGS", "PADS", ["env", "vibrato"], {
+        "tone": TONE(SAW), "env": env(800, 750, 14, 1500), "detune": {"cents": 12},
+        "vibrato": VIB(10, 4.5, 800)}),
+    P("BREATH IN", "PADS", ["env", "filter"], {
+        "tone": TONE(SAW), "env": env(1000, 750, 15, 750), "detune": {"cents": 8},
+        "filter": {"cutoff": 70, "resonance": 6, "envAmount": 90, "envAttack": 1000, "envDecay": 2000}}),
+    P("CHOIR-ISH", "PADS", ["env", "vibrato", "tremolo"], {
+        "tone": TONE(TRI), "env": env(500, 750, 15, 1500), "detune": {"cents": 10},
+        "vibrato": VIB(12, 5.0, 600), "tremolo": {"depth": 25, "tremRate": 4.5}}),
+    P("ECHO PAD", "PADS", ["env", "repeat"], {
+        "tone": TONE(PT, sidPw=2048), "env": env(250, 750, 13, 1500), "detune": {"cents": 7},
+        "repeat": {"time": 0, "repeats": 3, "level": 60}}),
+    P("WAVE PAD", "PADS", ["tremolo"], {
+        "tone": TONE(SAW), "env": env(500, 750, 15, 2400), "detune": {"cents": 9},
+        "tremolo": {"depth": 70, "tremSync": 1, "shape": 1}}),
+    P("SHIMMER", "PADS", ["env", "repeat", "vibrato"], {
+        "tone": TONE(TRI), "env": env(250, 750, 14, 2400), "detune": {"cents": 6},
+        "repeat": {"time": 4, "repeats": 4, "level": 55, "shift": 12, "hop": 1}, "vibrato": VIB(8, 6.5, 500)}),
+    P("ORGAN SWELL", "PADS", ["env", "tremolo"], {
+        "tone": TONE(PT, 2, sidPw=2048), "env": env(250, 750, 15, 300), "detune": {"cents": 4},
+        "tremolo": {"depth": 30, "tremRate": 6.5}}),
+    P("SAW UP GATE", "PADS", ["tremolo"], {
+        "tone": TONE(SAW), "env": env(56, 750, 15, 750), "detune": {"cents": 8},
+        "tremolo": {"depth": 90, "tremSync": 5, "shape": 2}}),
+    # ---- keys and plucks with tails
+    P("MUSIC BOX", "FX", ["env", "repeat"], {
+        "tone": TONE(TRI, gbDuty1=0), "env": env(2, 1500, 0, 1500), "detune": {"cents": 3},
+        "repeat": {"time": 2, "repeats": 3, "level": 55}}, octSid=1),
+    P("SOFT PIANO", "LEADS", ["env"], {
+        "tone": TONE(PT, sidPw=1800), "env": env(2, 1500, 4, 750), "detune": {"cents": 5}}),
+    P("HARP", "PADS", ["env"], {
+        "tone": TONE(TRI), "env": env(2, 750, 0, 1500), "detune": {"cents": 4}}),
+    P("CLAV", "LEADS", ["env", "filter"], {
+        "tone": TONE(PULSE, 1, sidPw=600), "env": env(2, 168, 0, 72), "detune": {"cents": 3},
+        "filter": {"cutoff": 120, "resonance": 9, "envAmount": 60, "envDecay": 150}}),
+    P("MARIMBA", "FX", ["env"], {
+        "tone": TONE(TRI, gbDuty1=2), "env": env(2, 300, 0, 300), "detune": {"cents": 2}}),
+    P("KALIMBA ECHO", "FX", ["env", "repeat"], {
+        "tone": TONE(TRI), "env": env(2, 300, 0, 300), "detune": {"cents": 3},
+        "repeat": {"time": 1, "repeats": 3, "level": 60, "shift": 7, "hop": 1}}),
+    P("DREAM KEYS", "PADS", ["env", "vibrato", "repeat"], {
+        "tone": TONE(PT, sidPw=1400), "env": env(16, 1500, 6, 2400), "detune": {"cents": 7},
+        "vibrato": VIB(10, 5.0, 600), "repeat": {"time": 0, "repeats": 2, "level": 55}}),
+    # ---- bass with shape
+    P("ROUND BASS", "BASS", ["env"], {
+        "tone": TONE(TRI), "env": env(8, 750, 10, 168), "detune": {"cents": 3}}, mono=1, octSid=-1),
+    P("PICK BASS", "BASS", ["env", "attack"], {
+        "tone": TONE(SAW), "env": env(2, 300, 6, 114), "detune": {"cents": 4},
+        "attack": {"click": 1}}, mono=1, octSid=-1),
+    P("SLOW BASS", "BASS", ["env", "glide"], {
+        "tone": TONE(SAW), "env": env(56, 750, 13, 300), "detune": {"cents": 5},
+        "glide": {"time": 1, "mode": 1}}, mono=1, octSid=-1),
+    P("WOBBLE BASS", "BASS", ["tremolo", "filter"], {
+        "tone": TONE(SAW), "env": env(8, 750, 14, 168), "detune": {"cents": 5},
+        "tremolo": {"depth": 60, "tremSync": 5, "shape": 0},
+        "filter": {"cutoff": 110, "resonance": 10, "lfoDepth": 60, "filtLfoSync": 5}}, mono=1, octSid=-1),
+    P("ECHO BASS", "BASS", ["repeat"], {
+        "tone": TONE(PULSE, 1, sidPw=1400), "env": env(2, 300, 4, 168), "detune": {"cents": 4},
+        "repeat": {"time": 2, "repeats": 2, "level": 60, "shift": 12}}, mono=1, octSid=-1),
+    P("SUB SWELL", "BASS", ["env"], {
+        "tone": TONE(TRI), "env": env(250, 750, 15, 750), "detune": {"cents": 2}}, mono=1, octSid=-1),
+    # ---- fat with space
+    P("FAT SWELL", "FAT", ["detune", "env"], {
+        "tone": TONE(SAW), "env": env(500, 750, 14, 1500), "detune": {"cents": 9},
+        "warble": {"amount": 9, "on": ["gb"]}}),
+    P("FAT PLUCK", "FAT", ["detune", "env"], {
+        "tone": TONE(SAW), "env": env(2, 750, 4, 750), "detune": {"cents": 9},
+        "warble": {"amount": 9, "on": ["gb"]}}),
+    P("FAT VIBES", "FAT", ["detune", "vibrato"], {
+        "tone": TONE(SAW), "env": env(16, 750, 12, 750), "detune": {"cents": 8},
+        "vibrato": VIB(15, 5.0, 500)}),
+    P("FAT ECHO", "FAT", ["detune", "repeat"], {
+        "tone": TONE(SAW), "env": env(8, 750, 10, 750), "detune": {"cents": 8},
+        "repeat": {"time": 0, "repeats": 2, "level": 60}}),
+    P("FAT TREMOLO", "FAT", ["detune", "tremolo"], {
+        "tone": TONE(SAW), "env": env(24, 750, 13, 750), "detune": {"cents": 8},
+        "tremolo": {"depth": 45, "tremSync": 5, "shape": 1}}),
+    # ---- fx
+    P("SIGH", "FX", ["env", "rdrop"], {
+        "tone": TONE(TRI), "env": env(250, 750, 13, 1500), "detune": {"cents": 6},
+        "rdrop": {"amount": 5, "time": 1000}}),
+    P("RISER", "FX", ["penv", "env"], {
+        "tone": TONE(SAW), "env": env(1000, 750, 15, 750), "detune": {"cents": 10},
+        "penv": {"amount": -12, "time": 1000}}),
+    P("RAINBOW ECHO", "FX", ["repeat"], {
+        "tone": TONE(TRI), "env": env(2, 300, 0, 240), "detune": {"cents": 4},
+        "repeat": {"time": 4, "repeats": 8, "level": 85, "shift": 1, "shiftIn": 1, "hop": 1}}),
+    P("SONAR", "FX", ["repeat", "env"], {
+        "tone": TONE(TRI), "env": env(2, 1500, 0, 1500), "detune": {"cents": 3},
+        "repeat": {"time": 11, "repeats": 5, "level": 70}}, octSid=1),
+]
+DEMO += DEMO2
+
+
 if __name__ == "__main__":
     names = [p["name"] for _, p in DEMO]
     assert len(set(names)) == len(names)
@@ -185,7 +325,7 @@ if __name__ == "__main__":
         b = g.patch_bytes(p)                      # (asserts unknown settings and converts)
         assert len(b) == json.load(open(os.path.join(ROOT, "patch", "c64-layout.json")))["patchSize"]
     out = {"format": "fat-chip-patches", "version": 1,
-           "doc": "Chip Lab's demo patches (Fat Chip 64 v0.30 / v0.31 effects: ATTACK, BEND IN / OUT, climbing and chip-hopping echoes, tempo PUMP and GATE). Not built into Fat Chip 64: sort the ones you like into banks. 'suggest' is a starting guess at each one's bank.",
+           "doc": "Chip Lab's demo patches: batch 1 (Fat Chip 64 v0.30 / v0.31 effects: ATTACK, BEND IN / OUT, climbing and chip-hopping echoes, tempo PUMP and GATE) and batch 2 (v0.39: the envelope, delayed vibrato, echoes and tremolo, with more space). Not built into Fat Chip 64: sort the ones you like into banks. 'suggest' is a starting guess at each one's bank.",
            "suggest": {p["name"]: bank for bank, p in DEMO},
            "patches": [p for _, p in DEMO]}
     with open(os.path.join(ROOT, "patch", "demo-patches.json"), "w") as f:

@@ -1017,7 +1017,7 @@ SidAttackFx:
 	bcc .c
 	lda #$FF
 .c:
-	sta SID+$16
+	jsr CutOut              ; (v0.39: into the 6581's audible range)
 .x:
 	rts
 

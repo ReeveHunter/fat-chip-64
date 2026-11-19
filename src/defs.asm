@@ -782,6 +782,8 @@ sidVolNow   ds 1               ; v0.34: the SID's master volume now (the IRQ mov
 sidVolTgt   ds 1               ;   a step every 2 ms towards this: no big jumps, no thump)
 sidRelT     ds 3               ; per SID voice: 50 ms steps its release still rings
 relDiv      ds 1               ; (counts 10 ms steps to 50)
+cutT        ds 1               ; CutOut's
+cutT2       ds 1
 tremRnd     ds 1               ; TREMOLO RANDOM: this cycle's level
 sinX        ds 1               ; Smooth's
 sinT        ds 1

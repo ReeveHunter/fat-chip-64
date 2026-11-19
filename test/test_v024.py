@@ -61,7 +61,7 @@ def name(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.38", "V0.38" in c.screen_row(0), c.screen_row(0))
+check("header V0.39", "V0.39" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)
@@ -180,7 +180,9 @@ for _ in range(6):
     shift(c, "/", ms=120)
     rolls.append(patch(c))
 check("SHIFT + /: the patch rolled (effects change), a * on the name", any(x != p0 for x in rolls) and name(c).endswith("*"), name(c))
-check("... the tone stays (SID wave, envelope)", all(x[:8] == p0[:8] for x in rolls), [x[:8] for x in rolls][:2])
+check("... the tone stays (mono, Fat Bass, SID wave); v0.39: the envelope rolls too",
+      all(x[0] == p0[0] and x[5] == p0[5] and x[8] == p0[8] for x in rolls)
+      and len({tuple(x[6:8]) for x in rolls}) > 1, (p0[:8], [x[:8] for x in rolls]))
 last = rolls[-2]
 c._raw_press("cbm", ms=8); c._raw_tap("/", ms=100); c._raw_release("cbm", ms=8)
 check("C= + /: back to the patch before the last roll", patch(c) == last)
@@ -215,7 +217,7 @@ cut_hi = c.raw[0xD416]
 c.midi_in(0xD0, 20, ms=80)
 cut_lo = c.raw[0xD416]
 check("BREATH FILTER: FAT (no filter) gets the low-pass, the breath opens it", c.raw[0xD418] & 0x10 and cut_hi > 180
-      and cut_lo < 60 and c.raw[0xD418] & 15 == 15, (cut_lo, cut_hi, hex(c.raw[0xD418])))
+      and cut_lo < 80 and c.raw[0xD418] & 15 == 15, (cut_lo, cut_hi, hex(c.raw[0xD418])))     # (v0.39: never below $28)
 c.midi_in(0x80, 60, 0, ms=40)
 # FX1: held GLIDE while blowing hard
 c.tap("return", ms=60); sel(c, "CASIO"); c.tap("return", ms=60); sel(c, "BREATH FX1")
