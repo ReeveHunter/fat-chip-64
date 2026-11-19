@@ -268,7 +268,7 @@ W, OR, GR, BL, RD = 1, 8, 5, 14, 10
 HELP = [
     (W, "A-G BANK  Z-B PATCH  : ; PREV / NEXT"),
     (W, "K KEY  L LATCH  N CHORD  M MUTE"),
-    (W, "/ DICE  <- UNDO  = TAP  , . NUDGE"),
+    (W, "/ RANDOM  <- UNDO  = TAP  , . NUDGE"),
     (W, "F1 F3 OCT  F5 FAT BASS  F7 VOICES"),
     (W, "SPACE FX  CRSR 1-KEY  RESTORE SCREEN"),
     (OR, "SHIFT  A-G Z-B : ; LEAD PATCH"),

@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.43:** the menu takes only the cursor keys (CRSR DOWN a line, SHIFT: up; CRSR RIGHT a value, SHIFT: back), RETURN and SHIFT+RETURN; the F keys keep their play jobs while it's open. "The dice" is RANDOMIZE on the screens (/ RANDOM; SHIFT+/ in the menu: RANDOMIZE IT).
+
 **v0.42:** WARBLE on the SID and NES, a DRONE that drifts like Stumped's pads, longer clicks, PUMP and GATE as tremolo shapes.
 - **WARBLE** now plays on the SID and the NES too (it was the Game Boy's alone): a slow random drift, each voice its own, up to AMOUNT cents, moving at SPEED (40: about a second from one side to the other). It stacks with VIBRATO.
 - **DRONE**: a new drone note moves every voice by gliding (no voice starts again), slowly (about 1.5 s on the SID and NES, the Game Boy at its slowest glide), each voice at its own moment within WANDER TIME; the voices are led to the nearest notes of the new drone (the root stays the bass).
@@ -306,15 +308,15 @@ too, each layer in its colour.
 | L | Latch on / off (in the LATCH STYLE) |
 | N | SMART CHORD size: 5TH → TRIAD → 7TH → 9TH → 11TH |
 | M | Mute everything (border red) |
-| / | The dice: the effects and envelope roll; the patch is called RANDOM PATCH. In the menu, SHIFT + / on a patch setting rolls just it |
-| ← | Undo the last patch change (the dice, a new patch, an effect or a setting); again: redo |
+| / | RANDOMIZE: the effects and envelope roll; the patch is called RANDOM PATCH. In the menu, SHIFT + / on a patch setting randomizes just it |
+| ← | Undo the last patch change (RANDOMIZE, a new patch, an effect or a setting); again: redo |
 | = | Tap tempo |
 | , / . | A DJ nudge: about 3% slower / faster while held |
 | SPACE | Its FX while held (CTRL + , . choose it) |
 | F1 / F3 | Octave up / down |
 | F5 | Fat Bass on / off |
 | F7 | POLY → MONO → SMART CHORD |
-| CRSR DOWN / CRSR RIGHT | One Key Play (when it's on). In the menu: a line down / a value up (SHIFT: up / down) |
+| CRSR DOWN / CRSR RIGHT | One Key Play (when it's on). In the menu: a line down / a value up (SHIFT: up / down); v0.43: the menu takes only the cursor keys, RETURN and SHIFT+RETURN |
 | RUN/STOP | Tapped: beat start / stop |
 | RETURN | The menu (SHIFT+RETURN backs out) |
 | RESTORE (the overlay's top B) | NORMAL → VISUALIZER → SCREENS OFF |

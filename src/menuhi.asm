@@ -14,7 +14,7 @@ mL9:      .byte "CASIO DH-100 ",0
 mL10:      .byte "ATARI SYNTHCART ",0
 mL11:      .byte "A-G BANK  Z-B PATCH  : ; PREV / NEXT ",0
 mL12:      .byte "K KEY  L LATCH  N CHORD  M MUTE ",0
-mL13:      .byte "/ DICE  <- UNDO  = TAP  , . NUDGE ",0
+mL13:      .byte "/ RANDOM  <- UNDO  = TAP  , . NUDGE ",0
 mL14:      .byte "F1 F3 OCT  F5 FAT BASS  F7 VOICES ",0
 mL15:      .byte "SPACE FX  CRSR 1-KEY  RESTORE SCREEN ",0
 mL16:      .byte "SHIFT  A-G Z-B : ; LEAD PATCH ",0

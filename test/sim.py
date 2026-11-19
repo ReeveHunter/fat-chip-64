@@ -284,6 +284,11 @@ class C64:
 
     def _raw_press(self, *keys, ms=12):
         for k in keys:
+            if (self.menu_fkeys and not self._xl_busy and k in self.MENU_F and "cbm" not in self.pressed
+                    and self.v("menuOn")):
+                self._with(on=["lshift"] if k in ("f1", "f5") else [], keys=[self.MENU_F[k]])
+                self._virt.add(k)
+                continue
             if self.keys_039 and not self._xl_busy:
                 x = self._xlat_press(k)
                 if isinstance(x, str):                 # (the same job on another key)
@@ -313,6 +318,12 @@ class C64:
     # press the v0.39 keys; each old key (with the modifiers held) does the
     # same job with the new keys. test_v040 and later turn it off.
     keys_039 = True
+    # menu_fkeys: tests from before v0.43 move round the menu with F1 / F3 (a
+    # line up / down) and F5 / F7 (a value back / on); v0.43's menu takes the
+    # cursor keys only, so those become SHIFT + CRSR DOWN, CRSR DOWN, SHIFT +
+    # CRSR RIGHT, CRSR RIGHT. test_v043 and later turn it off.
+    menu_fkeys = True
+    MENU_F = {"f1": "crsrdown", "f3": "crsrdown", "f5": "crsrright", "f7": "crsrright"}
     _xl_busy = False
     _virt = set()
     SHIFTS = {"lshift", "rshift"}

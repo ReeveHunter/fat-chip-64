@@ -575,32 +575,15 @@ StepLabel:
 MenuKey:
 	subroutine
 	sta keyCodeNow
-	ldx cbmDown             ; F1 F3: line up / down; F5 F7: value back / on
-	bne .nf                 ; (C= + F keys keep their jobs)
-	ldx #1
-	cmp #K_F1
-	beq .mvF
-	dex
-	cmp #K_F3
-	beq .mvF
-	ldx #1
-	cmp #K_F5
-	beq .chF
-	dex
-	cmp #K_F7
-	beq .chF
-.nf:
-	cmp #K_CRSR_DOWN
-	bne .r
+	cmp #K_CRSR_DOWN        ; (v0.43: the cursor keys and RETURN only; the
+	bne .r                  ;  F keys keep their play jobs)
 	ldx shiftDown
-.mvF:
 	stx mvDir
 	jmp .move
 .r:
 	cmp #K_CRSR_RIGHT
 	bne .ret
 	ldx shiftDown
-.chF:
 	stx mvBack
 	ldx menuRow
 	lda mKind,x
@@ -868,7 +851,7 @@ ChanOld:
 .x:
 	rts
 
-mHelp1:     .byte "F1 / F3 (CRSR): CHOOSE A LINE",0
-mHelp2:     .byte "F5 / F7 (CRSR RIGHT): CHANGE IT",0
-mHelp3:     .byte "RETURN: OPEN   SHIFT+/: ROLL THE DICE",0
+mHelp1:     .byte "CRSR DOWN (SHIFT: UP): CHOOSE A LINE",0
+mHelp2:     .byte "CRSR RIGHT (SHIFT: LEFT): CHANGE IT",0
+mHelp3:     .byte "RETURN: OPEN   SHIFT+/: RANDOMIZE IT",0
 mHelp4:     .byte "SHIFT+RETURN: BACK",0
