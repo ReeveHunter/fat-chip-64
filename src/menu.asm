@@ -20,6 +20,7 @@ MenuOpen:
 	sta menuOn
 	lda #0
 	sta menuRow
+	sta menuJump
 ; page A on screen (the cursor stays on its line if it's on this page)
 MenuPage:
 	subroutine
@@ -593,7 +594,9 @@ MenuKey:
 	rts                     ; (a line of text)
 .nt:
 	cmp #2
-	beq .fxt
+	bne .n2
+	jmp .fxt
+.n2:
 	cmp #3
 	bne .en
 	jmp .par
@@ -632,6 +635,8 @@ MenuKey:
 	jmp MenuVals
 .back:
 	ldx menuPage
+	beq .close
+	cpx menuJump            ; (v0.45: C= + RETURN came straight here: back to playing)
 	beq .close
 	lda pgBackItem,x        ; back to the page above, on this page's line
 	sta menuRow

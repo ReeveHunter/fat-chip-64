@@ -837,6 +837,7 @@ exK2        ds 1               ; DroneNear's tries
 nfxWarb     ds 1               ; the NES warbles (not 0)
 wbX         ds 1               ; WarbTick's
 wbY         ds 1
+menuJump    ds 1               ; v0.45: the page C= + RETURN opened (SHIFT + RETURN there: play)
 colDirty    ds 1               ; the menu: a colour not light green somewhere
 scrFx       ds 1               ; ScrFx's effect
 scrFxP      ds 1               ;   and setting               ; GbChanTo / NesChanTo

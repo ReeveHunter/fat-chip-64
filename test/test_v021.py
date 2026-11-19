@@ -42,7 +42,7 @@ def state(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.44", "V0.44" in c.screen_row(0), c.screen_row(0))
+check("header V0.45", "V0.45" in c.screen_row(0), c.screen_row(0))
 c.set("detLock", 2)
 c.set("latch", 0)                            # (no latch: each chord on its own)
 

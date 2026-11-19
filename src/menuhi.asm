@@ -23,8 +23,8 @@ mL18:      .byte "  F1 F3 LEAD + 1-KEY OCT  , . TRANSPOSE ",0
 mL19:      .byte "C=  A ARP S RPT D DUTY F FILT G GLIDE ",0
 mL20:      .byte "  H DETUNE J WARBLE K BLIP Z ATK X REL ",0
 mL21:      .byte "  C TREM V VIB B BEND IN N OUT M PWM ",0
-mL22:      .byte "  : ; SETTING  , . SPEED  L SYNC ",0
-mL23:      .byte "  RETURN NEXT SETTING  SPACE VINYL ",0
+mL22:      .byte "  CRSR SETTING/VALUE  , . SPEED  L SYNC ",0
+mL23:      .byte "  : ; EFFECT  RETURN MENU  SPACE VINYL ",0
 mL24:      .byte "  F1 F3 ARP OCT  F5 SYNC  F7 TYPE ",0
 mL25:      .byte "STOP  A-G Z-B BEAT  : ; PREV / NEXT ",0
 mL26:      .byte "  , . TEMPO  SPACE FILL  TAP: GO/STOP ",0
@@ -437,18 +437,3 @@ pS48:  .byte "SEMIS",0,"SCALE",0
 pW49:  .byte 69,$FF,$00,69,$FF,$02,69,$FF,$04
 pS49:  .byte "GB + NES ",0,"ALL CHIPS",0,"ONE CHIP ",0
 ; the effects: params, off row (field, value), detection count, on row, dice
-eN0:  .byte 0
-eN1:  .byte 0
-eN2:  .byte 0
-eN3:  .byte 0
-eN4:  .byte 0
-eN5:  .byte 0
-eN6:  .byte 44,$00
-eN7:  .byte 0
-eN8:  .byte 86,$03
-eN9:  .byte 83,$03
-eN10:  .byte 0
-eN11:  .byte 44,$2B
-eN12:  .byte 31,$01
-eN13:  .byte 1,$01
-; the envelope's Game Boy and NES parts from the SID's nibbles (EnvDerive)

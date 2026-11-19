@@ -310,8 +310,12 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	bne .nokp
 .crsr:
 	ldx ctrlDown            ; CTRL + CRSR: the play mode (v0.40)
-	beq .okp0
+	beq .cb
 	jmp PlayModeKey
+.cb:
+	ldx cbmDown             ; C= + CRSR: the last effect's settings, as in the menu (v0.45)
+	beq .okp0
+	jmp FocusCrsr
 .okp0:
 	ldx okpOn               ; ONE KEY PLAY: the cursor keys play
 	beq .x
@@ -496,7 +500,7 @@ CMD_END     equ CMD_CTRL+11
 	.byte {1}DiceRoll,{1}MomentDown,{1}ReturnKey,0
 	.byte {1}SplitPointKey,{1}LeadPrev,{1}LeadNext,{1}TransDown,{1}TransUp,{1}MomentDown,0
 	.byte {1}CbmArp,{1}EnvAtkKey,{1}EnvRelKey
-	.byte {1}FocusSync,{1}FocusDown,{1}FocusUp,{1}FocusSlower,{1}FocusFaster,{1}CbmSpace,{1}FocusNext,0
+	.byte {1}FocusSync,{1}FocusPrevFx,{1}FocusNextFx,{1}FocusSlower,{1}FocusFaster,{1}CbmSpace,{1}FocusMenu,0
 	.byte {1}BeatPrev,{1}BeatNext,{1}TempoDown,{1}TempoUp,{1}StopSpace,0
 	.byte {1}ChipKey,{1}ChipKey,{1}ChipKey,{1}ScSyncKey,{1}FineDown,{1}FineUp,{1}LatchStyleKey,{1}Panic
 	.byte {1}SpaceBack,{1}SpaceNext,0
@@ -1092,14 +1096,18 @@ FocusSync:
 .x:
 	rts
 
-; C= + : / ; : the effect's setting down / up (the arp: its pattern)
-FocusDown:
+; v0.45: C= + CRSR, as in the menu: CRSR DOWN the effect's next setting
+; (SHIFT: the one before), CRSR RIGHT its value up (SHIFT: down; the arp: its
+; pattern). Row 14 shows them.
+FocusCrsr:
+	cmp #K_CRSR_DOWN
+	bne FocusVal
+	jmp FocusNext
+FocusVal:
 	subroutine
-	lda #0
-	beq .s
-FocusUp:
-	lda #1
-.s:
+	lda shiftDown
+	eor #1
+	and #1
 	sta stDir
 	ldx fxFocus
 	beq .x
@@ -1196,7 +1204,7 @@ FocusFaster:
 .x:
 	rts
 
-; C= + RETURN: the effect's next setting for C= + : ; (shown on row 14)
+; C= + CRSR DOWN: the effect's next setting (SHIFT: the one before), round
 FocusNext:
 	subroutine
 	ldx fxFocus
@@ -1205,14 +1213,85 @@ FocusNext:
 	beq .x
 	dex
 	ldy fxParam
+	lda shiftDown
+	bne .b
 	iny
 	tya
 	cmp efNP,x
 	bcc .s
 	lda #0
+	beq .s
+.b:
+	dey
+	tya
+	bpl .s
+	lda efNP,x
+	sec
+	sbc #1
 .s:
 	sta fxParam
 	jmp Dirty
+.x:
+	rts
+
+; v0.45: C= + : / ; : the previous / next effect for the C= keys, without
+; switching it (row 14 shows it): ENVELOPE ... REPEAT, then the arp, round
+FocusPrevFx:
+	lda #$FF
+	bne FocusFx
+FocusNextFx:
+	lda #1
+FocusFx:
+	subroutine
+	ldx fxFocus
+	bne .add
+	cmp #1                  ; (none yet: ; the envelope, : the arp)
+	beq .env
+	lda #FOCUS_ARP
+	bne .s
+.add:
+	clc
+	adc fxFocus
+	cmp #FXI_ENV+1
+	bcs .a
+	lda #FOCUS_ARP          ; (before the envelope: the arp)
+	bne .s
+.a:
+	cmp #FOCUS_ARP+1
+	bcc .s
+.env:
+	lda #FXI_ENV+1          ; (past the arp: the envelope)
+.s:
+	sta fxFocus
+	lda #0
+	sta fxParam
+	jmp Dirty
+
+; v0.45: C= + RETURN: the menu, open on the effect's page at its setting;
+; SHIFT + RETURN there goes straight back to playing
+FocusMenu:
+	subroutine
+	ldx fxFocus
+	beq .x
+	cpx #FOCUS_ARP
+	beq .x
+	dex
+	lda efPage,x
+	pha
+	tay
+	lda pgFirst,y
+	clc
+	adc fxParam
+	pha
+	jsr GlitchCalm
+	lda #1
+	sta colDirty
+	sta menuOn
+	pla
+	sta menuRow
+	pla
+	sta menuJump
+	jmp MenuPage
 .x:
 	rts
 

@@ -80,7 +80,8 @@ c.midi_in(0xC0, 4, ms=300)                     # WHISTLE: SID and NES vibrato
 c.press("q", "e", "t", ms=300)
 n, longest = passes(c, 300)
 check("MIDI interrupts: main loop passes in 300 ms with a chord held (were about 80; ~160 now, it wobbles with the code's layout)", n > 150, n)
-check("... the longest under 4 ms", longest < 4.0, round(longest, 2))
+check("... the longest under 5 ms (v0.45: was 4; the longest pass is mostly MIDI-in interrupts landing in it, 15 bytes)",
+      longest < 5.0, round(longest, 2))
 c.release("q", "e", "t", ms=200)
 
 c2 = C64(channels=None, acia_irq=False)

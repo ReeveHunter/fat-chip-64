@@ -12,7 +12,8 @@ python3 tools/gen_beats.py >/dev/null
 python3 tools/gen_bend.py >/dev/null
 cd src
 rm -f ../bin/fatchip64-image.prg
-$DASM main.asm -f1 -o../bin/fatchip64-image.prg -s../bin/fatchip64.sym -l../bin/fatchip64.lst -v1 | grep -v "^Complete" || true
+$DASM main.asm -f1 -o../bin/fatchip64-image.prg -s../bin/fatchip64.sym -l../bin/fatchip64.lst -v1 > ../bin/dasm.log 2>&1 || true
+grep "error:\|Fatal" ../bin/dasm.log && { rm -f ../bin/fatchip64-image.prg; echo "dasm failed (bin/dasm.log)"; exit 1; }
 [ -s ../bin/fatchip64-image.prg ] || { echo "dasm failed"; exit 1; }
 cd ..
 DASM=$DASM python3 tools/crunch.py          # (v0.41: packed; it unpacks itself at start)

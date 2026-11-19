@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.45:** the C= keys work on the chosen effect as the menu does: C= + `:` / `;` choose the previous / next effect without switching it (ENVELOPE ... REPEAT, then the arp; row 14 shows it, dark grey while off); C= + CRSR DOWN its next setting (SHIFT: the one before); C= + CRSR RIGHT its value (SHIFT: back; the arp: its pattern); C= + RETURN opens the menu on that effect's page at that setting, and SHIFT + RETURN there goes straight back to playing.
+
 **v0.44:** F5 is on / off and F7 the cycle in every layer (SHIFT + F5 SPLIT on / off, SHIFT + F7 its mode); C= + F1 / F3 arp octave up / down (F1 up everywhere); in POLY and MONO, row 9 shows SMART CHORD's size in dark grey (N sets it for later); One Key Play moves with the lead's octave (SHIFT + F1 / F3; at the usual LEAD +1 it plays where it always did).
 
 **v0.43:** the menu takes only the cursor keys (CRSR DOWN a line, SHIFT: up; CRSR RIGHT a value, SHIFT: back), RETURN and SHIFT+RETURN; the F keys keep their play jobs while it's open. "The dice" is RANDOMIZE on the screens (/ RANDOM; SHIFT+/ in the menu: RANDOMIZE IT).
@@ -338,8 +340,9 @@ too, each layer in its colour.
 | S D F G H J | REPEAT, DUTY STEPS, FILTER, GLIDE, DETUNE, WARBLE on / off |
 | C V B N M | TREMOLO, VIBRATO, BEND IN, BEND OUT, PWM on / off (v0.41: BEND IN's SHAPE STEP is the old BLIP, its CLICK the old CLICK) |
 | Z / X | The envelope's attack / release: instant ↔ as it was (or 500 ms / 750 ms) |
-| : / ; | The last effect's setting down / up (the arp: its pattern) |
-| RETURN | The last effect's next setting for : ; |
+| : / ; | The previous / next effect to work on, without switching it (row 14) |
+| CRSR DOWN / CRSR RIGHT | Its next setting (SHIFT: the one before) / its value up (SHIFT: down; the arp: its pattern) |
+| RETURN | The menu, on that effect's page at that setting (SHIFT + RETURN: back to playing) |
 | , / . | The last effect slower / faster (its rate or time; the arp's speed) |
 | L | The last effect's tempo sync on / off (TREMOLO SYNC; the arp) |
 | SPACE | VINYL while held |
