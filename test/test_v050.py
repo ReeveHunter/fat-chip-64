@@ -48,7 +48,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(500)
-check("header V0.50", "V0.50" in c.screen_row(0), c.screen_row(0))
+check("header V0.51", "V0.51" in c.screen_row(0), c.screen_row(0))
 gb = c.v("gbBase")
 sound(c, 4)
 t0 = c.cpu.processorCycles

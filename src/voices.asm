@@ -398,12 +398,12 @@ Allocate:
 .cpd:
 	lda monoMode            ; MONO: just the last key pressed
 	beq .poly
-	lda heldCount
-	beq .poly
+	lda okpChordN           ; (v0.50: and One Key Play's notes; on their own,
+	beq .poly               ;  as they are)
 	jsr MonoNote
 	sta allocList
-	lda #1
-	sta allocCount
+	ldy #1
+	jsr AllocOkp
 .poly:
 	lda arpMode
 	cmp #ARP_UNISON
@@ -412,21 +412,8 @@ Allocate:
 	beq .w0
 	lda arpNote
 	sta allocList
-	ldy #1
-	ldx #0                  ; (v0.50: One Key Play's notes keep sounding)
-.ok:
-	cpx okpCount
-	beq .okd
-	lda okpNotes,x
-	cmp #NO_NOTE
-	beq .okn
-	sta allocList,y
-	iny
-.okn:
-	inx
-	bne .ok
-.okd:
-	sty allocCount
+	ldy #1                  ; (v0.50: One Key Play's notes keep sounding)
+	jsr AllocOkp
 .w0:
 	jsr ArpPairSet          ; SPARKLE: keep the arp pair out of the pad
 	jsr FatBassVoices         ; how many bass voices Fat Bass can have (vFat)
@@ -454,10 +441,11 @@ Allocate:
 .p1:
 	lda vFat,x
 	beq .p1n
-	lda allocList
+	ldy fbIdx               ; (v0.50: the lowest note not One Key Play's)
+	lda allocList,y
 	sta vWant,x
 	lda #1
-	sta covered
+	sta covered,y
 .p1n:
 	inx
 	cpx #NUM_VOICES
@@ -524,6 +512,59 @@ AllocDone:
 ; Fat Bass covers the lowest note, so it frees that note's voice). The
 ; first k bass voices get vFat; allocFree = the voices still spare after
 ; the notes and Fat Bass, for the effects.
+; v0.50: One Key Play's notes onto allocList from Y (not the note at 0 again);
+; allocCount = the end. Keeps X.
+AllocOkp:
+	subroutine
+	stx exS
+	ldx #0
+.ok:
+	cpx okpCount
+	beq .okd
+	lda okpNotes,x
+	cmp #NO_NOTE
+	beq .okn
+	cmp allocList
+	beq .okn
+	sta allocList,y
+	iny
+.okn:
+	inx
+	bne .ok
+.okd:
+	sty allocCount
+	ldx exS
+	rts
+
+; v0.50: C set if note A is One Key Play's alone (sounding from it, and not
+; one of the chord's). Keeps A, X, Y.
+OkpOnly:
+	subroutine
+	sty okY
+	stx okX
+	ldx okpCount
+.o:
+	dex
+	bmi .no
+	cmp okpNotes,x
+	bne .o
+	ldy okpChordN
+.c:
+	dey
+	bmi .yes
+	cmp okpChord,y
+	bne .c
+.no:
+	ldy okY
+	ldx okX
+	clc
+	rts
+.yes:
+	ldy okY
+	ldx okX
+	sec
+	rts
+
 FatBassVoices:
 	subroutine
 	lda #0
@@ -556,6 +597,17 @@ FatBassVoices:
 	beq .x
 	lda allocCount
 	beq .x
+	ldy #0                  ; v0.50: the bass is the lowest note that isn't One
+.fb:                            ;  Key Play's (none: no Fat Bass)
+	lda allocList,y
+	jsr OkpOnly
+	bcc .fbk
+	iny
+	cpy allocCount
+	bcc .fb
+	bcs .x
+.fbk:
+	sty fbIdx
 	lda allocFree
 	clc
 	adc #1
@@ -743,6 +795,9 @@ ApplyVoices:
 	lda vNote,x
 	cmp #NO_NOTE
 	beq .poly
+	lda vWant,x             ; (v0.50: One Key Play's notes attack, not legato)
+	jsr OkpOnly
+	bcs .poly
 	lda #0
 	sta t3
 	lda #1

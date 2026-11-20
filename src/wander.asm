@@ -49,6 +49,9 @@ ChgStyle:
 	lda hardCut
 	ora monoMode
 	bne .now0
+	lda vWant,x             ; (v0.50: One Key Play's: no glide from silence)
+	jsr OkpOnly
+	bcs .now0
 	jsr ChgEff
 	cmp #CHG_GLIDE
 	beq .gs
@@ -73,14 +76,10 @@ ChgStyle:
 	ora vArpHit,x           ; (the arp, MONO: their own way)
 	ora monoMode
 	bne .now
-	lda okpHit              ; One Key Play's notes: at once, new attacks
-	beq .s
-	lda vWant,x
-	cmp okpNotes
-	beq .okp
-	cmp okpNotes+1
-	beq .okp
-.s:
+	lda vWant,x             ; One Key Play's notes: at once, new attacks (v0.50:
+	jsr OkpOnly             ;  any time, not only as it's pressed: never a
+	bcs .okp                ;  chord change's glide)
+
 	jsr ChgEff
 	cmp #CHG_ATTACK
 	beq .now

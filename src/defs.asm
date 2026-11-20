@@ -846,6 +846,9 @@ menuJump    ds 1               ; v0.45: the page C= + RETURN opened (SHIFT + RET
 colDirty    ds 1
 gbFresh     ds 1               ; v0.46: a built-in sound just loaded, unchanged (SoundGb: CC 114)
 gbFc        ds 1               ; DEVICES GAME BOY: 0 FAT CHIP GB (CC 114), 1 OTHER (the CCs)
+fbIdx       ds 1               ; v0.50: allocList's Fat Bass note
+okX         ds 1               ; OkpOnly's
+okY         ds 1
 gbSyncT     ds 1               ; v0.50: ticks+1 at the last GbSyncTick
 gbDry       ds 1               ; GbPut sends nothing (SoundGb: just the caches)               ; the menu: a colour not light green somewhere
 scrFx       ds 1               ; ScrFx's effect
