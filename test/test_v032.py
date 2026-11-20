@@ -70,7 +70,7 @@ def lead_notes(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.56", "V0.56" in c.screen_row(0), c.screen_row(0))
+check("header V0.57", "V0.57" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- C= + V: KEY
 cv_tap(c)

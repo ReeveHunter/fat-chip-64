@@ -466,7 +466,7 @@ FxButtons:
 	lda t3
 	cmp #3
 	bne .ch
-	rts
+	jmp GbTrem              ; (v0.57: TREMOLO held or let go)
 
 ; Held SID notes play again at the new detune (no new attack)
 SidRetune:
@@ -859,21 +859,35 @@ SoundGb:
 ; volume, done there, locked to the tempo): CC 115 depth (0 if it isn't on
 ; the Game Boy), 116 shape (6 PUMP, 7-9 the GATEs), 117 sync, 118 / 119 the
 ; FREE rate in Hz x 100. Each only when it changes (gbCcS+12...).
+; v0.57: TREMOLO held too: the patch's (on the Game Boy whatever its chips),
+; or with none the held tremolo's own (DEEP, 6 HZ); let go: the patch's again.
 GbTrem:
 	subroutine
+	lda tremBtn
+	beq .pat
+	lda nesTrem
+	bne .pall
+	ldy uTremDep            ; held, the patch has none: its own
+	lda uTremDepT,y
+	sta gtD
+	lda uTremShape
+	sta gtS
+	lda #0
+	sta gtY
+	ldy uTremRate
+	lda uTremRL,y
+	sta mulA
+	lda uTremRH,y
+	sta mulA+1
+	jmp .send
+.pat:
 	lda tremChips
 	and #4
-	beq .d
+	beq .none
 	lda nesTrem
-.d:
-	ldx #0
-	ldy #GCC_TREM
-	jsr .one
-	lda tremChips
-	and #4
-	beq .x
-	lda nesTrem
-	beq .x
+	beq .none
+.pall:
+	sta gtD
 	lda nesTremMode         ; PUMP / GATEs: shapes 6-9
 	beq .sh
 	clc
@@ -882,18 +896,33 @@ GbTrem:
 .sh:
 	lda nesTremShp
 .s2:
-	ldx #1
-	ldy #GCC_TREM+1
-	jsr .one
+	sta gtS
 	lda nesTremSync
-	ldx #2
-	ldy #GCC_TREM+2
-	jsr .one
-	lda nesTremRL           ; Hz x 655.36 per 10 ms -> Hz x 100: x 39 / 256
+	sta gtY
+	lda nesTremRL
 	sta mulA
 	lda nesTremRH
 	sta mulA+1
-	lda #39
+	jmp .send
+.none:
+	lda #0
+	ldx #0
+	ldy #GCC_TREM
+	jmp .one
+.send:
+	lda gtD
+	ldx #0
+	ldy #GCC_TREM
+	jsr .one
+	lda gtS
+	ldx #1
+	ldy #GCC_TREM+1
+	jsr .one
+	lda gtY
+	ldx #2
+	ldy #GCC_TREM+2
+	jsr .one
+	lda #39                 ; Hz x 655.36 per 10 ms -> Hz x 100: x 39 / 256
 	jsr Mul16x8
 	lda mulR+1
 	and #127

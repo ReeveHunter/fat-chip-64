@@ -847,6 +847,9 @@ menuJump    ds 1               ; v0.45: the page C= + RETURN opened (SHIFT + RET
 colDirty    ds 1
 gbFresh     ds 1               ; v0.46: a built-in sound just loaded, unchanged (SoundGb: CC 114)
 gbFc        ds 1               ; DEVICES GAME BOY: 0 FAT CHIP GB (CC 114), 1 OTHER (the CCs)
+gtD         ds 1               ; v0.57: GbTrem's depth, shape, sync
+gtS         ds 1
+gtY         ds 1
 gbWait      ds 1               ; v0.54: GbPut waiting for room
 gbWaitOk    ds 1               ;   (only in GbStartup)
 fbIdx       ds 1               ; v0.50: allocList's Fat Bass note

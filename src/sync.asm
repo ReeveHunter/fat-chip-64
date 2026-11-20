@@ -633,7 +633,12 @@ ActRepeat:                      ; REPEAT held: echoes on (RepeatActive reads act
 	jmp RepeatChanged
 
 ActTrem:
-	sta tremBtn             ; (TremTick does it)
+	subroutine
+	sta tremBtn             ; (TremTick does it; v0.57: the Game Boy's here)
+	lda devOn+DEV_GB
+	beq .r
+	jmp GbTrem
+.r:
 	rts
 
 ActSus:
