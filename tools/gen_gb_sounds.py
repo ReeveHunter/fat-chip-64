@@ -41,7 +41,7 @@ def capture():
     T = 0xCF80
     a = c.sym["SoundSet"]
     for i in range(len(gen_patches.PATCHES)):
-        for k in range(12):                       # (forget what the Game Boy last got: send it all)
+        for k in range(20):                       # (forget what the Game Boy last got: send it all)
             c.raw[c.sym["gbCcS"] + k] = 0xFF
         c.set("gbFresh", 0)
         c.set("gbFc", 1)                          # (the CC way, to record it)
@@ -63,6 +63,8 @@ def capture():
                 continue
             v = (s & 15) - gb
             if not 0 <= v < 3:
+                continue
+            if d1 == 114:                         # (the status after the CCs: not part of the sound)
                 continue
             if d1 >= 102:
                 glob.append((d1, d2))

@@ -69,6 +69,7 @@ GCC_DOWNBEAT equ 109
 GCC_LATCH   equ 110
 GCC_PANIC   equ 111
 GCC_DISPLAY equ 112
+GCC_TREM    equ 115           ; v0.55: Fat Chip GB v0.13's tremolo: 115 depth, 116 shape, 117 sync, 118 / 119 rate
 GCC_SOUND   equ 114           ; v0.46: Fat Chip GB v0.10 plays built-in sound n from its own copy
 PROFILE_F   equ 70
 
@@ -793,7 +794,7 @@ tremRnd     ds 1               ; TREMOLO RANDOM: this cycle's level
 sinX        ds 1               ; Smooth's
 sinT        ds 1
 tremMask    ds 1               ;   the patch's tremolo chips (1 NES, 2 SID)
-gbCcS       ds 16              ; the Game Boy's CC 80 / 81 / 87 / 88 last sent, per channel
+gbCcS       ds 20              ; the Game Boy's CC 80 / 81 / 87 / 88 last sent, per channel; (v0.55) 12-16: CC 115-119
 gbK         ds 1
 gbCc        ds 1
 gbV         ds 1

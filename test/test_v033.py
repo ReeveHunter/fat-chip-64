@@ -40,12 +40,12 @@ def vols(c, n=80, ms=10):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.54", "V0.54" in c.screen_row(0), c.screen_row(0))
+check("header V0.55", "V0.55" in c.screen_row(0), c.screen_row(0))
 check("no tremolo: the SID's volume steady at 15", set(vols(c, 20)) == {15})
 
 # the built-in TREMOLO GATE patch: SID and NES by default
 send(c, BY["TREMOLO GATE"])
-check("TREMOLO GATE: tremChips = NES + SID", c.v("tremChips") == 3, c.v("tremChips"))
+check("TREMOLO GATE: tremChips = NES + SID (+ v0.55: the Game Boy)", c.v("tremChips") == 7, c.v("tremChips"))
 c.midi_in(0x90, 60, 100, ms=200)
 v = vols(c)
 check("... the SID's master volume chops on and off", min(v) <= 2 and max(v) == 15, v)

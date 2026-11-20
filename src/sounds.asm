@@ -833,7 +833,86 @@ SoundGb:
 	cmp #3
 	bne .ch
 	jsr GbLegato
-	jmp WarbleSend
+	jsr WarbleSend
+	jmp GbTrem
+
+; v0.55: the patch's tremolo on the Game Boy (Fat Chip GB v0.13: its master
+; volume, done there, locked to the tempo): CC 115 depth (0 if it isn't on
+; the Game Boy), 116 shape (6 PUMP, 7-9 the GATEs), 117 sync, 118 / 119 the
+; FREE rate in Hz x 100. Each only when it changes (gbCcS+12...).
+GbTrem:
+	subroutine
+	lda tremChips
+	and #4
+	beq .d
+	lda nesTrem
+.d:
+	ldx #0
+	ldy #GCC_TREM
+	jsr .one
+	lda tremChips
+	and #4
+	beq .x
+	lda nesTrem
+	beq .x
+	lda nesTremMode         ; PUMP / GATEs: shapes 6-9
+	beq .sh
+	clc
+	adc #5
+	bne .s2
+.sh:
+	lda nesTremShp
+.s2:
+	ldx #1
+	ldy #GCC_TREM+1
+	jsr .one
+	lda nesTremSync
+	ldx #2
+	ldy #GCC_TREM+2
+	jsr .one
+	lda nesTremRL           ; Hz x 655.36 per 10 ms -> Hz x 100: x 39 / 256
+	sta mulA
+	lda nesTremRH
+	sta mulA+1
+	lda #39
+	jsr Mul16x8
+	lda mulR+1
+	and #127
+	sta t2                  ; LSB
+	lda mulR+1
+	asl
+	lda mulR+2
+	rol
+	and #127                ; MSB
+	cmp gbCcS+15
+	bne .rt
+	lda t2
+	cmp gbCcS+16
+	beq .x
+.rt:
+	lda mulR+1              ; (both: the Game Boy takes the rate with the LSB)
+	asl
+	lda mulR+2
+	rol
+	and #127
+	sta gbCcS+15
+	tax
+	lda #GCC_TREM+3
+	jsr GbGlobal
+	lda t2
+	sta gbCcS+16
+	tax
+	lda #GCC_TREM+4
+	jmp GbGlobal
+.one:                           ; A = the value, Y = the CC, X = its slot
+	cmp gbCcS+12,x
+	beq .x
+	sta gbCcS+12,x
+	tax
+	tya
+	jmp GbGlobal
+.x:
+	rts
 
 ; v0.50: Fat Chip GB's status, CC 114 = 64 + the built-in sound, or 127
 ; (CUSTOM) when it isn't one: a received patch, or a built-in sound edited

@@ -270,7 +270,7 @@ def fields(p):
     f["gbRdA"] = rg["amount"] if rg else 0
     f["gbRdT"] = gb_penv_t(rg["time"]) * 8 if rg else 0
     # ---- v0.33: the patch's tremolo on the SID too (its master volume): bit 0 the NES, bit 1 the SID
-    f["tremChips"] = (1 if has("tremolo", "nes") else 0) | (2 if has("tremolo", "sid") else 0)
+    f["tremChips"] = (1 if has("tremolo", "nes") else 0) | (2 if has("tremolo", "sid") else 0) | (4 if has("tremolo", "gb") else 0)   # (v0.55: bit 2 the Game Boy)
     # ---- v0.42: WARBLE on the SID and the NES (a slow random drift): f / 4096 steps, a rate per 4 ms
     wv = on.get("warble") if has("warble", "sid") or has("warble", "nes") else None
     f["sndWarbA"] = min(120, round(wv["amount"] * 4096 * math.log(2) / 1200)) if wv else 0

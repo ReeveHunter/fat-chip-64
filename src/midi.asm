@@ -388,7 +388,7 @@ GbStartup:
 	beq .done
 	lda #1                  ; (v0.54: GbPut waits for room rather than drop)
 	sta gbWaitOk
-	ldy #15                 ; (the cached CCs: send them all again)
+	ldy #19                 ; (the cached CCs: send them all again)
 	lda #$FF
 .cc:
 	sta gbCcS,y
