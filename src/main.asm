@@ -23,6 +23,7 @@ Start:
 	sta $01
 	jsr InitHardware
 	jsr InitState
+	jsr BeatLoad            ; (beat 0's kit, name and steps, from under the I/O)
 	jsr ScreenInit
 	jsr SidInit
 	jsr SoundSid
@@ -523,5 +524,20 @@ hiEnd:
 	rend
   if hiEnd > $FFFA
     echo "the $E000 tables run into the CPU's vectors"
+    err
+  endif
+
+; ---- v0.60: data in the RAM under the I/O ($D000-$DFFF): packed apart too,
+; unpacked there with the I/O switched out; read with BeatLoad's copy
+ioPhys:
+	rorg $D000
+ioStart:
+	include "beatsio.asm"
+ioEnd:
+	rend
+  if ioEnd > $DE00
+    ; (Nmi reads the ACIA at $DE06: if one came while BeatLoad has the I/O
+    ;  switched out, it would read and write the RAM there: keep data below)
+    echo "the $D000 data runs past $DE00"
     err
   endif

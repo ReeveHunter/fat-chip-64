@@ -633,10 +633,9 @@ ScrTempo:
 	sta t1
 	ldx #6
 	jsr PutDecZ
-	ldx beatSel
-	lda beatNameLo,x
+	lda #<nameBuf
 	sta ptr
-	lda beatNameHi,x
+	lda #>nameBuf
 	sta ptr+1
 	ldx #20
 	ldy #12

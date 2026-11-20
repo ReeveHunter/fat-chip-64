@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.60**: room for the beats. The beats' kits, names and steps now live in the 4 KB of RAM under the I/O chips ($D000), and picking a beat copies it into a small buffer, so they no longer take room in the program. The packer packs that data too, and lays things out so that packing more of the code always gains room in the program file; before, it only gained once a big piece was packed. The 25-beat overhaul goes there next.
+
 **v0.59** (with Fat Chip GB v0.16): BEND IN goes to 4 octaves (AMOUNT −48 … +48; the menu adds ±36 and ±48). The SID starts that far away, kept within its notes (it used to wrap round to the bottom past the top); the Game Boy takes half the AMOUNT and BEND SHAPE's ×2 bit (2-semitone steps past 2 octaves); the NES stays at 2 octaves at most (its bends stop there).
 
 **v0.58** (with Fat Chip GB v0.15): VIBRATO SYNC and PWM SYNC. A division (1 BAR … 1/32) locks the LFO to the tempo: on the SID and the NES, and on the Game Boy, which runs it itself from the tempo and puts it back to its start on each downbeat (CC 91). The menu's VIBRATO and PWM pages have a SYNC line. (To make room: a few routines nothing used any more are gone, and the packer places its unpacker correctly when only a little is over.)

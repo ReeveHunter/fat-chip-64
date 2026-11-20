@@ -61,7 +61,7 @@ def name(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.59", "V0.59" in c.screen_row(0), c.screen_row(0))
+check("header V0.60", "V0.60" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)

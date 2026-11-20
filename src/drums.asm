@@ -76,16 +76,8 @@ DrumHit:
 	clc
 	adc drumLvl
 .k:
-	sta t1
-	lda beatSel             ; x 12
-	asl
-	asl
-	sta t2
-	asl
-	adc t2
-	adc t1
 	tax
-	lda kits,x
+	lda kitBuf,x
 	sta t1
 	; bank (CC14 on the sample channel) when it changes
 	lda #4
@@ -340,13 +332,45 @@ KeytarDrum:
 keytarNote: .byte 45,48,52,57,62
 keytarKind: .byte DK_KICK,DK_TOM,DK_SNARE,DK_CH,DK_CY
 
+; ------------------------------------------------------------ v0.60: beats under the I/O
+; BeatLoad: copy beat beatSel's kit, name and steps from under the I/O at
+; $D000 (beatsio.asm) into kitBuf, nameBuf and beatBuf
+BeatLoad:
+	subroutine
+	ldx beatSel
+	lda beatIoLo,x
+	sta ptr
+	lda beatIoHi,x
+	sta ptr+1
+	lda beatLen,x
+	asl
+	clc
+	adc #21                 ; kit 12 + name 9 + the steps
+	tax
+	php
+	sei
+	lda #$34                ; all RAM: what's under the I/O
+	sta $01
+	ldy #0
+.c:
+	lda (ptr),y
+	sta kitBuf,y            ; (kitBuf, nameBuf and beatBuf follow each other)
+	iny
+	dex
+	bne .c
+	lda #$35
+	sta $01
+	plp
+	rts
+
 ; ------------------------------------------------------------ beat demos
 ; G: next beat (its kit and tempo)
 ; A = beat: chosen (G, or the keytar's rhythm buttons)
 BeatChoose:
 	subroutine
 	sta beatSel
-	tax
+	jsr BeatLoad
+	ldx beatSel
 	lda beatStep
 	cmp beatLen,x
 	bcc .t
@@ -719,18 +743,12 @@ BeatPlay:
 	sta fillK
 	jmp .play
 .pat:
-	ldx beatSel
-	lda beatLo,x
-	sta ptr
-	lda beatHi,x
-	sta ptr+1
 	lda beatStep
 	asl
 	tay
-	lda (ptr),y
+	lda beatBuf,y
 	sta bA
-	iny
-	lda (ptr),y
+	lda beatBuf+1,y
 	sta bB
 	lda fillEnd             ; a fill just ended: crash and kick
 	beq .play

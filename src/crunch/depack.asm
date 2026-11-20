@@ -2,7 +2,7 @@
 ; tools/crunch.py lays the program file out as: the code from $0801 as it
 ; is, up to TAIL_DEST; then the rest of the code, packed; then the $E000
 ; tables, packed; then this, which the BASIC line SYSes. It unpacks the
-; tables to $E000, then the code's tail in place (it reads ahead of where it
+; tables to $E000, the data under the I/O to $D000 (v0.60), then the code's tail in place (it reads ahead of where it
 ; writes all the way: crunch.py checks), and starts the program.
 ; Packed stream, a byte T at a time:
 ;   T < $80          T+1 literal bytes follow
@@ -11,7 +11,7 @@
 ;                    d = 0: the end
 
 	processor 6502
-	include "params.asm"    ; (from crunch.py: DEP_ORG, TAIL_SRC, TAIL_DEST, HI_SRC, HI_DEST, START)
+	include "params.asm"    ; (from crunch.py: DEP_ORG, TAIL_SRC, TAIL_DEST, HI_SRC, HI_DEST, IO_SRC, IO_DEST, START)
 
 SRC         equ $FB
 DST         equ $FD
@@ -35,6 +35,19 @@ Go:
 	lda #>HI_DEST
 	sta DST+1
 	jsr Depack
+	lda #<IO_SRC            ; v0.60: the data under the I/O, with the I/O switched out
+	sta SRC
+	lda #>IO_SRC
+	sta SRC+1
+	lda #<IO_DEST
+	sta DST
+	lda #>IO_DEST
+	sta DST+1
+	lda #$34
+	sta $01
+	jsr Depack
+	lda #$35
+	sta $01
 	lda #<TAIL_SRC
 	sta SRC
 	lda #>TAIL_SRC

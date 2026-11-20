@@ -163,18 +163,23 @@ def main():
     mem[load:load + len(img) - 2] = img[2:]
     code_end = s["hiPhys"]
     hi = bytes(mem[code_end:code_end + s["hiEnd"] - s["hiStart"]])
+    io = bytes(mem[s["ioPhys"]:s["ioPhys"] + s["ioEnd"] - s["ioStart"]])
     hs, _ = pack(hi)
-    assert unpack(hs) == hi
+    ios, _ = pack(io)
+    assert unpack(hs) == hi and unpack(ios) == io
+    hs_len = len(hs) + len(ios)                       # (v0.60: the $D000 data follows the $E000 tables)
     cdir = os.path.join(ROOT, "src", "crunch")
     dasm = os.environ.get("DASM", "dasm")
-    dep_len = 200                                     # (depack.bin is 188; checked below. v0.58: was 160, too few)
+    dep_len = 220                                     # (depack.bin is 210; checked below. v0.58: was 160, too few; v0.60: 200)
 
     def layout(tail):
+        """the packed tables and data first (they unpack first, to $E000 and
+        $D000), then the packed tail, far enough up that unpacking it never
+        writes over bytes it hasn't read yet (v0.60: the tables always sit in
+        the room the tail needs, so every page packed gains)"""
         ts, toks = pack(bytes(mem[tail:code_end])) if tail < code_end else (bytes([0xC0, 0, 0]), [])
-        tail_src = tail + excess(toks)                # (the packed tail: far enough up to read ahead)
-        if tail_src - tail >= len(hs):                # the tables fit in the gap that leaves (unpacked
-            return ts, toks, tail_src, tail, tail_src + len(ts)   # first, before the tail covers it)
-        return ts, toks, tail_src, tail_src + len(ts), tail_src + len(ts) + len(hs)
+        tail_src = tail + max(excess(toks), hs_len)
+        return ts, toks, tail_src, tail, tail_src + len(ts)
 
     # the least packing that fits (the tail's start in pages, down from the end)
     tail = code_end
@@ -188,13 +193,14 @@ def main():
     assert tail == code_end or unpack(ts) == bytes(mem[tail:code_end])
     open(os.path.join(cdir, "params.asm"), "w").write(
         f"DEP_ORG     equ ${dep:04X}\nTAIL_SRC    equ ${tail_src:04X}\nTAIL_DEST   equ ${tail:04X}\n"
-        f"HI_SRC      equ ${hi_src:04X}\nHI_DEST     equ ${s['hiStart']:04X}\nSTART       equ ${s['Start']:04X}\n")
+        f"HI_SRC      equ ${hi_src:04X}\nHI_DEST     equ ${s['hiStart']:04X}\nSTART       equ ${s['Start']:04X}\n"
+        f"IO_SRC      equ ${hi_src + len(hs):04X}\nIO_DEST     equ ${s['ioStart']:04X}\n")
     subprocess.run([dasm, "depack.asm", "-f3", "-odepack.bin"], cwd=cdir, check=True, stdout=subprocess.DEVNULL)
     dp = open(os.path.join(cdir, "depack.bin"), "rb").read()
     assert dep + len(dp) <= FILE_TOP, "the unpacker runs into the I/O"
     out = bytearray(mem[0x0801:tail])
     out += bytes(dep - tail)
-    for at, b in ((tail_src, ts), (hi_src, hs)):
+    for at, b in ((tail_src, ts), (hi_src, hs), (hi_src + len(hs), ios)):
         out[at - 0x0801:at - 0x0801 + len(b)] = b
     out += dp
     sys_line = bytes([0x0D, 0x08, 0x0A, 0x00, 0x9E]) + str(dep).encode() + bytes(3)
@@ -202,7 +208,7 @@ def main():
     out[0:len(sys_line)] = sys_line                   # 10 SYS (the unpacker)
     open(os.path.join(ROOT, "bin", "fatchip64.prg"), "wb").write(bytes([0x01, 0x08]) + out)
     print(f"code ${0x0801:04X}-${tail:04X} as is, ${tail:04X}-${code_end:04X} packed "
-          f"{code_end - tail} -> {len(ts)}; $E000 tables {len(hi)} -> {len(hs)}; "
+          f"{code_end - tail} -> {len(ts)}; $E000 tables {len(hi)} -> {len(hs)}; $D000 data {len(io)} -> {len(ios)}; "
           f"program file ends ${0x0801 + len(out):04X}, SYS {dep}")
 
 

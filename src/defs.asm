@@ -866,6 +866,10 @@ vOkpN       ds NUM_VOICES      ;   (Allocate's, as it works)
 gbDry       ds 1               ; GbPut sends nothing (SoundGb: just the caches)               ; the menu: a colour not light green somewhere
 scrFx       ds 1               ; ScrFx's effect
 scrFxP      ds 1               ;   and setting               ; GbChanTo / NesChanTo
+; v0.60: the chosen beat, copied from under the I/O (BeatLoad)
+kitBuf      ds 12              ; its kit (kick g/h/a, snare g/h/a, toms h/m/l, perc g/h/a)
+nameBuf     ds 9               ; its name
+beatBuf     ds 128             ; its steps (2 bytes each, up to 64)
 ramEnd      ds 0
   if ramEnd > $CB00
     echo "RAM variables run past $CB00: clear more in Start"

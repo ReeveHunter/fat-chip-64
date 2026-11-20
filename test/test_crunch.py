@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Fat Chip 64 v0.41: the packed program file. Run as a C64 would (loaded
 at $0801, RUN), it unpacks to exactly the assembled image (the code from
-$0801, the tables at $E000) and starts; then it plays."""
+$0801, the tables at $E000, v0.60: the data under the I/O at $D000) and
+starts; then it plays."""
 import os
 import sys
 
@@ -39,6 +40,10 @@ code_ok = c.raw[0x0810:c.sym["hiPhys"]] == img[0x0810:c.sym["hiPhys"]]
 hi_ok = c.raw[c.sym["hiStart"]:c.sym["hiEnd"]] == img[c.sym["hiStart"]:c.sym["hiEnd"]]
 check("the code from $0810 matches the image", code_ok)
 check("the tables at $E000 match", hi_ok)
+ip, i0, i1 = c.sym["ioPhys"], c.sym["ioStart"], c.sym["ioEnd"]
+check("the data under the I/O at $D000 matches (v0.60)",
+      c.under[i0 - 0xD000:i1 - 0xD000] == img[ip:ip + i1 - i0], f"{i1 - i0} bytes")
+check("the I/O was switched back on ($01 = $35)", c.raw[1] == 0x35, hex(c.raw[1]))
 c.run_until(c.sym["Loop"], limit=3_000_000)
 c.run_ms(500)
 check("then it runs: the play screen", "FAT CHIP 64" in c.screen_row(0), c.screen_row(0))

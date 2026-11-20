@@ -67,9 +67,13 @@ class C64:
         raw = bytearray(rnd.randrange(256) for _ in range(65536))  # RAM is random at power-on
         raw[0xD000:0xE000] = bytes(0x1000)
         raw[load:load + len(data) - 2] = data[2:]
+        # v0.60: the RAM under the I/O ($D000-$DFFF), seen with $01 = $34 (or $30)
+        self.under = bytearray(rnd.randrange(256) for _ in range(0x1000))
         if prg.endswith("-image.prg"):
             hp, hs, he = self.sym["hiPhys"], self.sym["hiStart"], self.sym["hiEnd"]
             raw[hs:he] = raw[hp:hp + he - hs]
+            ip, i0, i1 = self.sym["ioPhys"], self.sym["ioStart"], self.sym["ioEnd"]
+            self.under[i0 - 0xD000:i1 - 0xD000] = raw[ip:ip + i1 - i0]
         self.raw = raw
         self.mem = ObservableMemory(subject=raw)
         self.pressed = set()
@@ -90,6 +94,18 @@ class C64:
         self.rx_overrun = 0
 
         m = self.mem
+
+        def ram_mode():
+            return (raw[1] & 7) in (0, 4)
+
+        def rd_under(a):
+            return self.under[a - 0xD000] if ram_mode() else None
+
+        def wr_under(a, v):
+            if ram_mode():
+                self.under[a - 0xD000] = v
+                return raw[a]           # (the I/O keeps its state)
+            return None
 
         def rd_dc01(_):
             # The real matrix has no diodes: current flows from a driven
@@ -192,6 +208,10 @@ class C64:
         m.subscribe_to_read([0xDE07], rd_rx)
         m.subscribe_to_read([0xD012], lambda _: (self.cpu.processorCycles // 65) & 0xFF)
 
+        # (subscribed last: py65 takes the last answer to a read)
+        io_range = list(range(0xD000, 0xE000))
+        m.subscribe_to_read(io_range, rd_under)
+        m.subscribe_to_write(io_range, wr_under)
         self.cpu = MPU(memory=m)
         self.cpu.pc = 0x0810
         self.cpu.sp = 0xFF
