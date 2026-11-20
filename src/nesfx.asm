@@ -222,6 +222,8 @@ NesGlideStep:
 	bmi .snap
 	eor nesGlH,x
 	sta nesGlH,x
+	ora nfxC                ; (v0.49: landed on 0 exactly: there too, so the
+	beq .snap               ;  centred bend still goes out)
 	lda nfxC
 	sta nesGlL,x
 	rts

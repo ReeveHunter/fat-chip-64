@@ -52,7 +52,7 @@ def nes_events(c, t0, ch):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.48", "V0.48" in c.screen_row(0), c.screen_row(0))
+check("header V0.49", "V0.49" in c.screen_row(0), c.screen_row(0))
 nes1 = c.v("nesBase")                    # NES pulse 1's channel
 
 # ---------------------------------------------------------------- Game Boy: CC 87 / 88
