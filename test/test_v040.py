@@ -42,7 +42,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.46", "V0.46" in c.screen_row(0), c.screen_row(0))
+check("header V0.47", "V0.47" in c.screen_row(0), c.screen_row(0))
 S = c.sym
 
 # ---------------------------------------------------------------- plain keys
@@ -81,7 +81,7 @@ seen = []
 for _ in range(3):
     c._raw_tap("f7", ms=60)
     seen.append((c.v("playMode"), c.v("monoMode")))
-check("F7: MONO, SMART CHORD, POLY", seen == [(0, 1), (1, 0), (0, 0)], seen)
+check("F7 (v0.47): from POLY, SMART CHORD, MONO, POLY", seen == [(1, 0), (0, 1), (0, 0)], seen)
 mod(c, "ctrl", "crsrdown")
 check("CTRL + CRSR: DRONE", c.v("playMode") == 2)
 mod(c, "ctrl", "crsrdown")

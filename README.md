@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.47:** F7 steps MONO → POLY → SMART CHORD (it was POLY → MONO → SMART CHORD); from DRONE it goes to POLY.
+
 **v0.46:** a built-in sound goes to the Game Boy as one CC.
 - **CC 114:** choosing a built-in sound sends Fat Chip GB (v0.10 or newer) one message, CC 114 = the sound's number, instead of about 45 CCs. The Game Boy has its own copy of every built-in sound's settings and shows the sound's name on its cards. Anything that changes the Game Boy's part (a held or locked effect, DRONE, the menu's MONO / POLY against the sound's own) still sends the CCs as before, and live edits are still CCs.
 - **DEVICES > GAME BOY:** FAT CHIP GB (CC 114) or OTHER (MGB), which always sends the CCs.
@@ -324,7 +326,7 @@ too, each layer in its colour.
 | SPACE | Its FX while held (CTRL + , . choose it) |
 | F1 / F3 | Octave up / down |
 | F5 | Fat Bass on / off |
-| F7 | POLY → MONO → SMART CHORD |
+| F7 | MONO → POLY → SMART CHORD |
 | CRSR DOWN / CRSR RIGHT | One Key Play (when it's on). In the menu: a line down / a value up (SHIFT: up / down); v0.43: the menu takes only the cursor keys, RETURN and SHIFT+RETURN |
 | RUN/STOP | Tapped: beat start / stop |
 | RETURN | The menu (SHIFT+RETURN backs out) |

@@ -419,9 +419,9 @@ class C64:
                 self._with(off=["cbm"], keys=["n"])
             elif k == "c":                                # POLY <-> MONO
                 if self.v("monoMode") == 0 and self.v("playMode") == 0:
-                    self._with(off=["cbm"], keys=["f7"])
+                    self._with(off=["cbm"], keys=["f7", "f7"])   # (v0.47: POLY, SMART, MONO)
                 elif self.v("monoMode") == 1 and self.v("playMode") == 0:
-                    self._with(off=["cbm"], keys=["f7", "f7"])
+                    self._with(off=["cbm"], keys=["f7"])
                 else:
                     self.set("monoMode", self.v("monoMode") ^ 1)
             elif k == "l":

@@ -344,7 +344,7 @@ KeyCmdPlay:                     ; (A = a command key: its usual job)
 	cpx #2
 	bcc .oct
 	beq .fat
-	jmp VoiceModeKey        ; F7: POLY, MONO, SMART CHORD (v0.40)
+	jmp VoiceModeKey        ; F7: MONO, POLY, SMART CHORD (v0.47)
 .fat:
 	jmp FatKey              ; F5: Fat Bass on / off (v0.37)
 .oct:
@@ -963,23 +963,23 @@ PlayModeKey:
 	sta playMode
 	jmp SettingChanged
 
-; F7: POLY, MONO, SMART CHORD, round again (from DRONE: POLY)
+; F7: MONO, POLY, SMART CHORD, round again (from DRONE: POLY)
 VoiceModeKey:
 	subroutine
 	lda playMode
 	cmp #MODE_CHORD
-	beq .poly
+	beq .mono               ; SMART CHORD -> MONO
+	cmp #MODE_POLY
+	bne .poly               ; (DRONE -> POLY)
 	lda monoMode
-	bne .smart
-	lda playMode
-	bne .poly
-	ldx #MODE_POLY          ; POLY -> MONO
-	lda #1
-	bne .set
-.smart:
-	ldx #MODE_CHORD
+	bne .poly               ; MONO -> POLY
+	ldx #MODE_CHORD         ; POLY -> SMART CHORD
 	lda #0
 	beq .set
+.mono:
+	ldx #MODE_POLY
+	lda #1
+	bne .set
 .poly:
 	lda #0
 	ldx #MODE_POLY

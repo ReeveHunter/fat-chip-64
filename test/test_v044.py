@@ -30,7 +30,7 @@ c.keys_039 = False
 c.fkeys_036 = False
 c.menu_fkeys = False
 c.run_ms(400)
-check("header V0.46", "V0.46" in c.screen_row(0), c.screen_row(0))
+check("header V0.47", "V0.47" in c.screen_row(0), c.screen_row(0))
 
 mod(c, "lshift", "f5")
 check("SHIFT + F5: SPLIT on (KEY)", c.v("clMode") == 1, c.v("clMode"))
@@ -56,12 +56,12 @@ c._raw_tap("n", ms=60)
 c.run_ms(200)
 check("... N changes it (still dark grey)", c.screen_row(9)[18:28] != row[18:28] and c.raw[0xD800 + 9 * 40 + 18] & 15 == 11,
       c.screen_row(9))
-c._raw_tap("f7", ms=60)
-c._raw_tap("f7", ms=60)                                      # POLY -> MONO -> SMART CHORD
+c._raw_tap("f7", ms=60)                                      # POLY -> SMART CHORD (v0.47)
 c.run_ms(200)
 check("SMART CHORD: the same text, light green", c.v("playMode") == 1 and c.raw[0xD800 + 9 * 40 + 18] & 15 == 13,
       (c.v("playMode"), c.raw[0xD800 + 9 * 40 + 18] & 15))
 c._raw_tap("f7", ms=60)
+c._raw_tap("f7", ms=60)                                      # -> MONO -> POLY
 
 # One Key Play in the lead's octave
 c.set("okpOn", 1)
