@@ -914,6 +914,21 @@ GbChan:
 	ldy gbPenvT
 	lda #81
 	jsr .cput
+	; v0.54: BEND SHAPE (Fat Chip GB v0.12): bit 0 STEP (with an AMOUNT),
+	; then CLICK (1 SHORT, 2 LONG), taken as it is
+	lda #0
+	ldy gbPenvA
+	cpy #63                 ; (cc(24, 48): AMOUNT 0)
+	beq .nst
+	lda sndStep
+.nst:
+	sta gbV
+	lda sndClick
+	asl
+	ora gbV
+	tay
+	lda #89
+	jsr .put
 	ldy gbRdA
 	lda #87
 	jsr .cput

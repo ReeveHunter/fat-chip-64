@@ -42,7 +42,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.53", "V0.53" in c.screen_row(0), c.screen_row(0))
+check("header V0.54", "V0.54" in c.screen_row(0), c.screen_row(0))
 S = c.sym
 
 # ---------------------------------------------------------------- plain keys
@@ -148,6 +148,7 @@ check("C= + CRSR RIGHT: its setting a step up", c.screen_row(14)[29:].strip() !=
 mod(c, "cbm", ".")
 check("C= + . : faster (row 14: RATE)", "RATE" in c.screen_row(14), c.screen_row(14))
 mod(c, "cbm", "crsrdown")                                    # (v0.45: was C= + RETURN)
+c.run_ms(100)                                                # (the row redrawn)
 check("C= + CRSR DOWN: the next setting (DELAY)", "DELAY" in c.screen_row(14), c.screen_row(14))
 mod(c, "cbm", "v")
 check("C= + V again: off (row 14 dark grey)", c.raw[0xD800 + 14 * 40 + 4] & 15 == 11, c.raw[0xD800 + 14 * 40 + 4] & 15)

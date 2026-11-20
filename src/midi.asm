@@ -268,7 +268,8 @@ GbPut:
 	; write the slot at head first (always free: one slot stays empty),
 	; then publish head unless the queue is full. Uses only A and X.
 	lda gbDry               ; (v0.46: SoundGb's dry run after a CC 114)
-	bne .full
+	bne .x
+.again:
 	ldx gbqHead
 	lda mS
 	sta gbqS,x
@@ -283,8 +284,26 @@ GbPut:
 	cmp gbqTail
 	beq .full
 	sta gbqHead
-.full:
+.x:
 	rts
+.full:
+	; v0.54: full in GbStartup (about 70 messages): wait for one to go out
+	; (the timer IRQ sends them; the MIDI chip kept going) rather than lose
+	; it. Anywhere else (or with interrupts off): dropped, as before
+	lda gbWaitOk            ; (only in GbStartup: elsewhere the keys can't wait)
+	beq .x
+	php
+	pla
+	and #4
+	bne .x
+	lda gbqTail
+	sta gbWait
+.w:
+	jsr TxService           ; (A, X)
+	lda gbqTail
+	cmp gbWait
+	beq .w
+	jmp .again
 
 NesPut:
 	subroutine
@@ -367,6 +386,8 @@ GbStartup:
 	subroutine
 	lda devOn+DEV_GB
 	beq .done
+	lda #1                  ; (v0.54: GbPut waits for room rather than drop)
+	sta gbWaitOk
 	ldy #15                 ; (the cached CCs: send them all again)
 	lda #$FF
 .cc:
@@ -416,6 +437,8 @@ GbStartup:
 	jsr SendTempo
 	jsr ArpPan
 	jsr SoundGb
+	lda #0
+	sta gbWaitOk
 .done:
 	rts
 

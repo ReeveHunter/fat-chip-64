@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.54** (with Fat Chip GB v0.12): BEND IN's STEP and CLICK on the Game Boy. STEP holds the note AMOUNT away for TIME, then jumps (the blip), as the SID and the NES do; CLICK starts each Game Boy note with a burst of noise on its noise channel (SHORT 20 ms or LONG as TIME), while the Game Boy's noise voice is silent. Fat Chip 64 sends it as CC 89 (BEND SHAPE), and for STEP the hold time as CC 81. The Game Boy's startup (now over 64 messages) waits for room in the queue instead of losing its last messages.
+
 **v0.53:** One Key Play's notes get voices before the chord's, and never the bass voices (the Game Boy wave, the NES triangle), so the SPARKLE arp's pair no longer squeezes them out when fewer chips are on: with two chips on, both its notes always sound beside the bass and as much of the chord as fits (SID alone: one of them).
 
 **v0.52:** no more Game Boy status every 2 seconds (it made the Teensyboy Pro blink). It's sent when the patch changes; after switching a Game Boy on late, CTRL + S off and on sends it everything again. One Key Play's notes get voices of their own, even when the chord has the same note, and keep them while they sound: a chord change doesn't glide or re-attack them, the arp never hits them, and pressing a chord key with the same note doesn't re-attack them.
@@ -505,6 +507,7 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
+| `test/test_v054.py` | BEND IN STEP / CLICK to the Game Boy (CC 89, CC 81), end to end through its ROM; the whole startup arrives |
 | `test/test_v053.py` | One Key Play beside SPARKLE with any chips on |
 | `test/test_v052.py` | One Key Play's own voices: chord changes, chord keys and the arp leave them alone |
 | `test/test_v051.py` | One Key Play in MONO, kept off Fat Bass and CHORD CHANGE glides |

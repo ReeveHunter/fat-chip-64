@@ -256,7 +256,8 @@ def fields(p):
     f["sndPenvK"] = bend_k(pe["time"]) if pe else 0
     pg = on.get("penv") if has("penv", "gb") else None
     f["gbPenvA"] = cc(pg["amount"] + 24 if pg else 24, 48)
-    f["gbPenvT"] = cc((1 if pg.get("shape", 0) else gb_penv_t(pg["time"])) if pg and pg["amount"] else 0, 15)
+    # (v0.54: STEP and a LONG CLICK: the hold time, Fat Chip GB v0.12's step_frames; SLIDE: its decay)
+    f["gbPenvT"] = cc((gb_step_t(pg["time"]) if pg.get("shape", 0) or not pg["amount"] else gb_penv_t(pg["time"])) if pg and (pg["amount"] or pg.get("click", 0)) else 0, 15)
     rd = on.get("rdrop") if has("rdrop", "sid") else None
     f["sndRdrop"] = rd["amount"] if rd else 0
     ra = on.get("rdrop")
@@ -284,6 +285,14 @@ GB_PENV = [131, 156, 178, 195, 209, 221, 229, 236, 241, 245, 248, 250, 251, 253,
 def bend_k(ms):
     """BEND IN / OUT time -> the C64's glide k (1/2^k of the way each 4 ms; about 3 x 2^k x 4 ms to settle)"""
     return max(1, min(9, round(math.log2(ms / 12))))
+
+
+GB_STEP = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 24, 30, 36, 48, 60]   # Fat Chip GB v0.12 step_frames
+
+
+def gb_step_t(ms):
+    """Fat Chip GB v0.12 BEND TIME 0-15 for STEP (and a LONG CLICK): held this many frames"""
+    return min(range(16), key=lambda i: abs(GB_STEP[i] * 1000 / GB_TICK_HZ - ms))
 
 
 def gb_penv_t(ms):
