@@ -490,6 +490,43 @@ Allocate:
 	iny
 	bne .kn
 .kd:
+	; 1c. (v0.53) One Key Play's other notes before the chord's (the melody
+	; wins when voices run short, beside SPARKLE's pair), on voices that
+	; aren't the bass (the Game Boy wave, the NES triangle: the chord's)
+	ldy okpFrom
+.on:
+	cpy allocCount
+	beq .od
+	lda covered,y
+	bne .onx
+	ldx #0
+.ov:
+	lda vWant,x
+	cmp #NO_NOTE
+	bne .ovx
+	lda vFat,x
+	ora vBass,x
+	bne .ovx
+	sty okY
+	jsr VoiceEnabled
+	php
+	ldy okY
+	plp
+	beq .ovx
+	lda allocList,y
+	sta vWant,x
+	lda #1
+	sta vOkpN,x
+	sta covered,y
+	bne .onx
+.ovx:
+	inx
+	cpx #NUM_VOICES
+	bne .ov
+.onx:
+	iny
+	bne .on
+.od:
 	; 2. one voice per uncovered note, lowest first
 	ldx #0
 .p2:

@@ -27,7 +27,7 @@ def mod(c, m, key, ms=60):
 c = C64(channels=None)
 c.run_ms(400)
 row = lambda r: c.screen_row(r)
-check("header V0.52", "V0.52" in row(0), row(0))
+check("header V0.53", "V0.53" in row(0), row(0))
 check("sound line: bank, slot, patch (FAT   1 FAT)", row(2).startswith("FAT   1 FAT "), row(2))
 
 # ---- banks and slots

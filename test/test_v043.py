@@ -30,7 +30,7 @@ c.keys_039 = False
 c.fkeys_036 = False
 c.menu_fkeys = False
 c.run_ms(400)
-check("header V0.52", "V0.52" in c.screen_row(0), c.screen_row(0))
+check("header V0.53", "V0.53" in c.screen_row(0), c.screen_row(0))
 
 c._raw_tap("return", ms=100)
 r = rows(c)

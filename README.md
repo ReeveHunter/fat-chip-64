@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.53:** One Key Play's notes get voices before the chord's, and never the bass voices (the Game Boy wave, the NES triangle), so the SPARKLE arp's pair no longer squeezes them out when fewer chips are on: with two chips on, both its notes always sound beside the bass and as much of the chord as fits (SID alone: one of them).
+
 **v0.52:** no more Game Boy status every 2 seconds (it made the Teensyboy Pro blink). It's sent when the patch changes; after switching a Game Boy on late, CTRL + S off and on sends it everything again. One Key Play's notes get voices of their own, even when the chord has the same note, and keep them while they sound: a chord change doesn't glide or re-attack them, the arp never hits them, and pressing a chord key with the same note doesn't re-attack them.
 
 **v0.51:** One Key Play keeps out of the way. In MONO its notes sound beside the mono note (they used to go silent while a key was held), with their own attacks. Fat Bass never takes them: it plays the lowest chord note, and with no chord held there's no Fat Bass. A voice moving to a One Key Play note never glides there with CHORD CHANGE (GLIDE, STAGGER, WANDER). REPEAT still echoes them.
@@ -503,6 +505,7 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
+| `test/test_v053.py` | One Key Play beside SPARKLE with any chips on |
 | `test/test_v052.py` | One Key Play's own voices: chord changes, chord keys and the arp leave them alone |
 | `test/test_v051.py` | One Key Play in MONO, kept off Fat Bass and CHORD CHANGE glides |
 | `test/test_v050.py` | the Game Boy sync (channels, tuning, status every 2 s; status after CCs; CUSTOM), One Key Play out of latch and the arp |
