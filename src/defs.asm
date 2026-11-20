@@ -803,6 +803,12 @@ rpShift     ds 1               ; REPEAT: each echo moved by this (signed)
 rpMode      ds 1               ;   bit 0 scale steps, bits 1-2 ECHOES (0 GB + NES, 1 ALL CHIPS, 2 ONE CHIP)
 rpCur       ds 1               ;   RepeatPress: the echo's note
 rpNEcho     ds 1               ;   echo voices now
+vibSyL      ds 1               ; v0.58: VIBRATO SYNC's step per 4 ms at this tempo
+vibSyH      ds 1
+pwmSyL      ds 1               ;   PWM SYNC's
+pwmSyH      ds 1
+pwmRL       ds 1               ;   the PWM's step now (the patch's or its SYNC's)
+pwmRH       ds 1
 tremSyncL   ds 1               ; TREMOLO SYNC: the phase step per 10 ms
 tremSyncH   ds 1
 tremMode    ds 1               ; TREMOLO MODE now: 0 LFO, 1 PUMP, 2-4 GATEs

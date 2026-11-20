@@ -903,6 +903,43 @@ TremSyncCalc:
 .x:
 	rts
 
+; v0.58: TREMOLO SYNC (per 10 ms), then VIBRATO SYNC and PWM SYNC (their
+; phase step per 4 ms: 262144 / the division in beats / beatMs)
+SyncCalc:
+	subroutine
+	jsr TremSyncCalc
+	lda beatMs
+	ora beatMs+1
+	beq .x
+	ldx sndVibSync
+	beq .p
+	jsr .one
+	lda d24
+	sta vibSyL
+	lda d24+1
+	sta vibSyH
+.p:
+	ldx sndPwmSync
+	beq .x
+	jsr .one
+	lda d24
+	sta pwmSyL
+	lda d24+1
+	sta pwmSyH
+.x:
+	rts
+.one:
+	lda ssyncL-1,x
+	sta d24
+	lda ssyncM-1,x
+	sta d24+1
+	lda ssyncH-1,x
+	sta d24+2
+	jmp Div24
+ssyncL:     .byte <65536,<131072,<262144,<349525,<524288,<786432,<1048576,<1572864,<2097152
+ssyncM:     .byte >65536,>131072,>262144,>349525,>524288,>786432,>1048576,>1572864,>2097152
+ssyncH:     .byte 65536>>16,131072>>16,262144>>16,349525>>16,524288>>16,786432>>16,1048576>>16,1572864>>16,2097152>>16
+
 ; 655360 / the division in beats: 1 BAR, 1/2, 1/4, 1/8 dotted, 1/8, 1/8T, 1/16, 1/16T, 1/32
 tsyncL:     .byte <163840,<327680,<655360,<873813,<1310720,<1966080,<2621440,<3932160,<5242880
 tsyncM:     .byte >163840,>327680,>655360,>873813,>1310720,>1966080,>2621440,>3932160,>5242880
@@ -1079,15 +1116,6 @@ TremCC7:                        ; A = CC7 value on both NES pulses
 
 ; Sound switched (V): leaving PADS ends any NES envelope at once and puts the
 ; pulses back at full volume.
-NesSoundApply:
-	subroutine
-	lda nesEnvOn
-	bne .x
-	jsr NesCutAll
-	jmp NesFullVolume
-.x:
-	rts
-
 ; Cut every NES voice that is fading (release) or dropping: note-off now.
 NesCutAll:
 	subroutine

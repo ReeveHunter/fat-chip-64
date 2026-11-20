@@ -194,20 +194,6 @@ MonoSet:
 	sta monoMode
 	rts
 
-; Menu: MONO/POLY changed
-MonoMenu:
-	jsr MonoSet
-	jsr GbLegato
-	lda #1
-	sta reallocFlag
-	jmp Dirty
-
-; Menu: Fat Bass lock changed
-FatBassMenu:
-	jsr SoundRelease
-	jsr FatBassSet
-	jmp Dirty
-
 ; The vibrato, glide and detune the SID uses (FxTick, voices.asm). Each is
 ; the menu's choice: AS SOUND (the sound's), ON (the ADVANCED SOUND values),
 ; OFF. VIBRATO or GLIDE held turns on what's off (the ADVANCED SOUND values;
@@ -215,7 +201,19 @@ FatBassMenu:
 ; voice its own phase; WIDE held: the detune about twice as wide.
 FxVars:
 	subroutine
+	jsr SyncCalc            ; (v0.58: TREMOLO, VIBRATO and PWM SYNC at this tempo)
 	ldx soundMode
+	lda sndPwmRL            ; ---- PWM: its rate, or its SYNC's
+	sta pwmRL
+	lda sndPwmRH
+	sta pwmRH
+	lda sndPwmSync
+	beq .pw
+	lda pwmSyL
+	sta pwmRL
+	lda pwmSyH
+	sta pwmRH
+.pw:
 	; ---- vibrato
 	ldy vibLock
 	beq .vs
@@ -232,6 +230,13 @@ FxVars:
 	sta vibRL
 	lda sndVibRH
 	sta vibRH
+	lda sndVibSync          ; (v0.58: VIBRATO SYNC: the rate from the tempo)
+	beq .vf
+	lda vibSyL
+	sta vibRL
+	lda vibSyH
+	sta vibRH
+.vf:
 	lda sndVibDel
 	sta vibDel
 	lda sndVibSpr
@@ -371,7 +376,7 @@ FxVars:
 	lda sndWarbA
 .nw:
 	sta nfxWarb
-	jmp TremSyncCalc        ; (TREMOLO SYNC: this patch's division)
+	rts
 
 ; the ADVANCED SOUND vibrato (keeps X)
 VibUser:
@@ -490,16 +495,6 @@ SidRetune:
 	rts
 
 ; A sound switch or an ADVANCED SOUND value changed (menu)
-SoundLocks:
-	jsr FxButtons
-	jsr RepeatFromSound
-	lda devOn+DEV_GB
-	beq .x
-	jsr GbDetAll
-	jmp WarbleSend
-.x:
-	rts
-
 ; WIDE / TAPE WOBBLE held or let go
 ActWide:
 ActWobble:
@@ -1141,6 +1136,9 @@ SoundGbLfo:
 	ldy #0
 	jmp SoundGbPut
 .snd:
+	lda #91                 ; (v0.58: LFO SYNC, Fat Chip GB v0.15)
+	ldy gbLSync
+	jsr SoundGbPut
 	lda #76
 	ldy gbLRate
 	jsr SoundGbPut
@@ -1189,6 +1187,9 @@ SoundGbLfo:
 	ldy #32
 	jmp SoundGbPut
 .pitch:
+	lda #91                 ; (FREE: no LFO SYNC)
+	ldy #0
+	jsr SoundGbPut
 	lda #78                 ; to pitch, triangle
 	ldy #0
 	jsr SoundGbPut
@@ -1487,7 +1488,7 @@ SidFx:
 	; each voice its own phase)
 	lda sndPwm
 	beq .noP
-	ADVANCE pPhL, sndPwmRL, sndPwmRH
+	ADVANCE pPhL, pwmRL, pwmRH       ; (v0.58: the patch's, or PWM SYNC's)
 	ldy fxVoice
 	iny
 	cpy #3

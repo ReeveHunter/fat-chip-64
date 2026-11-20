@@ -290,21 +290,8 @@ Div16:
 	rts
 
 ; ------------------------------------------------------------ arp keys
-ArpModeKey:
-	subroutine
-	ldx arpMode
-	inx
-	cpx #3
-	bcc .s
-	ldx #0
-.s:
-	stx arpMode
-	lda #0
-	sta arpTemp             ; (A takes over from a held ARP)
-	txa
-	beq ArpModeApply
-	stx arpLast             ; ARP (SPACE / a button) turns this one on
 ArpModeApply:
+	subroutine
 	lda #0
 	sta arpRunning          ; restart cleanly in the new mode
 	jsr ArpPan

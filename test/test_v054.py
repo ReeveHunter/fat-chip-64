@@ -42,7 +42,7 @@ def send(c, **penv):
 
 c = C64(channels=None)
 c.run_ms(500)
-check("header V0.57", "V0.57" in c.screen_row(0), c.screen_row(0))
+check("header V0.58", "V0.58" in c.screen_row(0), c.screen_row(0))
 gbm = [(a, b) for t, s, a, b in c.midi() if s & 0xF0 == 0xB0 and c.v("gbBase") <= (s & 15) < c.v("gbBase") + 3]
 check("the Game Boy's startup (now over 64 messages) arrives whole: it waits for room, ends with the status",
       len(gbm) > 64 and gbm[-1] == (114, 64), (len(gbm), gbm[-2:]))

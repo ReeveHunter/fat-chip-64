@@ -71,88 +71,90 @@ mL66:      .byte "RATE ",0
 mL67:      .byte "DELAY ",0
 mL68:      .byte "SHAPE ",0
 mL69:      .byte "DRIFT ",0
-mL70:      .byte "TIME ",0
-mL71:      .byte "AMOUNT ",0
-mL72:      .byte "SPEED ",0
-mL73:      .byte "DEPTH ",0
-mL74:      .byte "RATE ",0
-mL75:      .byte "SHAPE ",0
-mL76:      .byte "SYNC ",0
-mL77:      .byte "CUTOFF ",0
-mL78:      .byte "RESONANCE ",0
-mL79:      .byte "ENV AMOUNT ",0
-mL80:      .byte "LFO DEPTH ",0
-mL81:      .byte "LFO RATE ",0
-mL82:      .byte "DEPTH ",0
-mL83:      .byte "RATE ",0
-mL84:      .byte "SHAPE ",0
-mL85:      .byte "PATTERN ",0
-mL86:      .byte "STEP ",0
-mL87:      .byte "TIME ",0
-mL88:      .byte "REPEATS ",0
-mL89:      .byte "LEVEL ",0
-mL90:      .byte "SHIFT ",0
-mL91:      .byte "SHIFT IN ",0
-mL92:      .byte "ECHOES ",0
-mL93:      .byte "LATCH STYLE (CTRL L) ",0
-mL94:      .byte "SPACE ",0
-mL95:      .byte "BEND RANGE ",0
-mL96:      .byte "BEAT TEMPO ",0
-mL97:      .byte "FINE TUNE ",0
-mU97:      .byte " CENTS",0
-mL98:      .byte "CHORD CHANGE ",0
-mL99:      .byte "WANDER TIME ",0
-mL100:      .byte "DRONE VOICING ",0
-mL101:      .byte "SPLIT (SHIFT F5/F7) ",0
-mL102:      .byte "SPLIT KEY ",0
-mU102:      .byte "~K",0
-mL103:      .byte "SPLIT NOTE (MIDI) ",0
-mU103:      .byte "~N",0
-mL104:      .byte "LEAD OCTAVE ",0
-mU104:      .byte "",0
-mL105:      .byte "ONE KEY PLAY ",0
-mE105      equ mE1
-mL106:      .byte "NOTES ",0
-mL107:      .byte "MOTION ",0
-mL108:      .byte "TURN ",0
-mL109:      .byte "DIRECTION ",0
-mL110:      .byte "EACH PRESS ",0
-mL111:      .byte "YAMAHA SHS-10 ",0
-mL112:      .byte "CASIO DH-100 ",0
-mE112      equ mE111
-mL113:      .byte "ATARI SYNTHCART ",0
-mE113      equ mE111
-mL114:      .byte "GAME BOY ",0
-mL115:      .byte "GAME BOY CHANNELS ",0
-mL116:      .byte "MIDINES CHANNELS ",0
-mE116      equ mE115
-mL117:      .byte "TEMPO ",0
-mL118:      .byte "SHS-10 RHYTHM ",0
-mL119:      .byte "START/STOP ",0
-mL120:      .byte "VOICE BUTTONS ",0
-mL121:      .byte "RHYTHM BUTTONS ",0
-mL122:      .byte "WHEEL ",0
-mL123:      .byte "VIBRATO BUTTON ",0
-mE123      equ mE94
-mL124:      .byte "PORTAMENTO BUTTON ",0
-mE124      equ mE94
-mL125:      .byte "SUSTAIN BUTTON ",0
-mE125      equ mE94
-mL126:      .byte "BREATH ",0
-mL127:      .byte "BREATH FX1 ",0
-mL128:      .byte "BREATH FX2 ",0
-mE128      equ mE127
-mL129:      .byte "BREATH FEEL ",0
-mL130:      .byte "NOTES ",0
-mL131:      .byte "PORTAMENTO BUTTON ",0
-mE131      equ mE94
-mL132:      .byte "TONE BUTTONS ",0
-mL133:      .byte "TEMPO ",0
-mL134:      .byte "TRIM ",0
-mU134:      .byte "",0
-mL135:      .byte "TUNE TO ",0
-mL136:      .byte "MATCH KEY ",0
-mE136      equ mE1
+mL70:      .byte "SYNC ",0
+mL71:      .byte "TIME ",0
+mL72:      .byte "AMOUNT ",0
+mL73:      .byte "SPEED ",0
+mL74:      .byte "DEPTH ",0
+mL75:      .byte "RATE ",0
+mL76:      .byte "SHAPE ",0
+mL77:      .byte "SYNC ",0
+mL78:      .byte "CUTOFF ",0
+mL79:      .byte "RESONANCE ",0
+mL80:      .byte "ENV AMOUNT ",0
+mL81:      .byte "LFO DEPTH ",0
+mL82:      .byte "LFO RATE ",0
+mL83:      .byte "DEPTH ",0
+mL84:      .byte "RATE ",0
+mL85:      .byte "SHAPE ",0
+mL86:      .byte "SYNC ",0
+mL87:      .byte "PATTERN ",0
+mL88:      .byte "STEP ",0
+mL89:      .byte "TIME ",0
+mL90:      .byte "REPEATS ",0
+mL91:      .byte "LEVEL ",0
+mL92:      .byte "SHIFT ",0
+mL93:      .byte "SHIFT IN ",0
+mL94:      .byte "ECHOES ",0
+mL95:      .byte "LATCH STYLE (CTRL L) ",0
+mL96:      .byte "SPACE ",0
+mL97:      .byte "BEND RANGE ",0
+mL98:      .byte "BEAT TEMPO ",0
+mL99:      .byte "FINE TUNE ",0
+mU99:      .byte " CENTS",0
+mL100:      .byte "CHORD CHANGE ",0
+mL101:      .byte "WANDER TIME ",0
+mL102:      .byte "DRONE VOICING ",0
+mL103:      .byte "SPLIT (SHIFT F5/F7) ",0
+mL104:      .byte "SPLIT KEY ",0
+mU104:      .byte "~K",0
+mL105:      .byte "SPLIT NOTE (MIDI) ",0
+mU105:      .byte "~N",0
+mL106:      .byte "LEAD OCTAVE ",0
+mU106:      .byte "",0
+mL107:      .byte "ONE KEY PLAY ",0
+mE107      equ mE1
+mL108:      .byte "NOTES ",0
+mL109:      .byte "MOTION ",0
+mL110:      .byte "TURN ",0
+mL111:      .byte "DIRECTION ",0
+mL112:      .byte "EACH PRESS ",0
+mL113:      .byte "YAMAHA SHS-10 ",0
+mL114:      .byte "CASIO DH-100 ",0
+mE114      equ mE113
+mL115:      .byte "ATARI SYNTHCART ",0
+mE115      equ mE113
+mL116:      .byte "GAME BOY ",0
+mL117:      .byte "GAME BOY CHANNELS ",0
+mL118:      .byte "MIDINES CHANNELS ",0
+mE118      equ mE117
+mL119:      .byte "TEMPO ",0
+mL120:      .byte "SHS-10 RHYTHM ",0
+mL121:      .byte "START/STOP ",0
+mL122:      .byte "VOICE BUTTONS ",0
+mL123:      .byte "RHYTHM BUTTONS ",0
+mL124:      .byte "WHEEL ",0
+mL125:      .byte "VIBRATO BUTTON ",0
+mE125      equ mE96
+mL126:      .byte "PORTAMENTO BUTTON ",0
+mE126      equ mE96
+mL127:      .byte "SUSTAIN BUTTON ",0
+mE127      equ mE96
+mL128:      .byte "BREATH ",0
+mL129:      .byte "BREATH FX1 ",0
+mL130:      .byte "BREATH FX2 ",0
+mE130      equ mE129
+mL131:      .byte "BREATH FEEL ",0
+mL132:      .byte "NOTES ",0
+mL133:      .byte "PORTAMENTO BUTTON ",0
+mE133      equ mE96
+mL134:      .byte "TONE BUTTONS ",0
+mL135:      .byte "TEMPO ",0
+mL136:      .byte "TRIM ",0
+mU136:      .byte "",0
+mL137:      .byte "TUNE TO ",0
+mL138:      .byte "MATCH KEY ",0
+mE138      equ mE1
 pW0:  .byte 0,$FF,$00,0,$FF,$01
 pK0:  .word 0,1
 pS0:  .byte "POLY",0,"MONO",0
@@ -261,124 +263,119 @@ pS25:  .byte "TRI     ",0,"SAW UP  ",0,"SAW DOWN",0,"SQUARE  ",0,"RANDOM  ",0
 pW26:  .byte 28,$FF,$00,28,$FF,$01
 pK26:  .word 0,1
 pS26:  .byte "0 % ",0,"50 %",0
-pW27:  .byte 14,$FF,$03,37,$FF,$18,38,$FF,$18,39,$FF,$18,14,$FF,$04,37,$FF,$28,38,$FF,$28,39,$FF,$28
+pW27:  .byte 87,$FF,$00,89,$FF,$00,87,$FF,$01,89,$FF,$01,87,$FF,$02,89,$FF,$02,87,$FF,$03,89,$FF,$03
+        .byte 87,$FF,$04,89,$FF,$04,87,$FF,$05,89,$FF,$05,87,$FF,$06,89,$FF,$06,87,$FF,$07,89,$FF,$07
+        .byte 87,$FF,$08,89,$FF,$08,87,$FF,$09,89,$FF,$09
+pK27:  .word 0,1,2,3,4,5,6,7,8,9
+pS27:  .byte "FREE   ",0,"1 BAR  ",0,"1/2    ",0,"1/4    ",0,"1/8 DOT",0,"1/8    ",0,"1/8T   ",0,"1/16   ",0,"1/16T  ",0,"1/32   ",0
+pW28:  .byte 14,$FF,$03,37,$FF,$18,38,$FF,$18,39,$FF,$18,14,$FF,$04,37,$FF,$28,38,$FF,$28,39,$FF,$28
         .byte 14,$FF,$05,37,$FF,$38,38,$FF,$38,39,$FF,$38,14,$FF,$06,37,$FF,$50,38,$FF,$50,39,$FF,$50
         .byte 14,$FF,$07,37,$FF,$60,38,$FF,$60,39,$FF,$60
-pK27:  .word 3,4,5,6,7
-pS27:  .byte "30 MS ",0,"60 MS ",0,"120 MS",0,"250 MS",0,"500 MS",0
-pW28:  .byte 42,$FF,$06,84,$FF,$05,42,$FF,$0B,84,$FF,$09,42,$FF,$10,84,$FF,$0E,42,$FF,$15,84,$FF,$13
+pK28:  .word 3,4,5,6,7
+pS28:  .byte "30 MS ",0,"60 MS ",0,"120 MS",0,"250 MS",0,"500 MS",0
+pW29:  .byte 42,$FF,$06,84,$FF,$05,42,$FF,$0B,84,$FF,$09,42,$FF,$10,84,$FF,$0E,42,$FF,$15,84,$FF,$13
         .byte 42,$FF,$1A,84,$FF,$18,42,$FF,$1F,84,$FF,$1C,42,$FF,$29,84,$FF,$26,42,$FF,$34,84,$FF,$2F
         .byte 42,$FF,$40,84,$FF,$3B,42,$FF,$4D,84,$FF,$47,42,$FF,$67,84,$FF,$5F,42,$FF,$80,84,$FF,$76
-pK28:  .word 6,11,16,21,26,31,41,52,64,77,103,128
-pS28:  .byte "2 CENTS ",0,"4 CENTS ",0,"6 CENTS ",0,"8 CENTS ",0,"10 CENTS",0,"12 CENTS",0,"16 CENTS",0,"20 CENTS",0,"25 CENTS",0,"30 CENTS",0,"40 CENTS",0,"50 CENTS",0
-pW29:  .byte 43,$FF,$0A,85,$FF,$0A,43,$FF,$14,85,$FF,$14,43,$FF,$1E,85,$FF,$1E,43,$FF,$28,85,$FF,$28
+pK29:  .word 6,11,16,21,26,31,41,52,64,77,103,128
+pS29:  .byte "2 CENTS ",0,"4 CENTS ",0,"6 CENTS ",0,"8 CENTS ",0,"10 CENTS",0,"12 CENTS",0,"16 CENTS",0,"20 CENTS",0,"25 CENTS",0,"30 CENTS",0,"40 CENTS",0,"50 CENTS",0
+pW30:  .byte 43,$FF,$0A,85,$FF,$0A,43,$FF,$14,85,$FF,$14,43,$FF,$1E,85,$FF,$1E,43,$FF,$28,85,$FF,$28
         .byte 43,$FF,$32,85,$FF,$32,43,$FF,$3C,85,$FF,$3C,43,$FF,$50,85,$FF,$50,43,$FF,$64,85,$FF,$64
         .byte 43,$FF,$7F,85,$FF,$7F
-pK29:  .word 10,20,30,40,50,60,80,100,127
-pS29:  .byte "10 ",0,"20 ",0,"30 ",0,"40 ",0,"50 ",0,"60 ",0,"80 ",0,"100",0,"127",0
-pW30:  .byte 62,$FF,$02,62,$FF,$03,62,$FF,$04,62,$FF,$06,62,$FF,$08,62,$FF,$09,62,$FF,$0A,62,$FF,$0C,62,$FF,$0E,62,$FF,$0F
-pK30:  .word 2,3,4,6,8,9,10,12,14,15
-pS30:  .byte "10 % ",0,"20 % ",0,"30 % ",0,"40 % ",0,"50 % ",0,"60 % ",0,"70 % ",0,"80 % ",0,"90 % ",0,"100 %",0
-pW31:  .byte 63,$FF,$8F,64,$FF,$02,63,$FF,$1F,64,$FF,$05,63,$FF,$AE,64,$FF,$07,63,$FF,$3D,64,$FF,$0A
+pK30:  .word 10,20,30,40,50,60,80,100,127
+pS30:  .byte "10 ",0,"20 ",0,"30 ",0,"40 ",0,"50 ",0,"60 ",0,"80 ",0,"100",0,"127",0
+pW31:  .byte 62,$FF,$02,62,$FF,$03,62,$FF,$04,62,$FF,$06,62,$FF,$08,62,$FF,$09,62,$FF,$0A,62,$FF,$0C,62,$FF,$0E,62,$FF,$0F
+pK31:  .word 2,3,4,6,8,9,10,12,14,15
+pS31:  .byte "10 % ",0,"20 % ",0,"30 % ",0,"40 % ",0,"50 % ",0,"60 % ",0,"70 % ",0,"80 % ",0,"90 % ",0,"100 %",0
+pW32:  .byte 63,$FF,$8F,64,$FF,$02,63,$FF,$1F,64,$FF,$05,63,$FF,$AE,64,$FF,$07,63,$FF,$3D,64,$FF,$0A
         .byte 63,$FF,$CD,64,$FF,$0C,63,$FF,$5C,64,$FF,$0F,63,$FF,$EC,64,$FF,$11,63,$FF,$7B,64,$FF,$14
         .byte 63,$FF,$9A,64,$FF,$19,63,$FF,$B8,64,$FF,$1E,63,$FF,$F6,64,$FF,$28
-pK31:  .word 655,1311,1966,2621,3277,3932,4588,5243,6554,7864,10486
-pS31:  .byte "1 HZ ",0,"2 HZ ",0,"3 HZ ",0,"4 HZ ",0,"5 HZ ",0,"6 HZ ",0,"7 HZ ",0,"8 HZ ",0,"10 HZ",0,"12 HZ",0,"16 HZ",0
-pW32:  .byte 65,$FF,$00,67,$FF,$00,65,$FF,$01,67,$FF,$00,65,$FF,$02,67,$FF,$00,65,$FF,$03,67,$FF,$00
+pK32:  .word 655,1311,1966,2621,3277,3932,4588,5243,6554,7864,10486
+pS32:  .byte "1 HZ ",0,"2 HZ ",0,"3 HZ ",0,"4 HZ ",0,"5 HZ ",0,"6 HZ ",0,"7 HZ ",0,"8 HZ ",0,"10 HZ",0,"12 HZ",0,"16 HZ",0
+pW33:  .byte 65,$FF,$00,67,$FF,$00,65,$FF,$01,67,$FF,$00,65,$FF,$02,67,$FF,$00,65,$FF,$03,67,$FF,$00
         .byte 65,$FF,$04,67,$FF,$00,65,$FF,$05,67,$FF,$00,65,$FF,$00,67,$FF,$01,65,$FF,$00,67,$FF,$02
         .byte 65,$FF,$00,67,$FF,$03,65,$FF,$00,67,$FF,$04
-pK32:  .word 0,1,2,3,4,5,256,512,768,1024
-pS32:  .byte "TRI     ",0,"SINE    ",0,"SAW UP  ",0,"SAW DOWN",0,"SQUARE  ",0,"RANDOM  ",0,"PUMP    ",0,"X.X.XX.X",0,"XX.XX.X.",0,"X..X..X.",0
-pW33:  .byte 66,$FF,$00,66,$FF,$01,66,$FF,$02,66,$FF,$03,66,$FF,$04,66,$FF,$05,66,$FF,$06,66,$FF,$07,66,$FF,$08,66,$FF,$09
-pK33:  .word 0,1,2,3,4,5,6,7,8,9
-pS33:  .byte "FREE   ",0,"1 BAR  ",0,"1/2    ",0,"1/4    ",0,"1/8 DOT",0,"1/8    ",0,"1/8T   ",0,"1/16   ",0,"1/16T  ",0,"1/32   ",0
-pW34:  .byte 15,$FF,$08,15,$FF,$10,15,$FF,$18,15,$FF,$20,15,$FF,$30,15,$FF,$40,15,$FF,$50,15,$FF,$60
+pK33:  .word 0,1,2,3,4,5,256,512,768,1024
+pS33:  .byte "TRI     ",0,"SINE    ",0,"SAW UP  ",0,"SAW DOWN",0,"SQUARE  ",0,"RANDOM  ",0,"PUMP    ",0,"X.X.XX.X",0,"XX.XX.X.",0,"X..X..X.",0
+pW34:  .byte 66,$FF,$00,66,$FF,$01,66,$FF,$02,66,$FF,$03,66,$FF,$04,66,$FF,$05,66,$FF,$06,66,$FF,$07,66,$FF,$08,66,$FF,$09
+pK34:  .word 0,1,2,3,4,5,6,7,8,9
+pS34:  .byte "FREE   ",0,"1 BAR  ",0,"1/2    ",0,"1/4    ",0,"1/8 DOT",0,"1/8    ",0,"1/8T   ",0,"1/16   ",0,"1/16T  ",0,"1/32   ",0
+pW35:  .byte 15,$FF,$08,15,$FF,$10,15,$FF,$18,15,$FF,$20,15,$FF,$30,15,$FF,$40,15,$FF,$50,15,$FF,$60
         .byte 15,$FF,$70,15,$FF,$80,15,$FF,$90,15,$FF,$A0,15,$FF,$B0,15,$FF,$C0,15,$FF,$E0,15,$FF,$FF
-pK34:  .word 8,16,24,32,48,64,80,96,112,128,144,160,176,192,224,255
-pS34:  .byte "8  ",0,"16 ",0,"24 ",0,"32 ",0,"48 ",0,"64 ",0,"80 ",0,"96 ",0,"112",0,"128",0,"144",0,"160",0,"176",0,"192",0,"224",0,"255",0
-pW35:  .byte 16,$FF,$07,16,$FF,$17,16,$FF,$27,16,$FF,$37,16,$FF,$47,16,$FF,$57,16,$FF,$67,16,$FF,$77
+pK35:  .word 8,16,24,32,48,64,80,96,112,128,144,160,176,192,224,255
+pS35:  .byte "8  ",0,"16 ",0,"24 ",0,"32 ",0,"48 ",0,"64 ",0,"80 ",0,"96 ",0,"112",0,"128",0,"144",0,"160",0,"176",0,"192",0,"224",0,"255",0
+pW36:  .byte 16,$FF,$07,16,$FF,$17,16,$FF,$27,16,$FF,$37,16,$FF,$47,16,$FF,$57,16,$FF,$67,16,$FF,$77
         .byte 16,$FF,$87,16,$FF,$97,16,$FF,$A7,16,$FF,$B7,16,$FF,$C7,16,$FF,$D7,16,$FF,$E7,16,$FF,$F7
-pK35:  .word 7,23,39,55,71,87,103,119,135,151,167,183,199,215,231,247
-pS35:  .byte "0 ",0,"1 ",0,"2 ",0,"3 ",0,"4 ",0,"5 ",0,"6 ",0,"7 ",0,"8 ",0,"9 ",0,"10",0,"11",0,"12",0,"13",0,"14",0,"15",0
-pW36:  .byte 20,$FF,$00,20,$FF,$10,20,$FF,$20,20,$FF,$30,20,$FF,$40,20,$FF,$60,20,$FF,$7F
-pK36:  .word 0,16,32,48,64,96,127
-pS36:  .byte "0  ",0,"16 ",0,"32 ",0,"48 ",0,"64 ",0,"96 ",0,"127",0
-pW37:  .byte 17,$FF,$00,18,$FF,$00,17,$FF,$08,18,$FF,$83,17,$FF,$10,18,$FF,$83,17,$FF,$18,18,$FF,$83
+pK36:  .word 7,23,39,55,71,87,103,119,135,151,167,183,199,215,231,247
+pS36:  .byte "0 ",0,"1 ",0,"2 ",0,"3 ",0,"4 ",0,"5 ",0,"6 ",0,"7 ",0,"8 ",0,"9 ",0,"10",0,"11",0,"12",0,"13",0,"14",0,"15",0
+pW37:  .byte 20,$FF,$00,20,$FF,$10,20,$FF,$20,20,$FF,$30,20,$FF,$40,20,$FF,$60,20,$FF,$7F
+pK37:  .word 0,16,32,48,64,96,127
+pS37:  .byte "0  ",0,"16 ",0,"32 ",0,"48 ",0,"64 ",0,"96 ",0,"127",0
+pW38:  .byte 17,$FF,$00,18,$FF,$00,17,$FF,$08,18,$FF,$83,17,$FF,$10,18,$FF,$83,17,$FF,$18,18,$FF,$83
         .byte 17,$FF,$20,18,$FF,$83,17,$FF,$30,18,$FF,$83,17,$FF,$40,18,$FF,$83,17,$FF,$60,18,$FF,$83
         .byte 17,$FF,$7F,18,$FF,$83
-pK37:  .word 0,8,16,24,32,48,64,96,127
-pS37:  .byte "0  ",0,"8  ",0,"16 ",0,"24 ",0,"32 ",0,"48 ",0,"64 ",0,"96 ",0,"127",0
-pW38:  .byte 18,$FF,$1A,19,$FF,$00,18,$FF,$34,19,$FF,$00,18,$FF,$4F,19,$FF,$00,18,$FF,$83,19,$FF,$00
+pK38:  .word 0,8,16,24,32,48,64,96,127
+pS38:  .byte "0  ",0,"8  ",0,"16 ",0,"24 ",0,"32 ",0,"48 ",0,"64 ",0,"96 ",0,"127",0
+pW39:  .byte 18,$FF,$1A,19,$FF,$00,18,$FF,$34,19,$FF,$00,18,$FF,$4F,19,$FF,$00,18,$FF,$83,19,$FF,$00
         .byte 18,$FF,$C5,19,$FF,$00,18,$FF,$06,19,$FF,$01,18,$FF,$89,19,$FF,$01,18,$FF,$0C,19,$FF,$02
         .byte 18,$FF,$12,19,$FF,$03,18,$FF,$19,19,$FF,$04,18,$FF,$25,19,$FF,$06
-pK38:  .word 26,52,79,131,197,262,393,524,786,1049,1573
-pS38:  .byte "0.1 HZ ",0,"0.2 HZ ",0,"0.3 HZ ",0,"0.5 HZ ",0,"0.75 HZ",0,"1 HZ   ",0,"1.5 HZ ",0,"2 HZ   ",0,"3 HZ   ",0,"4 HZ   ",0,"6 HZ   ",0
-pW39:  .byte 21,$FF,$0D,47,$FF,$0C,21,$FF,$19,47,$FF,$18,21,$FF,$26,47,$FF,$24,21,$FF,$33,47,$FF,$30
+pK39:  .word 26,52,79,131,197,262,393,524,786,1049,1573
+pS39:  .byte "0.1 HZ ",0,"0.2 HZ ",0,"0.3 HZ ",0,"0.5 HZ ",0,"0.75 HZ",0,"1 HZ   ",0,"1.5 HZ ",0,"2 HZ   ",0,"3 HZ   ",0,"4 HZ   ",0,"6 HZ   ",0
+pW40:  .byte 21,$FF,$0D,47,$FF,$0C,21,$FF,$19,47,$FF,$18,21,$FF,$26,47,$FF,$24,21,$FF,$33,47,$FF,$30
         .byte 21,$FF,$40,47,$FF,$40,21,$FF,$4C,47,$FF,$4C,21,$FF,$59,47,$FF,$58,21,$FF,$66,47,$FF,$64
         .byte 21,$FF,$72,47,$FF,$70
-pK39:  .word 13,25,38,51,64,76,89,102,114
-pS39:  .byte "10 %",0,"20 %",0,"30 %",0,"40 %",0,"50 %",0,"60 %",0,"70 %",0,"80 %",0,"90 %",0
-pW40:  .byte 22,$FF,$1A,23,$FF,$00,46,$FF,$04,22,$FF,$34,23,$FF,$00,46,$FF,$14,22,$FF,$4F,23,$FF,$00
+pK40:  .word 13,25,38,51,64,76,89,102,114
+pS40:  .byte "10 %",0,"20 %",0,"30 %",0,"40 %",0,"50 %",0,"60 %",0,"70 %",0,"80 %",0,"90 %",0
+pW41:  .byte 22,$FF,$1A,23,$FF,$00,46,$FF,$04,22,$FF,$34,23,$FF,$00,46,$FF,$14,22,$FF,$4F,23,$FF,$00
         .byte 46,$FF,$1C,22,$FF,$83,23,$FF,$00,46,$FF,$28,22,$FF,$C5,23,$FF,$00,46,$FF,$30,22,$FF,$06
         .byte 23,$FF,$01,46,$FF,$38,22,$FF,$89,23,$FF,$01,46,$FF,$40,22,$FF,$0C,23,$FF,$02,46,$FF,$44
         .byte 22,$FF,$12,23,$FF,$03,46,$FF,$50,22,$FF,$19,23,$FF,$04,46,$FF,$54
-pK40:  .word 26,52,79,131,197,262,393,524,786,1049
-pS40:  .byte "0.1 HZ ",0,"0.2 HZ ",0,"0.3 HZ ",0,"0.5 HZ ",0,"0.75 HZ",0,"1 HZ   ",0,"1.5 HZ ",0,"2 HZ   ",0,"3 HZ   ",0,"4 HZ   ",0
-pW41:  .byte 45,$FF,$00,45,$FF,$34,45,$FF,$1A,45,$FF,$4D,45,$FF,$67
-pK41:  .word 0,52,26,77,103
-pS41:  .byte "TRI     ",0,"SAW UP  ",0,"SAW DOWN",0,"SQUARE  ",0,"RANDOM  ",0
-pW42:  .byte 29,$FF,$01,29,$FF,$02
-pK42:  .word 1,2
-pS42:  .byte "3 WIDTHS",0,"4 WIDTHS",0
-pW43:  .byte 30,$FF,$05,30,$FF,$07,30,$FF,$0A,30,$FF,$0F,30,$FF,$14,30,$FF,$1E,30,$FF,$28,30,$FF,$3E,30,$FF,$53,30,$FF,$7D
-pK43:  .word 5,7,10,15,20,30,40,62,83,125
-pS43:  .byte "20 MS ",0,"30 MS ",0,"40 MS ",0,"60 MS ",0,"80 MS ",0,"120 MS",0,"160 MS",0,"250 MS",0,"333 MS",0,"500 MS",0
-pW44:  .byte 2,$FF,$00,2,$FF,$01,2,$FF,$02,2,$FF,$03,2,$FF,$04,2,$FF,$05,2,$FF,$06,2,$FF,$07,2,$FF,$08,2,$FF,$09,2,$FF,$0A,2,$FF,$0B,2,$FF,$0C,2,$FF,$0D
-pK44:  .word 0,1,2,3,4,5,6,7,8,9,10,11,12,13
-pS44:  .byte "1/4    ",0,"1/8 DOT",0,"1/8    ",0,"1/8T   ",0,"1/16   ",0,"80 MS  ",0,"100 MS ",0,"125 MS ",0,"150 MS ",0,"200 MS ",0,"250 MS ",0,"300 MS ",0,"400 MS ",0,"500 MS ",0
-pW45:  .byte 3,$FF,$00,3,$FF,$01,3,$FF,$02,3,$FF,$03,3,$FF,$04,3,$FF,$05,3,$FF,$06,3,$FF,$07
-pK45:  .word 0,1,2,3,4,5,6,7
-pS45:  .byte "1",0,"2",0,"3",0,"4",0,"5",0,"6",0,"7",0,"8",0
-pW46:  .byte 4,$FF,$05,4,$FF,$04,4,$FF,$03,4,$FF,$02,4,$FF,$01,4,$FF,$00
-pK46:  .word 5,4,3,2,1,0
-pS46:  .byte "50 % ",0,"60 % ",0,"70 % ",0,"80 % ",0,"90 % ",0,"100 %",0
-pW47:  .byte 68,$FF,$F4,68,$FF,$F9,68,$FF,$FB,68,$FF,$FC,68,$FF,$FD,68,$FF,$FE,68,$FF,$FF,68,$FF,$00
+pK41:  .word 26,52,79,131,197,262,393,524,786,1049
+pS41:  .byte "0.1 HZ ",0,"0.2 HZ ",0,"0.3 HZ ",0,"0.5 HZ ",0,"0.75 HZ",0,"1 HZ   ",0,"1.5 HZ ",0,"2 HZ   ",0,"3 HZ   ",0,"4 HZ   ",0
+pW42:  .byte 45,$FF,$00,45,$FF,$34,45,$FF,$1A,45,$FF,$4D,45,$FF,$67
+pK42:  .word 0,52,26,77,103
+pS42:  .byte "TRI     ",0,"SAW UP  ",0,"SAW DOWN",0,"SQUARE  ",0,"RANDOM  ",0
+pW43:  .byte 88,$FF,$00,89,$FF,$00,88,$FF,$01,89,$FF,$01,88,$FF,$02,89,$FF,$02,88,$FF,$03,89,$FF,$03
+        .byte 88,$FF,$04,89,$FF,$04,88,$FF,$05,89,$FF,$05,88,$FF,$06,89,$FF,$06,88,$FF,$07,89,$FF,$07
+        .byte 88,$FF,$08,89,$FF,$08,88,$FF,$09,89,$FF,$09
+pK43:  .word 0,1,2,3,4,5,6,7,8,9
+pS43:  .byte "FREE   ",0,"1 BAR  ",0,"1/2    ",0,"1/4    ",0,"1/8 DOT",0,"1/8    ",0,"1/8T   ",0,"1/16   ",0,"1/16T  ",0,"1/32   ",0
+pW44:  .byte 29,$FF,$01,29,$FF,$02
+pK44:  .word 1,2
+pS44:  .byte "3 WIDTHS",0,"4 WIDTHS",0
+pW45:  .byte 30,$FF,$05,30,$FF,$07,30,$FF,$0A,30,$FF,$0F,30,$FF,$14,30,$FF,$1E,30,$FF,$28,30,$FF,$3E,30,$FF,$53,30,$FF,$7D
+pK45:  .word 5,7,10,15,20,30,40,62,83,125
+pS45:  .byte "20 MS ",0,"30 MS ",0,"40 MS ",0,"60 MS ",0,"80 MS ",0,"120 MS",0,"160 MS",0,"250 MS",0,"333 MS",0,"500 MS",0
+pW46:  .byte 2,$FF,$00,2,$FF,$01,2,$FF,$02,2,$FF,$03,2,$FF,$04,2,$FF,$05,2,$FF,$06,2,$FF,$07,2,$FF,$08,2,$FF,$09,2,$FF,$0A,2,$FF,$0B,2,$FF,$0C,2,$FF,$0D
+pK46:  .word 0,1,2,3,4,5,6,7,8,9,10,11,12,13
+pS46:  .byte "1/4    ",0,"1/8 DOT",0,"1/8    ",0,"1/8T   ",0,"1/16   ",0,"80 MS  ",0,"100 MS ",0,"125 MS ",0,"150 MS ",0,"200 MS ",0,"250 MS ",0,"300 MS ",0,"400 MS ",0,"500 MS ",0
+pW47:  .byte 3,$FF,$00,3,$FF,$01,3,$FF,$02,3,$FF,$03,3,$FF,$04,3,$FF,$05,3,$FF,$06,3,$FF,$07
+pK47:  .word 0,1,2,3,4,5,6,7
+pS47:  .byte "1",0,"2",0,"3",0,"4",0,"5",0,"6",0,"7",0,"8",0
+pW48:  .byte 4,$FF,$05,4,$FF,$04,4,$FF,$03,4,$FF,$02,4,$FF,$01,4,$FF,$00
+pK48:  .word 5,4,3,2,1,0
+pS48:  .byte "50 % ",0,"60 % ",0,"70 % ",0,"80 % ",0,"90 % ",0,"100 %",0
+pW49:  .byte 68,$FF,$F4,68,$FF,$F9,68,$FF,$FB,68,$FF,$FC,68,$FF,$FD,68,$FF,$FE,68,$FF,$FF,68,$FF,$00
         .byte 68,$FF,$01,68,$FF,$02,68,$FF,$03,68,$FF,$04,68,$FF,$05,68,$FF,$07,68,$FF,$0C
-pK47:  .word 244,249,251,252,253,254,255,0,1,2,3,4,5,7,12
-pS47:  .byte "-12",0,"-7 ",0,"-5 ",0,"-4 ",0,"-3 ",0,"-2 ",0,"-1 ",0,"+0 ",0,"+1 ",0,"+2 ",0,"+3 ",0,"+4 ",0,"+5 ",0,"+7 ",0,"+12",0
-pW48:  .byte 69,$FF,$00,69,$FF,$01
-pK48:  .word 0,1
-pS48:  .byte "SEMIS",0,"SCALE",0
-pW49:  .byte 69,$FF,$00,69,$FF,$02,69,$FF,$04
-pK49:  .word 0,2,4
-pS49:  .byte "GB + NES ",0,"ALL CHIPS",0,"ONE CHIP ",0
+pK49:  .word 244,249,251,252,253,254,255,0,1,2,3,4,5,7,12
+pS49:  .byte "-12",0,"-7 ",0,"-5 ",0,"-4 ",0,"-3 ",0,"-2 ",0,"-1 ",0,"+0 ",0,"+1 ",0,"+2 ",0,"+3 ",0,"+4 ",0,"+5 ",0,"+7 ",0,"+12",0
+pW50:  .byte 69,$FF,$00,69,$FF,$01
+pK50:  .word 0,1
+pS50:  .byte "SEMIS",0,"SCALE",0
+pW51:  .byte 69,$FF,$00,69,$FF,$02,69,$FF,$04
+pK51:  .word 0,2,4
+pS51:  .byte "GB + NES ",0,"ALL CHIPS",0,"ONE CHIP ",0
 ; the effects: params, off row (field, value), detection count, on row, dice
 eO0:  .byte 0
-eN0:  .byte 0
 eO1:  .byte 0
-eN1:  .byte 0
 eO2:  .byte 0
-eN2:  .byte 0
 eO3:  .byte 70,$00,71,$05,72,$00,73,$00,74,$00,75,$3F,76,$00
-eN3:  .byte 0
 eO4:  .byte 77,$00,78,$00,79,$00,80,$00,81,$00,82,$00
-eN4:  .byte 0
 eO5:  .byte 12,$00,49,$40,50,$40
-eN5:  .byte 0
-eO6:  .byte 24,$00,25,$00,26,$00,27,$00,28,$00
-eN6:  .byte 44,$00
+eO6:  .byte 24,$00,25,$00,26,$00,27,$00,28,$00,87,$00,89,$00
 eO7:  .byte 14,$00,37,$00,38,$00,39,$00
-eN7:  .byte 0
 eO8:  .byte 42,$00,43,$28,84,$00,85,$00,86,$00
-eN8:  .byte 86,$03
 eO9:  .byte 62,$00,63,$00,64,$00,65,$00,66,$00,67,$00,83,$00
-eN9:  .byte 83,$07
 eO10:  .byte 15,$00,16,$00,17,$00,18,$00,19,$00,20,$00
-eN10:  .byte 0
-eO11:  .byte 21,$00,22,$00,23,$00
-eN11:  .byte 44,$2B
+eO11:  .byte 21,$00,22,$00,23,$00,88,$00,89,$00
 eO12:  .byte 29,$00,30,$00,31,$00
-eN12:  .byte 31,$01
 eO13:  .byte 1,$00,2,$01,3,$02,4,$03,68,$00,69,$00
-eN13:  .byte 1,$01
-; the envelope's Game Boy and NES parts from the SID's nibbles (EnvDerive)

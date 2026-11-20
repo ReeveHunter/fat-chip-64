@@ -342,17 +342,9 @@ keytarKind: .byte DK_KICK,DK_TOM,DK_SNARE,DK_CH,DK_CY
 
 ; ------------------------------------------------------------ beat demos
 ; G: next beat (its kit and tempo)
-BeatKey:
-	subroutine
-	ldx beatSel
-	inx
-	cpx #NUM_BEATS
-	bcc .s
-	ldx #0
-.s:
-	txa
 ; A = beat: chosen (G, or the keytar's rhythm buttons)
 BeatChoose:
+	subroutine
 	sta beatSel
 	tax
 	lda beatStep

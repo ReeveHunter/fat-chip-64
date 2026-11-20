@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.58** (with Fat Chip GB v0.15): VIBRATO SYNC and PWM SYNC. A division (1 BAR … 1/32) locks the LFO to the tempo: on the SID and the NES, and on the Game Boy, which runs it itself from the tempo and puts it back to its start on each downbeat (CC 91). The menu's VIBRATO and PWM pages have a SYNC line. (To make room: a few routines nothing used any more are gone, and the packer places its unpacker correctly when only a little is over.)
+
 **v0.57:** TREMOLO held reaches the Game Boy too: the patch's own tremolo (even one that leaves the Game Boy out), or on a patch without one the held tremolo's (DEEP, 6 HZ). Let go and the Game Boy goes back to the patch's.
 
 **v0.56** (with Fat Chip GB v0.14): in DRONE the Game Boy's glides ease in and out (an S curve over about 1.5 s, like the SID's), each voice at its own moment as Fat Chip 64 staggers them; out of DRONE, its usual glide. Sent as CC 90 (EASED GLIDE).
@@ -513,6 +515,7 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
+| `test/test_v058.py` | VIBRATO / PWM SYNC on the SID, NES and Game Boy (CC 91), end to end |
 | `test/test_v057.py` | TREMOLO held on the Game Boy |
 | `test/test_v056.py` | DRONE's eased glides on the Game Boy (CC 90), end to end through its ROM |
 | `test/test_v055.py` | the patch's tremolo to the Game Boy (CC 115–119, sent on change), end to end through its ROM |

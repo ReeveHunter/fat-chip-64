@@ -167,7 +167,7 @@ def main():
     assert unpack(hs) == hi
     cdir = os.path.join(ROOT, "src", "crunch")
     dasm = os.environ.get("DASM", "dasm")
-    dep_len = 160                                     # (about; checked below)
+    dep_len = 200                                     # (depack.bin is 188; checked below. v0.58: was 160, too few)
 
     def layout(tail):
         ts, toks = pack(bytes(mem[tail:code_end])) if tail < code_end else (bytes([0xC0, 0, 0]), [])
@@ -180,7 +180,8 @@ def main():
     tail = code_end
     while True:
         ts, toks, tail_src, hi_src, dep = layout(tail)
-        if dep + dep_len <= FILE_TOP and dep >= code_end:
+        dep = max(dep, code_end)                      # (v0.58: the unpacker above the code, even when the packed data ends lower)
+        if dep + dep_len <= FILE_TOP:
             break
         tail = (tail - 1) & 0xFF00 if tail & 0xFF else tail - 0x400
         assert tail > 0x0900, "can't fit"

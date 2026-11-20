@@ -234,6 +234,10 @@
       f.sndWarbA = wv ? Math.min(120, pyRound(wv.amount * 4096 * Math.log(2) / 1200)) : 0;
       f.sndWarbR = wv ? Math.max(1, wv.speed) : 0;
       f.warbChips = (has("warble", "sid") ? 1 : 0) | (has("warble", "nes") ? 2 : 0);
+      // v0.58: VIBRATO SYNC and PWM SYNC, and the Game Boy LFO's
+      f.sndVibSync = v ? v.vibSync : 0;
+      f.sndPwmSync = pw ? pw.pwmSync : 0;
+      f.gbLSync = lf ? (vb ? vb.vibSync : pm.pwmSync) : 0;
       return f;
     }
 

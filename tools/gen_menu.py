@@ -45,7 +45,8 @@ STEPS = {
     "env": [("attack", None), ("decay", None), ("sustain", list(range(16))), ("release", None)],
     "detune": [("cents", [0, 2, 3, 4, 5, 7, 10, 14, 20, 25, 30, 40, 50])],
     "vibrato": [("depth", [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]), ("vibRate", [1, 2, 3, 4, 4.5, 5, 5.5, 6, 6.5, 7, 8, 10, 12]),
-                ("delay", [0, 100, 200, 300, 400, 600, 800, 1000, 1500, 2000]), ("shape", SHAPES), ("drift", [0, 50])],
+                ("delay", [0, 100, 200, 300, 400, 600, 800, 1000, 1500, 2000]), ("shape", SHAPES), ("drift", [0, 50]),
+                ("vibSync", list(range(10)))],
     "glide": [("time", [0, 1, 2, 3, 4])],
     "warble": [("amount", [2, 4, 6, 8, 10, 12, 16, 20, 25, 30, 40, 50]), ("speed", [10, 20, 30, 40, 50, 60, 80, 100, 127])],
     "tremolo": [("depth", [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]), ("tremRate", [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16]), ("shape", list(range(10))),
@@ -56,7 +57,8 @@ STEPS = {
     "filter": [("cutoff", [8, 16, 24, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 255]), ("resonance", list(range(16))),
                ("envAmount", [0, 16, 32, 48, 64, 96, 127]), ("lfoDepth", [0, 8, 16, 24, 32, 48, 64, 96, 127]),
                ("filtLfoRate", [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6])],
-    "pwm": [("depth", [10, 20, 30, 40, 50, 60, 70, 80, 90]), ("pwmRate", [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4]), ("shape", SHAPES)],
+    "pwm": [("depth", [10, 20, 30, 40, 50, 60, 70, 80, 90]), ("pwmRate", [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4]), ("shape", SHAPES),
+            ("pwmSync", list(range(10)))],
     "dutyseq": [("pattern", [0, 1]), ("stepMs", [20, 30, 40, 60, 80, 120, 160, 250, 333, 500])],
     "repeat": [("time", [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14]), ("repeats", list(range(1, 9))), ("level", [50, 60, 70, 80, 90, 100]),
                ("shift", [-12, -7, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 7, 12]), ("shiftIn", [0, 1]), ("hop", [0, 1, 2])],
@@ -65,7 +67,7 @@ STEPS = {
 RATE = {"vibrato": ("vibRate", 1), "warble": ("speed", 1), "tremolo": ("tremRate", 1), "filter": ("filtLfoRate", 1),
         "pwm": ("pwmRate", 1), "dutyseq": ("stepMs", -1), "penv": ("time", -1), "rdrop": ("time", -1),
         "glide": ("time", -1)}
-SYNC = {"tremolo": "tremSync"}
+SYNC = {"tremolo": "tremSync", "vibrato": "vibSync", "pwm": "pwmSync"}   # (v0.58: VIBRATO and PWM too)
 FX_ORDER = ["patch", "tone", "env", "penv", "rdrop", "detune", "vibrato", "glide", "warble", "tremolo", "filter", "pwm",
             "dutyseq", "repeat"]
 ALWAYS = {"patch", "tone", "env"}
@@ -75,7 +77,7 @@ SHORT = {"OCTAVE + 5TH": "OCT + 5TH", "GATE X.X.XX.X": "X.X.XX.X", "GATE XX.XX.X
          "SCALE STEPS": "SCALE", "SEMITONES": "SEMIS", "1/8 DOTTED": "1/8 DOT", "PULSE+SAW+TRI": "P+S+T", "PULSE+TRI": "PULS+TRI", "PULSE+SAW": "PULS+SAW", "50/25/12.5%": "SPREAD"}
 FXNAME = {"patch": "PATCH", "tone": "TONE", "env": "ENVELOPE", "dutyseq": "DUTY STEPS"}
 PNAME = {("patch", "mono"): "MONO", ("patch", "fatBass"): "FAT BASS", ("vibrato", "vibRate"): "RATE",
-         ("tremolo", "tremRate"): "RATE", ("tremolo", "tremSync"): "SYNC", ("repeat", "shift"): "SHIFT", ("pwm", "pwmRate"): "RATE", ("filter", "filtLfoRate"): "LFO RATE",
+         ("tremolo", "tremRate"): "RATE", ("tremolo", "tremSync"): "SYNC", ("vibrato", "vibSync"): "SYNC", ("pwm", "pwmSync"): "SYNC", ("repeat", "shift"): "SHIFT", ("pwm", "pwmRate"): "RATE", ("filter", "filtLfoRate"): "LFO RATE",
          ("tone", "gbWaveShape"): "GB WAVE SHAPE", ("tone", "sidPwSpread"): "SID WIDTHS"}
 
 

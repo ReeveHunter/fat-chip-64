@@ -276,6 +276,10 @@ def fields(p):
     f["sndWarbA"] = min(120, round(wv["amount"] * 4096 * math.log(2) / 1200)) if wv else 0
     f["sndWarbR"] = max(1, wv["speed"]) if wv else 0
     f["warbChips"] = (1 if has("warble", "sid") else 0) | (2 if has("warble", "nes") else 0)
+    # ---- v0.58: VIBRATO SYNC and PWM SYNC (0 FREE, 1 BAR ... 1/32), and the Game Boy LFO's (its vibrato's or PWM's)
+    f["sndVibSync"] = v["vibSync"] if v else 0
+    f["sndPwmSync"] = pw["pwmSync"] if pw else 0
+    f["gbLSync"] = (vb["vibSync"] if vb else pm["pwmSync"]) if lf else 0
     return f
 
 
