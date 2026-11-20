@@ -786,10 +786,10 @@ SoundGb:
 	lda #0
 	sta gbFresh
 	lda gbFc
-	bne .all
+	bne .full
 	ldx soundMode
 	cpx #NUM_SOUNDS
-	bcs .all
+	bcs .full
 	lda actCnt+A_WOBBLE     ; (nothing in play that changes them)
 	ora actCnt+A_WIDE
 	ora vibBtn
@@ -798,10 +798,10 @@ SoundGb:
 	ora warbLock
 	ora brWarb
 	ora glideBtn
-	bne .all
+	bne .full
 	lda effMode
 	cmp #MODE_DRONE
-	beq .all
+	beq .full
 	lda gbBase
 	and #15
 	ora #$B0
@@ -821,6 +821,8 @@ SoundGb:
 	jmp GbLegato
 .r:	rts
 .full:
+	jsr .all                ; the CCs, then (v0.50) the sound's status, for
+	jmp GbStatus            ;  Fat Chip GB's names
 .all:
 	lda #0
 	sta t3                  ; channel 0-2: pulse 1, pulse 2, wave
@@ -832,6 +834,39 @@ SoundGb:
 	bne .ch
 	jsr GbLegato
 	jmp WarbleSend
+
+; v0.50: Fat Chip GB's status, CC 114 = 64 + the built-in sound, or 127
+; (CUSTOM) when it isn't one: a received patch, or a built-in sound edited
+; (its name gets a *) or randomized (RANDOM PATCH): its name isn't the
+; built-in's. Fat Chip GB v0.11 names its cards from it, and a Game Boy
+; switched on late plays the sound.
+GbStatus:
+	subroutine
+	ldx soundMode
+	cpx #NUM_SOUNDS
+	bcs .c
+	lda patchLo,x
+	sta .nm+1
+	lda patchHi,x
+	sta .nm+2
+	ldy #patchName-livePatch+NAME_LEN-1
+.l:
+.nm:
+	lda $FFFF,y
+	cmp livePatch,y
+	bne .c
+	dey
+	cpy #patchName-livePatch
+	bcs .l
+	txa
+	ora #64
+	tax
+	bne .s
+.c:
+	ldx #127
+.s:
+	lda #GCC_SOUND
+	jmp GbGlobal
 
 ; Game Boy channel t3 (0-2: pulse 1, pulse 2, wave): the patch's CCs
 GbChan:

@@ -1,6 +1,6 @@
-DEP_ORG     equ $CB6A
-TAIL_SRC    equ $B497
-TAIL_DEST   equ $B497
-HI_SRC      equ $B49A
+DEP_ORG     equ $CBE4
+TAIL_SRC    equ $B511
+TAIL_DEST   equ $B511
+HI_SRC      equ $B514
 HI_DEST     equ $E000
 START       equ $0810

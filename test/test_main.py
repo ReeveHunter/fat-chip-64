@@ -353,7 +353,7 @@ for idle in (40000, 70000, 100000):         # ms of silence
     c.release("q", ms=60)
     m2 = c.midi(since=t0)
     check(f"after {idle // 1000} s of silence notes still go out right away",
-          len([x for x in m2 if (x[1] & 15) in GB]) == 6 and len([x for x in m2 if (x[1] & 0xF0) == 0x90 and x[3] and (x[1] & 15) in NES]) == 3,
+          len([x for x in m2 if (x[1] & 15) in GB and not (x[1] & 0xF0 == 0xB0 and x[2] in (103, 113, 114))]) == 6 and len([x for x in m2 if (x[1] & 0xF0) == 0x90 and x[3] and (x[1] & 15) in NES]) == 3,
           len(m2))
     c.run_ms(900)
 

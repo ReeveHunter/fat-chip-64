@@ -419,6 +419,37 @@ GbStartup:
 .done:
 	rts
 
+; v0.50: every 2 s or so, when nothing's waiting for the Game Boy: its
+; channels (CC 113), the tuning and the sound's status (CC 114), so a Game
+; Boy switched on after Fat Chip 64 joins in (Fat Chip GB v0.11) and its
+; cards keep the sound's name
+GbSyncTick:
+	subroutine
+	lda devOn+DEV_GB
+	beq .x
+	lda ticks+1             ; (256 ms steps)
+	sec
+	sbc gbSyncT
+	cmp #8
+	bcc .x
+	lda gbqHead
+	cmp gbqTail
+	bne .x
+	lda ticks+1
+	sta gbSyncT
+	lda gbBase
+	clc
+	adc #64
+	tax
+	lda #GCC_CHANNELS
+	jsr GbGlobal
+	ldx gbTune
+	lda #GCC_TUNE
+	jsr GbGlobal
+	jmp GbStatus
+.x:
+	rts
+
 ; MidiNES startup: CC7 = 127 on every voice (levels 0-7 are silent and CC7
 ; scales velocity), sweep shift CC16 = 127 on the pulses (lowest octave).
 NesStartup:

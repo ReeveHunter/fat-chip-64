@@ -424,9 +424,7 @@ OkpRelease:
 	eor #$FF
 	and okpDown
 	sta okpDown
-	bne .x
-	lda latch
-	bne .x
+	bne .x                  ; (v0.50: latch doesn't hold One Key Play's notes)
 	sta okpCount            ; (0)
 	lda #1
 	sta reallocFlag

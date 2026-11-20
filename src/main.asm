@@ -72,6 +72,7 @@ Loop:
 	jsr DrumTick            ; noise hits end
 	jsr StutterTick         ; STUTTER held
 	jsr RepeatTick          ; REPEAT's echoes
+	jsr GbSyncTick          ; v0.50: the Game Boy's channels and sound now and then
 	lda reallocFlag
 	beq .noAlloc
 	lda #0

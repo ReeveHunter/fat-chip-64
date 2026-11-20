@@ -408,12 +408,25 @@ Allocate:
 	lda arpMode
 	cmp #ARP_UNISON
 	bne .w0
-	lda heldCount
+	lda okpChordN
 	beq .w0
 	lda arpNote
 	sta allocList
-	lda #1
-	sta allocCount
+	ldy #1
+	ldx #0                  ; (v0.50: One Key Play's notes keep sounding)
+.ok:
+	cpx okpCount
+	beq .okd
+	lda okpNotes,x
+	cmp #NO_NOTE
+	beq .okn
+	sta allocList,y
+	iny
+.okn:
+	inx
+	bne .ok
+.okd:
+	sty allocCount
 .w0:
 	jsr ArpPairSet          ; SPARKLE: keep the arp pair out of the pad
 	jsr FatBassVoices         ; how many bass voices Fat Bass can have (vFat)
@@ -638,7 +651,7 @@ ArpPairNotes:
 	bpl .c
 	lda arpMode
 	beq .x
-	lda heldCount
+	lda okpChordN           ; (v0.50: One Key Play alone doesn't start the arp)
 	beq .x
 	lda arpMode
 	cmp #ARP_UNISON

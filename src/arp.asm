@@ -468,7 +468,7 @@ ArpTick:
 	lda reallocFlag         ; keys changed: let go of everything = stop, so
 	beq .due                ; the next press starts the arp at once
 	jsr BuildHeld
-	lda heldCount
+	lda okpChordN           ; (v0.50: the chord's notes, not One Key Play's)
 	beq .stop
 .due:
 	lda nowL                ; due? (now - arpNext) >= 0; arpNext is never
@@ -478,7 +478,7 @@ ArpTick:
 	sbc arpNext+1
 	bmi .x
 	jsr BuildHeld
-	lda heldCount
+	lda okpChordN           ; (v0.50: the chord's notes, not One Key Play's)
 	beq .stop
 	jsr ArpStep
 	jsr VinylStep           ; (VINYL STOP: longer)
@@ -501,7 +501,7 @@ ArpTick:
 	lda reallocFlag
 	beq .x
 	jsr BuildHeld
-	lda heldCount
+	lda okpChordN           ; (v0.50: the chord's notes, not One Key Play's)
 	beq .x
 	; notes appeared: first step right away
 	lda #1
@@ -525,7 +525,8 @@ ArpTick:
 	sta arpRunning
 	rts
 
-; Pick the next arp note. heldList / heldCount / playOrder are current.
+; Pick the next arp note. okpChord / okpChordN (the chord: heldList without
+; One Key Play's notes, BuildHeld) / playOrder are current.
 ArpStep:
 	subroutine
 	jsr PlayPrune
@@ -535,7 +536,7 @@ ArpStep:
 	lda playCount
 	jmp .n
 .asc:
-	lda heldCount
+	lda okpChordN           ; (v0.50: One Key Play's notes aren't arpeggiated)
 .n:
 	sta t2                  ; notes in the source
 	beq .x
@@ -566,7 +567,7 @@ ArpDone:                        ; patterns come back here with arpIdx set
 	jmp .set
 .fromHeld:
 	ldx arpIdx
-	lda heldList,x
+	lda okpChord,x          ; (the chord, without One Key Play's notes)
 .set:
 	sta arpNote
 	inc arpStep

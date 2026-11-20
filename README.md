@@ -6,6 +6,10 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.50:** the Game Boy keeps up, and One Key Play stays out of latch and the arp.
+- **Every 2 seconds or so** (when nothing is waiting to go to the Game Boy) Fat Chip 64 sends its channels (CC 113), the tuning (CC 103) and the sound's status (CC 114 = 64 + the built-in sound, or 127 for a sound of its own: received, edited or randomized). A Game Boy switched on after Fat Chip 64 moves to the right channels, goes into the FAT CHIP profile and plays the current built-in sound (Fat Chip GB v0.11). The status also follows a sound sent as CCs, so the Game Boy's cards show the right name (or CUSTOM) in both DEVICES > GAME BOY settings.
+- **One Key Play:** its notes stop when you let go of the cursor key, even with LATCH on (the latched chord stays), and the arp steps through the chord only; One Key Play's notes keep sounding beside it (in UNISON too) and don't start the arp on their own.
+
 **v0.49:** fixed a NES note stuck near the previous note after a glide. When a NES glide's last step landed exactly on the new note (likely with whole-semitone glides and a late step), the final centred bend never went out, so the voice stayed bent most of the way back to its last note until the next one.
 
 **v0.48:** with SUSTAIN 0, the NES triangle (which has no volume to fade) stops when the pulses' envelope has decayed to silence, instead of sounding for as long as the key is held. Plucks, keys and the like no longer leave a bass note droning on the NES.
@@ -495,6 +499,7 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
+| `test/test_v050.py` | the Game Boy sync (channels, tuning, status every 2 s; status after CCs; CUSTOM), One Key Play out of latch and the arp |
 | `test/test_v046.py` | CC 114: one message for a built-in sound, the CCs when something changes the Game Boy's part or for OTHER (MGB) |
 | `tools/gen_gb_sounds.py` | the built-in sounds' Game Boy CCs, recorded in the simulator, for Fat Chip GB's ROM |
 | `test/test_gb_channels.py` | end to end: CC 113 moves Fat Chip GB to 11–15, chord and MONO legato arrive |
