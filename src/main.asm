@@ -72,7 +72,6 @@ Loop:
 	jsr DrumTick            ; noise hits end
 	jsr StutterTick         ; STUTTER held
 	jsr RepeatTick          ; REPEAT's echoes
-	jsr GbSyncTick          ; v0.50: the Game Boy's channels and sound now and then
 	lda reallocFlag
 	beq .noAlloc
 	lda #0
@@ -194,6 +193,7 @@ InitState:
 	sta $C700,x             ; (v0.21: the variables reach into $C7xx)
 	sta $C800,x             ; (v0.22: and $C8xx)
 	sta $C900,x             ; (v0.28: and $C9xx)
+	sta $CA00,x             ; (v0.52: and $CAxx; the unpacker above is done with)
 	inx
 	bne .ram
 	ldx #NUM_VOICES-1

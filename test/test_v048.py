@@ -37,7 +37,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(400)
-check("header V0.51", "V0.51" in c.screen_row(0), c.screen_row(0))
+check("header V0.52", "V0.52" in c.screen_row(0), c.screen_row(0))
 clav = next(p for p in DEMO if p["name"] == "CLAV")
 c.midi_in(*gen_patches.sysex(clav), ms=300)
 c.set("playMode", 0)

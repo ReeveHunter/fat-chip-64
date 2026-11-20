@@ -386,43 +386,49 @@ Allocate:
 	subroutine
 	jsr BuildHeld
 	jsr LeadVoices          ; (CHORD + LEAD: one voice per chip, while it plays)
-	; what the stacker spreads: the chord, or in UNISON arp just the arp note
-	ldy heldCount
-	sty allocCount
+	; what the stacker spreads: the chord (MONO: the last key pressed; UNISON
+	; arp: the arp note), then (v0.52) One Key Play's notes as entries of their
+	; own from okpFrom, even one the chord also has: they get voices of their
+	; own (vOkp), kept while they sound
+	ldy okpChordN
 .cp:
 	dey
 	bmi .cpd
-	lda heldList,y
+	lda okpChord,y
 	sta allocList,y
 	jmp .cp
 .cpd:
-	lda monoMode            ; MONO: just the last key pressed
+	lda monoMode
 	beq .poly
-	lda okpChordN           ; (v0.50: and One Key Play's notes; on their own,
-	beq .poly               ;  as they are)
+	lda okpChordN
+	beq .poly
 	jsr MonoNote
 	sta allocList
 	ldy #1
-	jsr AllocOkp
+	bne .ok
 .poly:
+	ldy okpChordN
 	lda arpMode
 	cmp #ARP_UNISON
-	bne .w0
-	lda okpChordN
-	beq .w0
+	bne .ok
+	tya
+	beq .ok
 	lda arpNote
 	sta allocList
-	ldy #1                  ; (v0.50: One Key Play's notes keep sounding)
+	ldy #1
+.ok:
+	sty okpFrom
 	jsr AllocOkp
-.w0:
 	jsr ArpPairSet          ; SPARKLE: keep the arp pair out of the pad
 	jsr FatBassVoices         ; how many bass voices Fat Bass can have (vFat)
 	jsr RepeatSet           ; REPEAT: echo voices from what's spare
 	; nothing wanted yet
 	ldx #NUM_VOICES-1
-	lda #NO_NOTE
 .w:
+	lda #NO_NOTE
 	sta vWant,x
+	lda #0
+	sta vOkpN,x
 	dex
 	bpl .w
 	jsr LeadWant
@@ -430,7 +436,7 @@ Allocate:
 	bne .go
 	jmp AllocDone
 .go:
-	ldx #7
+	ldx #11
 	lda #0
 .c:
 	sta covered,x
@@ -450,12 +456,49 @@ Allocate:
 	inx
 	cpx #NUM_VOICES
 	bne .p1
+	; 1b. (v0.52) One Key Play's notes stay on the voices already playing them
+	ldy okpFrom
+.kn:
+	cpy allocCount
+	beq .kd
+	ldx #0
+.kv:
+	lda vOkp,x
+	beq .kx
+	lda vOkpN,x             ; (kept for another of its notes already)
+	ora vFat,x
+	bne .kx
+	sty okY
+	jsr VoiceEnabled
+	php
+	ldy okY
+	plp
+	beq .kx
+	lda vNote,x
+	cmp allocList,y
+	bne .kx
+	sta vWant,x
+	lda #1
+	sta vOkpN,x
+	sta covered,y
+	bne .kd1
+.kx:
+	inx
+	cpx #NUM_VOICES
+	bne .kv
+.kd1:
+	iny
+	bne .kn
+.kd:
 	; 2. one voice per uncovered note, lowest first
 	ldx #0
 .p2:
 	jsr VoiceEnabled
 	beq .p2n
 	lda vFat,x              ; (busy with the bass)
+	bne .p2n
+	lda vWant,x             ; (kept for One Key Play)
+	cmp #NO_NOTE
 	bne .p2n
 	ldy #0
 .find:
@@ -470,6 +513,10 @@ Allocate:
 	sta covered,y
 	lda allocList,y
 	sta vWant,x
+	cpy okpFrom
+	bcc .p2n
+	lda #1                  ; (One Key Play's)
+	sta vOkpN,x
 .p2n:
 	inx
 	cpx #NUM_VOICES
@@ -493,6 +540,11 @@ Allocate:
 	ldy t2
 	lda allocList,y
 	sta vWant,x
+	cpy okpFrom
+	bcc .p3c
+	lda #1
+	sta vOkpN,x
+.p3c:
 	iny
 	cpy t1
 	bcc .keep
@@ -504,6 +556,12 @@ Allocate:
 	cpx #NUM_VOICES
 	bne .p3
 AllocDone:
+	ldx #NUM_VOICES-1       ; (v0.52: which voices are One Key Play's now)
+.ko:
+	lda vOkpN,x
+	sta vOkp,x
+	dex
+	bpl .ko
 	jsr ArpPairNotes
 	jmp EchoKeep
 
@@ -512,7 +570,7 @@ AllocDone:
 ; Fat Bass covers the lowest note, so it frees that note's voice). The
 ; first k bass voices get vFat; allocFree = the voices still spare after
 ; the notes and Fat Bass, for the effects.
-; v0.50: One Key Play's notes onto allocList from Y (not the note at 0 again);
+; v0.50: One Key Play's notes onto allocList from Y;
 ; allocCount = the end. Keeps X.
 AllocOkp:
 	subroutine
@@ -524,8 +582,6 @@ AllocOkp:
 	lda okpNotes,x
 	cmp #NO_NOTE
 	beq .okn
-	cmp allocList
-	beq .okn
 	sta allocList,y
 	iny
 .okn:
@@ -534,35 +590,6 @@ AllocOkp:
 .okd:
 	sty allocCount
 	ldx exS
-	rts
-
-; v0.50: C set if note A is One Key Play's alone (sounding from it, and not
-; one of the chord's). Keeps A, X, Y.
-OkpOnly:
-	subroutine
-	sty okY
-	stx okX
-	ldx okpCount
-.o:
-	dex
-	bmi .no
-	cmp okpNotes,x
-	bne .o
-	ldy okpChordN
-.c:
-	dey
-	bmi .yes
-	cmp okpChord,y
-	bne .c
-.no:
-	ldy okY
-	ldx okX
-	clc
-	rts
-.yes:
-	ldy okY
-	ldx okX
-	sec
 	rts
 
 FatBassVoices:
@@ -597,16 +624,9 @@ FatBassVoices:
 	beq .x
 	lda allocCount
 	beq .x
-	ldy #0                  ; v0.50: the bass is the lowest note that isn't One
-.fb:                            ;  Key Play's (none: no Fat Bass)
-	lda allocList,y
-	jsr OkpOnly
-	bcc .fbk
-	iny
-	cpy allocCount
-	bcc .fb
-	bcs .x
-.fbk:
+	lda okpFrom             ; v0.50: the bass is the chord's lowest note, never
+	beq .x                  ;  One Key Play's (no chord: no Fat Bass)
+	ldy #0
 	sty fbIdx
 	lda allocFree
 	clc
@@ -712,7 +732,8 @@ ArpPairNotes:
 	beq .x
 	ldx #NUM_VOICES-1       ; unison: every voice re-attacks each step
 .u:
-	lda vLead,x             ; (but the lead's: CHORD + LEAD)
+	lda vLead,x             ; (but the lead's: CHORD + LEAD; v0.52: and One
+	ora vOkp,x              ;  Key Play's)
 	eor #1
 	sta vArpHit,x
 	dex
@@ -795,9 +816,8 @@ ApplyVoices:
 	lda vNote,x
 	cmp #NO_NOTE
 	beq .poly
-	lda vWant,x             ; (v0.50: One Key Play's notes attack, not legato)
-	jsr OkpOnly
-	bcs .poly
+	lda vOkp,x              ; (v0.50: One Key Play's notes attack, not legato)
+	bne .poly
 	lda #0
 	sta t3
 	lda #1
@@ -867,12 +887,17 @@ ApplyVoices:
 NoteWasPressed:
 	subroutine
 	sta exV
-	ldy okpHit              ; One Key Play's new notes
-	beq .k
+	ldy vOkp,x              ; v0.52: One Key Play's voices: its press alone,
+	beq .k                  ;  the chord's voices: the keys alone
+	ldy okpHit
+	beq .no
 	cmp okpNotes
 	beq .yes
 	cmp okpNotes+1
 	beq .yes
+.no:
+	lda #0
+	rts
 .k:
 	sec
 	sbc octBase

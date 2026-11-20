@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fat Chip 64 v0.50: every 2 s or so (nothing waiting for the Game Boy) the
-Game Boy gets its channels (CC 113), the tuning (CC 103) and the sound's
-status (CC 114 = 64 + the built-in sound, 127 CUSTOM), for a Game Boy
-switched on late and for its cards' names (Fat Chip GB v0.11). The status
-also follows a sound sent as CCs, in either DEVICES > GAME BOY setting."""
+"""Fat Chip 64 v0.50: the sound's status (CC 114 = 64 + the built-in sound,
+127 CUSTOM) follows a sound sent as CCs, in either DEVICES > GAME BOY
+setting, for Fat Chip GB v0.11's names. (v0.52: no longer every 2 s, which
+blinked the Teensyboy Pro: CTRL + S off and on resends everything.) One Key
+Play: not latched, not arpeggiated."""
 import os
 import sys
 
@@ -48,19 +48,19 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(500)
-check("header V0.51", "V0.51" in c.screen_row(0), c.screen_row(0))
+check("header V0.52", "V0.52" in c.screen_row(0), c.screen_row(0))
 gb = c.v("gbBase")
 sound(c, 4)
 t0 = c.cpu.processorCycles
 c.run_ms(5000)
 m = gbcc(c, t0)
-hb = [x for x in m if x[1] in (113, 103, 114)]
-st = [b for _, a, b in hb if a == 114]
-check("idle 5 s: the channels, tuning and status about every 2 s", 2 <= len(st) <= 3 and
-      [b for _, a, b in hb if a == 113] == [64 + gb] * len(st) and len([1 for x in hb if x[1] == 103]) == len(st), hb)
-check("... the status: 64 + the sound (WHISTLE 4)", st and all(b == 68 for b in st), st)
-ts = [t for t, a, b in hb if a == 114]
-check("... spaced about 2 s", all(1900 <= b - a <= 2400 for a, b in zip(ts, ts[1:])), ts)
+check("v0.52: idle 5 s: nothing goes to the Game Boy (no blinking)", not m, m)
+t0 = c.cpu.processorCycles
+c._raw_press("ctrl", ms=20); c._raw_tap("s", ms=60); c._raw_release("ctrl", ms=60)
+c._raw_press("ctrl", ms=20); c._raw_tap("s", ms=60); c._raw_release("ctrl", ms=300)
+m = [x[1:] for x in gbcc(c, t0)]
+check("CTRL + S off and on: the startup again (channels, FAT CHIP, the sound's CCs, then its status)",
+      (113, 64 + gb) in m and (102, 70) in m and m[-1] == (114, 64 + 4) and len(m) > 20, m[:4] + m[-3:])
 
 # while notes are streaming, it waits for a quiet moment
 c.set("gbFc", 1)
@@ -72,13 +72,10 @@ t0 = sound(c, 4)
 check("FAT CHIP GB: just CC 114 4 (no status after it)", [x[1:] for x in gbcc(c, t0)] == [(114, 4)], gbcc(c, t0))
 
 # an edited sound: its name gets a *: CUSTOM
-c.raw[c.sym["patchName"] + 15] = ord("*")
-c.set("gbFc", 1)
-t0 = sound(c, 4) if False else c.cpu.processorCycles
-c.run_ms(2600)
+t0 = c.cpu.processorCycles
+c._raw_press("cbm", ms=30); c._raw_tap("z", ms=60); c._raw_release("cbm", ms=300)   # C= + Z: the attack
 st = [b for _, a, b in gbcc(c, t0) if a == 114]
-check("a built-in sound edited (* on its name): status 127 (CUSTOM)", st and st[-1] == 127, st)
-c.set("gbFc", 0)
+check("a built-in sound edited (C= + Z: * on its name): status 127 (CUSTOM)", st and st[-1] == 127 and chr(c.raw[c.sym["patchName"] + 15]) == "*", st)
 
 # a patch from Chip Lab (SysEx): CUSTOM
 p = dict(gen_patches.PATCHES[4])
@@ -89,9 +86,8 @@ check("a patch received over SysEx: its CCs, then status 127", st and st[-1] == 
 
 # randomized: CUSTOM
 sound(c, 2)
-c._raw_tap("/", ms=100)
 t0 = c.cpu.processorCycles
-c.run_ms(2600)
+c._raw_tap("/", ms=400)
 st = [b for _, a, b in gbcc(c, t0) if a == 114]
 check("RANDOMIZE: status 127", st and st[-1] == 127, st)
 

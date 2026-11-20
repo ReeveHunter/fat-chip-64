@@ -230,7 +230,7 @@ physCount   ds 1
 notePressed ds NIDX             ; 1 = pressed since the last voice update
 heldList    ds 8               ; held notes, ascending (MIDI notes)
 heldCount   ds 1
-covered     ds 8
+covered     ds 12             ; (v0.52: the chord's 8 + One Key Play's 4)
 vWant       ds NUM_VOICES      ; MIDI note each voice should play, or NO_NOTE
 vNote       ds NUM_VOICES      ; note each voice plays now
 vRetrig     ds NUM_VOICES      ; SID: gate back on at the next scan
@@ -291,7 +291,7 @@ pairA       ds 1               ; SPARKLE's two arp voices
 pairB       ds 1
 vSkip       ds NUM_VOICES
 vArpHit     ds NUM_VOICES
-allocList   ds 8
+allocList   ds 12
 allocCount  ds 1
 ; v0.06
 newPending  ds 1               ; latch NEXT (=): the next note starts a new chord
@@ -847,14 +847,15 @@ colDirty    ds 1
 gbFresh     ds 1               ; v0.46: a built-in sound just loaded, unchanged (SoundGb: CC 114)
 gbFc        ds 1               ; DEVICES GAME BOY: 0 FAT CHIP GB (CC 114), 1 OTHER (the CCs)
 fbIdx       ds 1               ; v0.50: allocList's Fat Bass note
-okX         ds 1               ; OkpOnly's
-okY         ds 1
-gbSyncT     ds 1               ; v0.50: ticks+1 at the last GbSyncTick
+okY         ds 1               ; Allocate's
+okpFrom     ds 1               ; v0.52: allocList's One Key Play notes start here
+vOkp        ds NUM_VOICES      ; v0.52: the voice plays One Key Play's note
+vOkpN       ds NUM_VOICES      ;   (Allocate's, as it works)
 gbDry       ds 1               ; GbPut sends nothing (SoundGb: just the caches)               ; the menu: a colour not light green somewhere
 scrFx       ds 1               ; ScrFx's effect
 scrFxP      ds 1               ;   and setting               ; GbChanTo / NesChanTo
 ramEnd      ds 0
-  if ramEnd > $CA00
-    echo "RAM variables run past $CA00: clear more in Start"
+  if ramEnd > $CB00
+    echo "RAM variables run past $CB00: clear more in Start"
     err
   endif

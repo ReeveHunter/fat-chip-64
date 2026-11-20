@@ -29,7 +29,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(400)
-check("header V0.51", "V0.51" in c.screen_row(0), c.screen_row(0))
+check("header V0.52", "V0.52" in c.screen_row(0), c.screen_row(0))
 c.set("okpOn", 1)
 
 # MONO
@@ -95,7 +95,7 @@ for k in "tryeq":
         prev = now
     c.release(k, ms=200)
     c._raw_release("crsrdown", ms=1200)                     # (past SMART latch's window: a new chord next)
-check("chord changes with One Key Play held (CHORD CHANGE GLIDE): a voice moving to its notes never glides", not bad and moves > 0, (bad[:5], moves))
+check("chord changes with One Key Play held (CHORD CHANGE GLIDE): a voice moving to its notes never glides (v0.52: they keep their own voices, so few move at all)", not bad, (bad[:5], moves))
 nes_gl = 0
 c.press("y", ms=0)
 for _ in range(10):
