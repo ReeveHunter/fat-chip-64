@@ -38,7 +38,7 @@ c.keys_039 = False
 c.fkeys_036 = False
 c.menu_fkeys = False
 c.run_ms(400)
-check("header V0.58", "V0.58" in c.screen_row(0), c.screen_row(0))
+check("header V0.59", "V0.59" in c.screen_row(0), c.screen_row(0))
 
 mod(c, "cbm", "v")                                           # VIBRATO: DEPTH
 r0 = c.screen_row(14)

@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.59** (with Fat Chip GB v0.16): BEND IN goes to 4 octaves (AMOUNT −48 … +48; the menu adds ±36 and ±48). The SID starts that far away, kept within its notes (it used to wrap round to the bottom past the top); the Game Boy takes half the AMOUNT and BEND SHAPE's ×2 bit (2-semitone steps past 2 octaves); the NES stays at 2 octaves at most (its bends stop there).
+
 **v0.58** (with Fat Chip GB v0.15): VIBRATO SYNC and PWM SYNC. A division (1 BAR … 1/32) locks the LFO to the tempo: on the SID and the NES, and on the Game Boy, which runs it itself from the tempo and puts it back to its start on each downbeat (CC 91). The menu's VIBRATO and PWM pages have a SYNC line. (To make room: a few routines nothing used any more are gone, and the packer places its unpacker correctly when only a little is over.)
 
 **v0.57:** TREMOLO held reaches the Game Boy too: the patch's own tremolo (even one that leaves the Game Boy out), or on a patch without one the held tremolo's (DEEP, 6 HZ). Let go and the Game Boy goes back to the patch's.
@@ -515,6 +517,7 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
+| `test/test_v059.py` | BEND IN to 4 octaves: the SID (clamped), the Game Boy (×2 bit), the NES (2 octaves) |
 | `test/test_v058.py` | VIBRATO / PWM SYNC on the SID, NES and Game Boy (CC 91), end to end |
 | `test/test_v057.py` | TREMOLO held on the Game Boy |
 | `test/test_v056.py` | DRONE's eased glides on the Game Boy (CC 90), end to end through its ROM |

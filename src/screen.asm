@@ -862,41 +862,7 @@ ScrMidiIn:
 	lda lastInNote
 	jmp PutMidiNote
 
-; 16-bit number in t1:t0 at column X of row ptr2, five digits
-PutDec16:
-	subroutine
-	ldy #0
-.digit:
-	lda #0
-	sta t2
-.sub:
-	lda t0
-	sec
-	sbc decLo,y
-	pha
-	lda t1
-	sbc decHi,y
-	bcc .done
-	sta t1
-	pla
-	sta t0
-	inc t2
-	bne .sub
-.done:
-	pla
-	lda t2
-	clc
-	adc #'0
-	sty t3
-	jsr PutChar
-	ldy t3
-	inx
-	iny
-	cpy #5
-	bne .digit
-	rts
-
-; Like PutDec16, without leading zeros. Returns X past the number.
+; t1:t0 in decimal at column X of row ptr2, without leading zeros. Returns X past the number.
 PutDecZ:
 	subroutine
 	lda #0

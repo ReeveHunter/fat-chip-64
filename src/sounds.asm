@@ -1048,9 +1048,20 @@ GbChan:
 	beq .nst
 	lda sndStep
 .nst:
-	sta gbV
-	lda sndClick
+	sta gbV                 ; (bit 0: STEP)
+	lda sndPenv             ; v0.59: more than 24 away: bit 3, x2 (Fat Chip GB v0.16)
+	bpl .pp
+	eor #$FF
+	clc
+	adc #1
+.pp:
+	cmp #25                 ; (C: 25 or more)
+	lda #0
+	rol
 	asl
+	asl                     ; x2 << 2
+	ora sndClick
+	asl                     ; x2 << 3 | CLICK << 1
 	ora gbV
 	tay
 	lda #89

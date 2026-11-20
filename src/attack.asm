@@ -87,10 +87,20 @@ BendIn:
 	lda t3
 	beq .x                  ; (a glide to a new note, no new attack)
 .go:
-	lda vWant,x
+	lda sndPenv             ; (v0.59: up to 4 octaves away: kept in 0-115)
+	bmi .dn
 	clc
-	adc sndPenv
-	jsr NoteClamp
+	adc vWant,x
+	cmp #116
+	bcc .ok
+	lda #115
+	bne .ok
+.dn:
+	clc
+	adc vWant,x
+	bcs .ok                 ; (no borrow: 0 or more)
+	lda #0
+.ok:
 	jsr SidPitch            ; -> ptr
 	lda ptr
 	sta sidBaseLo,y

@@ -255,7 +255,10 @@ def fields(p):
     f["sndPenv"] = pe["amount"] & 255 if pe else 0
     f["sndPenvK"] = bend_k(pe["time"]) if pe else 0
     pg = on.get("penv") if has("penv", "gb") else None
-    f["gbPenvA"] = cc(pg["amount"] + 24 if pg else 24, 48)
+    ga = pg["amount"] if pg else 0
+    if abs(ga) > 24:                                            # (v0.59: past 2 octaves: half, and BEND SHAPE's x2 bit)
+        ga = int(math.copysign(min(24, (abs(ga) + 1) // 2), ga))
+    f["gbPenvA"] = cc(ga + 24, 48)
     # (v0.54: STEP and a LONG CLICK: the hold time, Fat Chip GB v0.12's step_frames; SLIDE: its decay)
     f["gbPenvT"] = cc((gb_step_t(pg["time"]) if pg.get("shape", 0) or not pg["amount"] else gb_penv_t(pg["time"])) if pg and (pg["amount"] or pg.get("click", 0)) else 0, 15)
     rd = on.get("rdrop") if has("rdrop", "sid") else None
