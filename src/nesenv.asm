@@ -192,7 +192,7 @@ NesBeforeOn:
 	cmp #DEV_NES
 	bne .x
 	ldy vEnvSlot,x
-	bmi .x
+	bmi .tc
 	lda #0
 	sta envLvL,y
 	sta envLvH,y
@@ -218,6 +218,74 @@ NesBeforeOn:
 	lda #7
 	sta mD1
 	jmp NesPut
+.tc:
+	; v0.48: the triangle has no volume, so with SUSTAIN 0 it stops when
+	; the pulses' envelope has decayed to nothing (a shadow of it, here)
+	lda vIdx,x
+	cmp #2
+	bne .x
+	lda #0
+	sta tcPh
+	lda envSusV
+	bne .x
+	stx tcV
+	lda #0
+	sta tcLvL
+	sta tcLvH
+	lda #ENV_A
+	ldx envAtkV
+	bne .tp
+	lda envPeakV
+	sta tcLvH
+	lda #ENV_D
+.tp:
+	sta tcPh
+.x:
+	rts
+
+; the triangle's shadow envelope, one 10 ms step: faded out, its note-off
+TriCutStep:
+	subroutine
+	lda tcPh
+	beq .x
+	cmp #ENV_A
+	bne .d
+	lda tcLvL
+	clc
+	adc envAtkV
+	sta tcLvL
+	lda tcLvH
+	adc #0
+	sta tcLvH
+	cmp envPeakV
+	bcc .x
+	lda #ENV_D
+	sta tcPh
+	rts
+.d:
+	lda envDecV
+	beq .cut                ; (no decay: SUSTAIN 0 right after the attack)
+	lda tcLvL
+	sec
+	sbc envDecV
+	sta tcLvL
+	lda tcLvH
+	sbc #0
+	sta tcLvH
+	bcs .x
+.cut:
+	lda #0
+	sta tcPh
+	ldx tcV
+	lda vOut,x
+	cmp #NO_NOTE
+	beq .x
+	lda vDev,x
+	cmp #DEV_NES
+	bne .x
+	stx t0
+	lda #NO_NOTE
+	jmp MidiTo
 .x:
 	rts
 
@@ -230,6 +298,7 @@ NesEnvTick:
 	sta envPh
 	sta envPh+1
 	sta triOn
+	sta tcPh
 	lda ticks               ; (the tremolo still runs, for the SID)
 	sec
 	sbc envLast
@@ -261,6 +330,7 @@ NesEnvTick:
 	jsr EnvStep
 	ldy #1
 	jsr EnvStep
+	jsr TriCutStep
 	lda foAny
 	beq .tri
 	jsr FoStep

@@ -331,6 +331,10 @@ envRel      ds 2               ; release step
 envY        ds 1
 envLast     ds 1               ; ticks (low byte) of the last envelope step
 triOn       ds 1               ; triangle release drop running
+tcPh        ds 1               ; v0.48 SUSTAIN 0: the triangle's shadow envelope (0 idle, ENV_A, ENV_D)
+tcLvL       ds 1
+tcLvH       ds 1
+tcV         ds 1               ; ... its voice
 triK        ds 1
 triNote     ds 1
 triLast     ds 1

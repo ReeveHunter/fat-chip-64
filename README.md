@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.48:** with SUSTAIN 0, the NES triangle (which has no volume to fade) stops when the pulses' envelope has decayed to silence, instead of sounding for as long as the key is held. Plucks, keys and the like no longer leave a bass note droning on the NES.
+
 **v0.47:** F7 steps MONO → POLY → SMART CHORD (it was POLY → MONO → SMART CHORD); from DRONE it goes to POLY.
 
 **v0.46:** a built-in sound goes to the Game Boy as one CC.

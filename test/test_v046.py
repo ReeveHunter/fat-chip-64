@@ -39,7 +39,7 @@ def sound(c, i):
 
 c = C64(channels=None)
 c.run_ms(500)
-check("header V0.47", "V0.47" in c.screen_row(0), c.screen_row(0))
+check("header V0.48", "V0.48" in c.screen_row(0), c.screen_row(0))
 check("DEVICES > GAME BOY: FAT CHIP GB by default", c.v("gbFc") == 0)
 gb = c.v("gbBase")
 
