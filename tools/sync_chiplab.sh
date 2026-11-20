@@ -1,7 +1,8 @@
 #!/bin/sh
 # Copy the patch definition, the built-in patches, the C64 layout and the
 # JavaScript converter to Chip Lab (the ReeveHunter.github.io repo next to this
-# one). Run after changing anything in patch/ or tools/gen_patches.py.
+# one), and the beats to the beats page. Run after changing anything in patch/,
+# tools/gen_patches.py or tools/gen_beat_book.py.
 set -e
 cd "$(dirname "$0")/.."
 python3 tools/gen_patches.py >/dev/null
@@ -9,3 +10,8 @@ python3 tools/make_demo_patches.py >/dev/null
 DEST=${1:-../ReeveHunter.github.io/fatchip/chiplab}
 cp patch/effects.json patch/patches.json patch/demo-patches.json patch/c64-layout.json patch/fatchip-patch.js "$DEST"/
 echo "copied to $DEST"
+# the beats page plays patch/beats.json (tools/gen_beat_book.py)
+python3 tools/gen_beat_book.py >/dev/null
+BEATS=$(dirname "$DEST")/beats
+cp patch/beats.json "$BEATS"/
+echo "copied beats.json to $BEATS"
