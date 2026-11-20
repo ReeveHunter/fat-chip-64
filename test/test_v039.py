@@ -40,7 +40,7 @@ def cutoffs(c, ms):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.55", "V0.55" in c.screen_row(0), c.screen_row(0))
+check("header V0.56", "V0.56" in c.screen_row(0), c.screen_row(0))
 
 for cut, want in ((1, 0x29), (128, 0x28 + 100), (255, 0xEF)):           # (0: no filter)
     send(c, BY["RAW"], filter={"cutoff": cut, "resonance": 8})

@@ -453,6 +453,10 @@ FxButtons:
 	tay
 	lda #5
 	jsr SoundGbPut
+	jsr GbEaseVal           ; (v0.56: DRONE's eased glide)
+	tay
+	lda #90
+	jsr SoundGbPut
 	ldy t3
 	cpy #2
 	beq .next               ; (the wave channel has no LFO here)
@@ -562,6 +566,21 @@ GbGlideVal:
 	bne .x
 	lda #120
 .x:
+	rts
+
+; v0.56: Fat Chip GB v0.14's EASED GLIDE (CC 90): in DRONE its glides ease in
+; and out over GB_EASE frames (about the SID's DRONE glide); else 0, the
+; usual glide. -> A (keeps X, Y)
+GB_EASE     equ 90
+GbEaseVal:
+	subroutine
+	lda effMode
+	cmp #MODE_DRONE
+	bne .no
+	lda #GB_EASE
+	rts
+.no:
+	lda #0
 	rts
 
 ; Game Boy detune (CC 94) for pulse Y (0-1), X = soundMode -> A (keeps X).
@@ -970,6 +989,10 @@ GbChan:
 	jsr GbGlideVal
 	tay
 	lda #5
+	jsr .put
+	jsr GbEaseVal           ; (v0.56: DRONE's eased glide)
+	tay
+	lda #90
 	jsr .put
 	ldy t3                  ; level: pulses / wave
 	lda gbLvl

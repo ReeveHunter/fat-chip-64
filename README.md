@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.56** (with Fat Chip GB v0.14): in DRONE the Game Boy's glides ease in and out (an S curve over about 1.5 s, like the SID's), each voice at its own moment as Fat Chip 64 staggers them; out of DRONE, its usual glide. Sent as CC 90 (EASED GLIDE).
+
 **v0.55** (with Fat Chip GB v0.13): the patch's TREMOLO on the Game Boy too, on its master volume (no clicks) and done by the Game Boy itself: every SHAPE (PUMP and the GATEs too), SYNC divisions locked to the tempo and downbeat, FREE rates. Fat Chip 64 sends it as CC 115–119, only when it changes. (TREMOLO held and the ADVANCED SOUND tremolo stay on the SID and NES.)
 
 **v0.54** (with Fat Chip GB v0.12): BEND IN's STEP and CLICK on the Game Boy. STEP holds the note AMOUNT away for TIME, then jumps (the blip), as the SID and the NES do; CLICK starts each Game Boy note with a burst of noise on its noise channel (SHORT 20 ms or LONG as TIME), while the Game Boy's noise voice is silent. Fat Chip 64 sends it as CC 89 (BEND SHAPE), and for STEP the hold time as CC 81. The Game Boy's startup (now over 64 messages) waits for room in the queue instead of losing its last messages.
@@ -509,6 +511,7 @@ detuned about ±7 cents on every chip, with a little warble on the Game Boy.
 | `src/sync.asm` | keytar clock / Start / Stop / buttons / wheel, Synthcart tempos |
 | `test/test_v013.py` | menu, keytar sync, wheel, buttons, Synthcart, ; / : |
 | `test/test_v012.py` | channels, sounds, MONO legato, Fat Bass, effects, keytar drums, beat demos, loop timing |
+| `test/test_v056.py` | DRONE's eased glides on the Game Boy (CC 90), end to end through its ROM |
 | `test/test_v055.py` | the patch's tremolo to the Game Boy (CC 115–119, sent on change), end to end through its ROM |
 | `test/test_v054.py` | BEND IN STEP / CLICK to the Game Boy (CC 89, CC 81), end to end through its ROM; the whole startup arrives |
 | `test/test_v053.py` | One Key Play beside SPARKLE with any chips on |
