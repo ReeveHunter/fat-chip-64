@@ -15,8 +15,9 @@ up to NEIGHBOURS neighbours, closest first. No sample data goes in it.
 Neighbours come only from the same bucket (or a bucket the clip "also works
 as"), the same sub-bucket first; within that, by how alike the clips measure
 (length, decay, attack, low end, brightness, level), pulled closer by Sorter
-rounds that put them together and by shared style tags. The sweep clips
-(B95-B127) neighbour the sweep clips next to them."""
+rounds that put them together and by shared style tags. Only the drum buckets
+vary (kick, snare, layered, hats & cymbals, toms & percussion): vocals, FX,
+tonal clips and the sweep get no neighbours and are never swapped in."""
 import json
 import math
 import os
@@ -28,6 +29,7 @@ from scipy.signal import butter, sosfiltfilt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 NEIGHBOURS = 6
+SWAPPABLE = {"kick", "snare", "layer", "hats", "perc"}   # the drum buckets: only these vary
 HZ = [4181.7, 4709.9, 5264.0, 5593.0, 6258.0, 7046.4, 7919.4, 8363.4, 9419.9, 11186.1, 12604.0, 13982.6,
       16884.6, 21306.8, 24858.0, 33143.9]
 
@@ -148,14 +150,13 @@ def main():
         return h
 
     for c in clips:
-        if is_sweep(c):
-            n = int(c[1:])
-            clips[c]["near"] = [f"B{m}" for d in (1, 2, 3) for m in (n - d, n + d) if 95 <= m <= 127][:NEIGHBOURS]
+        if clips[c]["bucket"] not in SWAPPABLE:   # vocals, FX, tonal clips and the sweep always play as chosen
+            clips[c]["near"] = []
             continue
         top, sub = clips[c]["bucket"], clips[c]["sub"]
         cand = []
         for o in ids:
-            if o == c:
+            if o == c or clips[o]["bucket"] not in SWAPPABLE:
                 continue
             oh = homes(o)
             if not any(bk == top for bk, _ in oh) and not (clips[c]["also"] and any(bk == clips[c]["also"] for bk, _ in oh)):
