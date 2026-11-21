@@ -5,8 +5,8 @@ fatchip/beatlab/beatlab.json by tools/sync_chiplab.sh).
   clips       per MidiNES clip: bucket, sub-bucket, own pitch, length, name,
               neighbours (from patch/clips.json, tools/analyze_clips.py, and
               patch/clip-names.json, Reeve's Sample Lab names)
-  timeSigs, hatLayers, accentLayers, gbKits   Fat Chip 64's (patch/beats.json),
-              plus 6/8 (two bars of 12 sixteenths) among the time signatures
+  timeSigs    the Beat Lab's (TIME_SIGS below; Fat Chip 64 takes them in v0.63)
+  hatLayers, accentLayers, gbKits   Fat Chip 64's (patch/beats.json)
   gbNote      the Game Boy's drum notes (Fat Chip GB), by kit slot
   imports     starting points: the 25 beats (patch/beats.json) and the six
               older demo beats (v0.12-v0.60), in the new format
@@ -40,6 +40,23 @@ LANE2 = ["cy", "oh", "rd", "ch", "sh"]
 HATS = dict(rock=("A12", "A27"), electro=("A14", "A42"), jungle=("A83", "A116"), dnb=("A94", "A116"),
             boombap=("A84", "A42"), soft=("A26", "A56"))
 EXTRA = dict(cp="A24", ht="A43", mt="A46", lt="A47", rm="A63", cb="A53", cl="A41", sh="A62", cy="A54", rd="A82")
+
+
+# the Beat Lab's time signatures (Reeve, 2026-11-21; Fat Chip 64 to take them in v0.63): the runs of the
+# 32 steps that make each bar. 7/4 "7 in a row" was the same steps as 4+3, so it's gone; 5/8 and 7/8 take a
+# bar from each half (3+2 from bar 1, 3+2 from bar 2) for a longer pattern; 6/8 sits after 3/4 (the same
+# steps: twelve sixteenths a bar, grouped in threes rather than fours).
+TIME_SIGS = [
+    {"name": "4/4", "short": "4/4", "bars": [[[0, 16]], [[16, 16]]]},
+    {"name": "3/4", "short": "3/4", "bars": [[[0, 12]], [[16, 12]]]},
+    {"name": "6/8", "short": "6/8", "bars": [[[0, 12]], [[16, 12]]]},
+    {"name": "5/4 (3+2)", "short": "5/4 3+2", "bars": [[[0, 12], [16, 8]]]},
+    {"name": "6/4 (4+2)", "short": "6/4 4+2", "bars": [[[0, 16], [16, 8]]]},
+    {"name": "7/4 (4+3)", "short": "7/4 4+3", "bars": [[[0, 16], [16, 12]]]},
+    {"name": "7/4 (3+4)", "short": "7/4 3+4", "bars": [[[0, 12], [16, 16]]]},
+    {"name": "5/8", "short": "5/8", "bars": [[[0, 10]], [[16, 10]]]},
+    {"name": "7/8", "short": "7/8", "bars": [[[0, 14]], [[16, 14]]]},
+]
 
 
 def pad(clip):
@@ -139,7 +156,7 @@ def main():
     for cid, c in CLIPS.items():
         clips[cid] = {"bucket": c["bucket"], "sub": c["sub"], "pitch": c["pitch"], "ms": c["ring_ms"], "near": c["near"],
                       "name": NAMES.get(cid, "")}
-    ts = DOC["timeSigs"] + [{"name": "6/8", "short": "6/8", "bars": [[[0, 12]], [[16, 12]]]}]
+    ts = TIME_SIGS
     gb_note = {str(gen_beats.GB_NOTE[l]): l for l in gen_beats.GB_NOTE}
     doc = {"about": "Fat Chip Beat Lab data (fat-chip-64 tools/gen_beatlab_data.py). Pads: keys " + KEYS + ".",
            "keys": KEYS, "clips": clips, "timeSigs": ts, "hatLayers": DOC["hatLayers"], "accentLayers": DOC["accentLayers"],
