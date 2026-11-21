@@ -1,4 +1,4 @@
-DEP_ORG     equ $CE4B
+DEP_ORG     equ $CE66
 TAIL_SRC    equ $B291
 TAIL_DEST   equ $9900
 HI_SRC      equ $9900

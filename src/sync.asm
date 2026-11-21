@@ -9,8 +9,9 @@
 ;                   Synthcart's ten NTSC tempos (whole Atari frames a beat).
 ;   START/STOP      KEYTAR / OWN: its Start and Stop start / stop the beat demo
 ;                   (a start waits for the next beat clock: step 1 lands on it)
-;   RHYTHM BUTTONS  PICK BEAT / IGNORE: its style (Program Change on channel 16)
-;                   picks a beat (styleBeat)
+;   RHYTHM BUTTONS  IN ORDER / BY FEEL / IGNORE: its rhythm (Program Change on
+;                   channel 16, the keytar's 00-44) picks beat n (bank n / 5), or
+;                   the beat nearest its style (styleBeat)
 ;   DRUM NOTES      IGNORE / PLAY: its drum notes on the MidiNES (drums.asm)
 ;   VOICE BUTTONS   PICK SOUND / IGNORE: its voice (Program Change 0-24 on the
 ;                   key channel) picks a sound (voiceSound)
@@ -407,12 +408,17 @@ KeytarStyle:
 	subroutine
 	lda useShs
 	beq .x
-	lda syncRhythm
-	bne .x
 	ldx rxD1
 	cpx #25
 	bcs .x
+	lda syncRhythm          ; v0.62: IN ORDER (00-44: bank, then beat), BY FEEL, IGNORE
+	cmp #2
+	bcs .x
+	txa
+	ldy syncRhythm
+	beq .go
 	lda styleBeat,x
+.go:
 	jmp BeatChoose
 .x:
 	rts
@@ -442,7 +448,7 @@ KeytarVoice:
 	rts
 
 ; the keytar's 25 rhythm styles -> the beats (v0.61: the 25 in BASIC, CHILL,
-; BREAK, GLOBE, SWING), by feel
+; BREAK, GLOBE, SWING), for RHYTHM BUTTONS BY FEEL
 ;   R&B 1/2 SLOW JAM / NEW JACK, Fusion 1/2 FUNK / BREAKS, Slow Rock TRIP HOP,
 ;   Swing JAZZ, Big Band / Dixie / Boogie Woogie SHUFFLE, Jazz Waltz JAZZ,
 ;   R'n'R 1/2 ROCK / SHUFFLE, Rock-a-Ballad SLOW JAM, Hard Rock ROCK, Reggae

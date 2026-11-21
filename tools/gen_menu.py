@@ -387,7 +387,7 @@ def build_pages(params, effects):
         enum("SHS-10 RHYTHM", "shsRhythm", ["IGNORE", "PLAY ON MIDINES"], hook="SyncDerive"),
         enum("START/STOP", "shsStart", ["BUILT-IN BEATS", "IGNORE"], hook="SyncDerive"),
         enum("VOICE BUTTONS", "syncVoice", ["PICK PATCH", "IGNORE"]),
-        enum("RHYTHM BUTTONS", "syncRhythm", ["PICK BEAT", "IGNORE"]),
+        enum("RHYTHM BUTTONS", "syncRhythm", ["IN ORDER", "BY FEEL", "IGNORE"]),
         enum("WHEEL", "syncWheel", ["BEND", "OFF"], hook="WheelHook"),
         enum("VIBRATO BUTTON", "btnTask", ACTS),
         enum("PORTAMENTO BUTTON", "btnTask+1", ACTS),

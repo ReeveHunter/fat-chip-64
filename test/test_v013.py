@@ -133,10 +133,17 @@ c.midi_in(0xFC, ms=200)
 check("keytar Stop: the beat stops", c.v("beatRun") == 0)
 
 # ---------------------------------------------------------------- rhythm / voice buttons
-c.midi_in(0xCF, 13, ms=200)                 # Hard Rock
-check("rhythm button (Hard Rock, PC 13 on ch 16): ROCK", c.v("beatSel") == 0 and "ROCK" in c.screen_row(12), c.screen_row(12))
+c.midi_in(0xCF, 13, ms=200)                 # the keytar's 23 (Hard Rock)
+check("v0.62 RHYTHM BUTTONS IN ORDER: 23 (PC 13) picks bank 3's 4th, HOUSE", c.v("beatSel") == 13 and "HOUSE" in c.screen_row(12), c.screen_row(12))
+c.set("syncRhythm", 1)                      # BY FEEL
+c.midi_in(0xCF, 13, ms=200)
+check("BY FEEL: Hard Rock (PC 13) picks ROCK", c.v("beatSel") == 0 and "ROCK" in c.screen_row(12), c.screen_row(12))
 c.midi_in(0xCF, 9, ms=200)                  # Jazz Waltz
-check("Jazz Waltz: JAZZ (v0.61)", c.v("beatSel") == 23)
+check("BY FEEL: Jazz Waltz picks JAZZ", c.v("beatSel") == 23)
+c.set("syncRhythm", 2)                      # IGNORE
+c.midi_in(0xCF, 0, ms=200)
+check("IGNORE: the rhythm buttons pick nothing", c.v("beatSel") == 23)
+c.set("syncRhythm", 0)
 c.midi_in(0xC0, 4, ms=300)                  # voice button 4 on the key channel
 check("voice button (PC 4 on ch 1): WHISTLE", c.v("soundMode") == 4 and "WHISTLE" in c.screen_row(2), c.screen_row(2))
 c.midi_in(0xC0, 0, ms=300)

@@ -446,7 +446,7 @@ latchStyle  ds 1               ; = turns latch on in this style (SMART / HOLD / 
 fbLock      ds 1               ; Fat Bass: 0 as the sound says, 1 always, 2 never
 syncTempo   ds 1               ; 0 KEYTAR, 1 OWN, 2 SYNTHCART
 syncStart   ds 1               ; 0 KEYTAR, 1 OWN
-syncRhythm  ds 1               ; 0 PICK BEAT, 1 IGNORE
+syncRhythm  ds 1               ; 0 IN ORDER, 1 BY FEEL, 2 IGNORE (v0.62)
 syncDrums   ds 1               ; 0 IGNORE, 1 PLAY
 syncVoice   ds 1               ; 0 PICK SOUND, 1 IGNORE
 syncWheel   ds 1               ; 0 BEND, 1 OFF

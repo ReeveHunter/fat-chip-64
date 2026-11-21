@@ -29,7 +29,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(400)
-check("header V0.61", "V0.61" in c.screen_row(0), c.screen_row(0))
+check("header V0.62", "V0.62" in c.screen_row(0), c.screen_row(0))
 c.set("okpOn", 1)
 
 # MONO

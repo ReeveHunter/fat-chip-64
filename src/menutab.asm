@@ -54,7 +54,7 @@ mCount:     .byte 0,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
         .byte 3,20,24,2,101,5,7,3,4,24,128,5,2,2,4,4,2,2,2,2,2,2,12,12
-        .byte 4,15,9,10,6,3,2,2,2,2,2,2,2,2,20,20,20,4,24,24,3,3,20,2
+        .byte 4,15,9,10,6,3,2,2,2,2,2,2,3,2,20,20,20,4,24,24,3,3,20,2
         .byte 2,17,6,2
 mArgLo: .byte <(1),<(devOn),<(devOn+1),<(devOn+2),<(2),<(16),<(17),<(18),<(19),<(20),<(21),<(22),<(0),<(0),<(0),<(0),<(0),<(0),<(0),<(0),<(0),<(0),<(0),<(0)
         .byte <(0),<(0),<(0),<(0),<(0),<(0),<(0),<(0),<(1),<(1),<(2),<(3),<(4),<(5),<(6),<(7),<(8),<(9),<(10),<(11),<(12),<(13),<(2),<(3)
@@ -147,15 +147,15 @@ mE128:      .word mS144,mS50
 mE129:      .word mS50,mS145
 mE130:      .word mS146,mS50
 mE131:      .word mS147,mS50
-mE132:      .word mS148,mS50
-mE133:      .word mS149,mS0
-mE137:      .word mS150,mS151,mS152,mS0
-mE138:      .word mS103,mS153,mS154,mS155,mS152,mS156,mS157,mS158,mS159,mS160,mS161,mS162,mS163,mS164,mS165,mS166,mS167,mS168,mS169,mS170,mS171,mS172,mS173,mS174
-mE140:      .word mS175,mS176,mS177
-mE141:      .word mS178,mS179,mS180
-mE143:      .word mS181,mS50
-mE144:      .word mS0,mS182
-mE146:      .word mS0,mS183,mS184,mS185,mS186,mS187
+mE132:      .word mS148,mS149,mS50
+mE133:      .word mS150,mS0
+mE137:      .word mS151,mS152,mS153,mS0
+mE138:      .word mS103,mS154,mS155,mS156,mS153,mS157,mS158,mS159,mS160,mS161,mS162,mS163,mS164,mS165,mS166,mS167,mS168,mS169,mS170,mS171,mS172,mS173,mS174,mS175
+mE140:      .word mS176,mS177,mS178
+mE141:      .word mS179,mS180,mS181
+mE143:      .word mS182,mS50
+mE144:      .word mS0,mS183
+mE146:      .word mS0,mS184,mS185,mS186,mS187,mS188
 mS0:   .byte "OFF",0
 mS1:   .byte "ON",0
 mS2:   .byte "SMART",0
@@ -304,46 +304,47 @@ mS144:   .byte "FOLLOW",0
 mS145:   .byte "PLAY ON MIDINES",0
 mS146:   .byte "BUILT-IN BEATS",0
 mS147:   .byte "PICK PATCH",0
-mS148:   .byte "PICK BEAT",0
-mS149:   .byte "BEND",0
-mS150:   .byte "VOLUME",0
-mS151:   .byte "VOLUME+FILTER",0
-mS152:   .byte "FILTER",0
-mS153:   .byte "VIBRATO DEPTH",0
-mS154:   .byte "WARBLE DEPTH",0
-mS155:   .byte "DETUNE DEPTH",0
-mS156:   .byte "HELD: MUTE",0
-mS157:   .byte "HELD: BEND DOWN",0
-mS158:   .byte "HELD: BEND UP",0
-mS159:   .byte "HELD: VIBRATO",0
-mS160:   .byte "HELD: TREMOLO",0
-mS161:   .byte "HELD: ARP",0
-mS162:   .byte "HELD: STUTTER",0
-mS163:   .byte "HELD: VINYL STOP",0
-mS164:   .byte "HELD: GLIDE",0
-mS165:   .byte "HELD: SUSTAIN",0
-mS166:   .byte "HELD: OCTAVE UP",0
-mS167:   .byte "HELD: REPEAT",0
-mS168:   .byte "HELD: FILTER SWE",0
-mS169:   .byte "HELD: BEAT FILL",0
-mS170:   .byte "HELD: TAPE WOBBL",0
-mS171:   .byte "HELD: WIDE",0
-mS172:   .byte "HELD: TAP TEMPO",0
-mS173:   .byte "HELD: BEAT ON/OF",0
-mS174:   .byte "HELD: NEXT SOUND",0
-mS175:   .byte "SOFT",0
-mS176:   .byte "NORMAL",0
-mS177:   .byte "HARD",0
-mS178:   .byte "AS PLAYED",0
-mS179:   .byte "CHORD",0
-mS180:   .byte "HARMONY",0
-mS181:   .byte "PICK BANK",0
-mS182:   .byte "SYNC",0
-mS183:   .byte "SQUARE C -10",0
-mS184:   .byte "LEAD F -10",0
-mS185:   .byte "BASS C# -35",0
-mS186:   .byte "PITFALL C# -30",0
-mS187:   .byte "SAW C# +10",0
+mS148:   .byte "IN ORDER",0
+mS149:   .byte "BY FEEL",0
+mS150:   .byte "BEND",0
+mS151:   .byte "VOLUME",0
+mS152:   .byte "VOLUME+FILTER",0
+mS153:   .byte "FILTER",0
+mS154:   .byte "VIBRATO DEPTH",0
+mS155:   .byte "WARBLE DEPTH",0
+mS156:   .byte "DETUNE DEPTH",0
+mS157:   .byte "HELD: MUTE",0
+mS158:   .byte "HELD: BEND DOWN",0
+mS159:   .byte "HELD: BEND UP",0
+mS160:   .byte "HELD: VIBRATO",0
+mS161:   .byte "HELD: TREMOLO",0
+mS162:   .byte "HELD: ARP",0
+mS163:   .byte "HELD: STUTTER",0
+mS164:   .byte "HELD: VINYL STOP",0
+mS165:   .byte "HELD: GLIDE",0
+mS166:   .byte "HELD: SUSTAIN",0
+mS167:   .byte "HELD: OCTAVE UP",0
+mS168:   .byte "HELD: REPEAT",0
+mS169:   .byte "HELD: FILTER SWE",0
+mS170:   .byte "HELD: BEAT FILL",0
+mS171:   .byte "HELD: TAPE WOBBL",0
+mS172:   .byte "HELD: WIDE",0
+mS173:   .byte "HELD: TAP TEMPO",0
+mS174:   .byte "HELD: BEAT ON/OF",0
+mS175:   .byte "HELD: NEXT SOUND",0
+mS176:   .byte "SOFT",0
+mS177:   .byte "NORMAL",0
+mS178:   .byte "HARD",0
+mS179:   .byte "AS PLAYED",0
+mS180:   .byte "CHORD",0
+mS181:   .byte "HARMONY",0
+mS182:   .byte "PICK BANK",0
+mS183:   .byte "SYNC",0
+mS184:   .byte "SQUARE C -10",0
+mS185:   .byte "LEAD F -10",0
+mS186:   .byte "BASS C# -35",0
+mS187:   .byte "PITFALL C# -30",0
+mS188:   .byte "SAW C# +10",0
 pgFirst:    .byte 0,12,31,46,55,59,63,65,66,72,73,75,79,84,88,90,96,108,114,120,128,137,144
 pgCount:    .byte 12,19,15,9,4,4,2,1,6,1,2,4,5,4,2,6,12,6,6,8,9,7,4
 pgBack:     .byte 0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,0,0,0,0
