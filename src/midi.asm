@@ -394,6 +394,9 @@ GbStartup:
 	sta gbCcS,y
 	dey
 	bpl .cc
+	lda #0                  ; (v0.61: and the beats' drum kit and HATS)
+	sta gbKitSent
+	sta gbHatSent
 	; first, move the Game Boy's voices to our channels (Fat Chip GB v0.08
 	; hears CC 113 on any channel, so its own setting doesn't matter)
 	lda gbBase

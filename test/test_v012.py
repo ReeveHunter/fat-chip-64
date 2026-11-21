@@ -78,9 +78,9 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
-check("screen: header V0.60, sound line, tempo / beat line",
-      "V0.60" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
-      and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  BEAT ELECTRO  STOP",
+check("screen: header V0.61, sound line, tempo / beat line",
+      "V0.61" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
+      and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  A    ROCK     STOP",
       (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles
 c.press("ctrl", ms=12)
@@ -210,8 +210,8 @@ c.midi_in(0x9F, 45, 127, ms=20)              # kick accent
 c.midi_in(0x9F, 57, 64, ms=20)               # hat
 msgs = since(c, t0)
 dmc = [x[1:] for x in msgs if (x[1] & 15) == DMC]
-check("keytar kick (accent): bank A (CC14 = 0), sample A0 (ELECTRO kit)",
-      (0xB4, 14, 0) in dmc and (0x94, 0, 127) in dmc, dmc)
+check("keytar kick (accent): bank A (CC14 = 0), sample A91 (v0.61: ROCK's kit)",
+      (0xB4, 14, 0) in dmc and (0x94, 91, 127) in dmc, dmc)
 nz = [x[1:] for x in msgs if (x[1] & 15) == NOISE]
 check("keytar hat: NES noise level (CC7) and a closed-hat note 49-51",
       any(s == 0xB3 and a == 7 for s, a, _ in nz) and any(s == 0x93 and 49 <= a <= 51 for s, a, _ in nz), nz)
@@ -222,20 +222,31 @@ t0 = c.cpu.processorCycles
 c.midi_in(0x9F, 52, 56, ms=5)               # snare ghost
 c.midi_in(0x9F, 45, 64, ms=20)              # a kick 2 ms later: more important, plays
 d = [x[1:] for x in since(c, t0) if (x[1] & 0xF0) == 0x90 and (x[1] & 15) == DMC and x[3]]
-check("keytar snare ghost (A65), then a kick right after it still plays (A10)", d == [(0x94, 65, 127), (0x94, 10, 127)], d)
+check("keytar snare ghost (A9), then a kick right after it still plays (A68)", d == [(0x94, 9, 127), (0x94, 68, 127)], d)
 t0 = c.cpu.processorCycles
 c.midi_in(0x9F, 45, 64, ms=2)
 c.midi_in(0x9F, 52, 64, ms=20)              # snare 2 ms after a kick: dropped
 d = [x[1:] for x in since(c, t0) if (x[1] & 0xF0) == 0x90 and (x[1] & 15) == DMC and x[3]]
-check("a snare right after a kick is dropped (one sample at a time)", d == [(0x94, 10, 127)], d)
+check("a snare right after a kick is dropped (one sample at a time)", d == [(0x94, 68, 127)], d)
 t0 = c.cpu.processorCycles
 c.midi_in(0x9B, 60, 64, 0x9E, 36, 64, ms=40)   # accompaniment channels: still ignored
 check("channels 12-15 still ignored", since(c, t0) == [], since(c, t0))
 c.midi_in(0x8B, 60, 0, 0x8E, 36, 0, ms=20)
 
-# ---------------------------------------------------------------- beat demos
+# ---------------------------------------------------------------- beats (v0.61: the 25)
+def pick(c, n):
+    """RUN/STOP + ; until beat n"""
+    for _ in range(25):
+        if c.v("beatSel") == n:
+            break
+        c._raw_press("runstop", ms=30); c._raw_tap(";", ms=40); c._raw_release("runstop", ms=60)
+    c.run_ms(100)
+
+
 c.tap("g", ms=150)
-check("G: JUNGLE, 168 BPM", c.v("beatSel") == 1 and c.v("bpm") == 168 and "JUNGLE" in c.screen_row(12), c.screen_row(12))
+check("G: the next beat (DISCO, 120 BPM)", c.v("beatSel") == 1 and c.v("bpm") == 120 and "DISCO" in c.screen_row(12), c.screen_row(12))
+pick(c, 11)
+check("JUNGLE, 168 BPM", c.v("beatSel") == 11 and c.v("bpm") == 168 and "JUNGLE" in c.screen_row(12), c.screen_row(12))
 t0 = c.cpu.processorCycles
 c.tap("f5", ms=10)
 c.run_ms(2 * 4 * 60000 // 168 + 50)          # two bars
@@ -259,9 +270,9 @@ t0 = c.cpu.processorCycles
 c.run_ms(400)
 check("stopped: no more drums", [x for x in since(c, t0) if (x[1] & 0xF0) == 0x90 and x[3]] == [])
 
-# boombap: swing
-c.tap("g", ms=20); c.tap("g", ms=150)
-check("G G: BOOMBAP, 90 BPM", c.v("beatSel") == 3 and c.v("bpm") == 90, (c.v("beatSel"), c.v("bpm")))
+# boom bap: swing
+pick(c, 21)
+check("BOOM BAP, 90 BPM", c.v("beatSel") == 21 and c.v("bpm") == 90, (c.v("beatSel"), c.v("bpm")))
 t0 = c.cpu.processorCycles
 c.tap("f5", ms=10)
 c.run_ms(2 * 4 * 60000 // 90 + 50)
@@ -269,7 +280,7 @@ msgs = since(c, t0)
 hits = [(t - t0) / CYCLES_PER_MS for t, s, a, b in msgs if s == 0x94 and b]
 rel = [round(x - hits[0]) for x in hits]
 # bar 1 samples: steps 0 K, 4 S, 7 K (odd: swung), 10 K, 12 S, 15 K (odd); step 166.7 ms, swing 55% = +46 ms
-check("BOOMBAP: odd 16ths swung late (+46 ms), even ones on the grid",
+check("BOOM BAP: odd 16ths swung late (+46 ms), even ones on the grid",
       len(rel) >= 6 and abs(rel[1] - 667) <= 6 and abs(rel[2] - 1213) <= 8 and abs(rel[3] - 1667) <= 6, rel[:6])
 c.tap("f5", ms=50)
 

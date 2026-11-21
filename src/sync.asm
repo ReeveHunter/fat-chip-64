@@ -10,7 +10,7 @@
 ;   START/STOP      KEYTAR / OWN: its Start and Stop start / stop the beat demo
 ;                   (a start waits for the next beat clock: step 1 lands on it)
 ;   RHYTHM BUTTONS  PICK BEAT / IGNORE: its style (Program Change on channel 16)
-;                   picks a beat demo (styleBeat)
+;                   picks a beat (styleBeat)
 ;   DRUM NOTES      IGNORE / PLAY: its drum notes on the MidiNES (drums.asm)
 ;   VOICE BUTTONS   PICK SOUND / IGNORE: its voice (Program Change 0-24 on the
 ;                   key channel) picks a sound (voiceSound)
@@ -441,12 +441,15 @@ KeytarVoice:
 .x:
 	rts
 
-; the keytar's 25 rhythm styles -> beat demos (0 ELECTRO, 1 JUNGLE, 2 DNB,
-; 3 BOOMBAP, 4 ROCK, 5 6/8), by feel, until there are 20 beats
-;   R&B 1/2, Fusion 1/2, Slow Rock, Swing, Big Band, Dixie, Boogie Woogie,
-;   Jazz Waltz, R'n'R 1/2, Rock-a-Ballad, Hard Rock, Reggae, Bossa Nova,
-;   Samba, Tango, Country, Bluegrass, March 1/2, Lullaby, Baroque, Fanfare
-styleBeat:  .byte 3,3,0,2,5,3,1,4,4,5,4,4,5,4,3,0,1,0,4,2,4,4,5,0,4
+; the keytar's 25 rhythm styles -> the beats (v0.61: the 25 in BASIC, CHILL,
+; BREAK, GLOBE, SWING), by feel
+;   R&B 1/2 SLOW JAM / NEW JACK, Fusion 1/2 FUNK / BREAKS, Slow Rock TRIP HOP,
+;   Swing JAZZ, Big Band / Dixie / Boogie Woogie SHUFFLE, Jazz Waltz JAZZ,
+;   R'n'R 1/2 ROCK / SHUFFLE, Rock-a-Ballad SLOW JAM, Hard Rock ROCK, Reggae
+;   REGGAE, Bossa Nova BOSSA, Samba SALSA, Tango CUMBIA, Country MOTORIK,
+;   Bluegrass DISCO, March 1/2 TECHNO / HOUSE, Lullaby LO-FI, Baroque
+;   SYNTHPOP, Fanfare AFROBEAT
+styleBeat:  .byte 9,22,3,12,6,23,20,20,20,23,0,20,9,0,17,18,15,16,4,1,14,13,5,2,19
 
 ; Control change rxD1 = rxD2 on a key channel: the three buttons
 KeytarCC:

@@ -30,6 +30,8 @@ data = open(os.path.join(ROOT, "bin", "fatchip64-image.prg"), "rb").read()
 img = bytearray(65536)                           # (the image as assembled)
 img[0x0801:0x0801 + len(data) - 2] = data[2:]
 hp, hs, he = c.sym["hiPhys"], c.sym["hiStart"], c.sym["hiEnd"]
+ip, i0, i1 = c.sym["ioPhys"], c.sym["ioStart"], c.sym["ioEnd"]
+io_img = bytes(img[ip:ip + i1 - i0])             # (first: the image can reach $E000)
 img[hs:he] = img[hp:hp + he - hs]
 start = c.sym["Start"]
 while c.cpu.pc != start and c.cpu.processorCycles < 4_000_000:
@@ -40,9 +42,8 @@ code_ok = c.raw[0x0810:c.sym["hiPhys"]] == img[0x0810:c.sym["hiPhys"]]
 hi_ok = c.raw[c.sym["hiStart"]:c.sym["hiEnd"]] == img[c.sym["hiStart"]:c.sym["hiEnd"]]
 check("the code from $0810 matches the image", code_ok)
 check("the tables at $E000 match", hi_ok)
-ip, i0, i1 = c.sym["ioPhys"], c.sym["ioStart"], c.sym["ioEnd"]
 check("the data under the I/O at $D000 matches (v0.60)",
-      c.under[i0 - 0xD000:i1 - 0xD000] == img[ip:ip + i1 - i0], f"{i1 - i0} bytes")
+      bytes(c.under[i0 - 0xD000:i1 - 0xD000]) == io_img, f"{i1 - i0} bytes")
 check("the I/O was switched back on ($01 = $35)", c.raw[1] == 0x35, hex(c.raw[1]))
 c.run_until(c.sym["Loop"], limit=3_000_000)
 c.run_ms(500)

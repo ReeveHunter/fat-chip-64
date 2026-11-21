@@ -202,16 +202,16 @@ ACCENT_LAYERS = [
 # time signatures: each bar of the cycle is a list of [first step, steps] taken
 # from the beat's 32 steps (the kick stays on the downbeat)
 TIME_SIGS = [
-    dict(name="4/4", bars=[[[0, 16]], [[16, 16]]]),
-    dict(name="3/4", bars=[[[0, 12]], [[16, 12]]]),
-    dict(name="5/4 (3+2)", bars=[[[0, 12], [16, 8]]]),
-    dict(name="6/4 (4+2)", bars=[[[0, 16], [16, 8]]]),
-    dict(name="7/4 (4+3)", bars=[[[0, 16], [16, 12]]]),
-    dict(name="7/4 (3+4)", bars=[[[0, 12], [16, 16]]]),
-    dict(name="7/4 (7 in a row)", bars=[[[0, 28]]]),
-    dict(name="5/8 (3+2)", bars=[[[0, 6], [16, 4]]]),
-    dict(name="7/8 (4+3)", bars=[[[0, 8], [16, 6]]]),
-    dict(name="7/8 (2+2+3)", bars=[[[0, 4], [8, 4], [16, 6]]]),
+    dict(name="4/4", short="4/4", bars=[[[0, 16]], [[16, 16]]]),
+    dict(name="3/4", short="3/4", bars=[[[0, 12]], [[16, 12]]]),
+    dict(name="5/4 (3+2)", short="5/4 3+2", bars=[[[0, 12], [16, 8]]]),
+    dict(name="6/4 (4+2)", short="6/4 4+2", bars=[[[0, 16], [16, 8]]]),
+    dict(name="7/4 (4+3)", short="7/4 4+3", bars=[[[0, 16], [16, 12]]]),
+    dict(name="7/4 (3+4)", short="7/4 3+4", bars=[[[0, 12], [16, 16]]]),
+    dict(name="7/4 (7 in a row)", short="7/4 7", bars=[[[0, 28]]]),
+    dict(name="5/8 (3+2)", short="5/8 3+2", bars=[[[0, 6], [16, 4]]]),
+    dict(name="7/8 (4+3)", short="7/8 4+3", bars=[[[0, 8], [16, 6]]]),
+    dict(name="7/8 (2+2+3)", short="7/8 2+2+3", bars=[[[0, 4], [8, 4], [16, 6]]]),
 ]
 
 

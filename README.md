@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.61** (with Fat Chip GB v0.17): **the 25 beats.** Five banks of five, BASIC (rock, disco, synthpop, funk, motorik), CHILL (lo-fi, trip hop, dub, trap, slow jam), BREAK (DnB, jungle, breaks, house, techno), GLOBE (salsa, cumbia, reggae, bossa, afrobeat) and SWING (shuffle, boom bap, new jack, jazz, go-go), from `patch/beats.json` (`tools/gen_beat_book.py`; hear them at reevehunter.com/fatchip/beats). Each has an A and a B part: RUN/STOP + N plays A, B, both, or A then B by turns. RUN/STOP + H lays a hat layer over it (14, three of them triplets over the straight beat), J an accent layer (FLAT, DOWNBEAT, BACKBEAT, OFFBEAT, SYNCOPATED, SHUFFLE, BUILD, HUMAN), K a time signature (3/4, 5/4, 6/4, three 7/4s, 5/8, two 7/8s: runs of the beat's steps from each bar's start, so the kick stays on the downbeat) and L a swing (or the beat's own). The new BEATS page in the menu has those and **BEATS ON: MIDINES / GAME BOY / BOTH**, **BOTH: LAYER / SPLIT** (SPLIT: the NES the kick, snare, clap, rim and toms; the Game Boy the hats, cymbals, shaker, cowbell and clave) and **GAME BOY HATS: SAMPLE / NOISE**. On the Game Boy (Fat Chip GB v0.17) the beat plays its drum kit (the beat's own of the seven), two hits at once, and while the beat plays its wave channel is the drums' (the synth gets no note on it). **Choosing a beat while one plays keeps the tempo** (Reeve); stopped, the beat brings its own (BEAT TEMPO DEFAULT). The MidiNES kits are the six curated kits, each beat borrowing the nearest, until there are kits for the new beats. Also: letting go of VINYL STOP brings the beat straight back while the pitch winds up (the step after used to wait out the slowed step), and the variables start at $C400 (the code may run to $C3FF).
+
 **v0.60**: room for the beats. The beats' kits, names and steps now live in the 4 KB of RAM under the I/O chips ($D000), and picking a beat copies it into a small buffer, so they no longer take room in the program. The packer packs that data too, and lays things out so that packing more of the code always gains room in the program file; before, it only gained once a big piece was packed. The 25-beat overhaul goes there next.
 
 **v0.59** (with Fat Chip GB v0.16): BEND IN goes to 4 octaves (AMOUNT −48 … +48; the menu adds ±36 and ±48). The SID starts that far away, kept within its notes (it used to wrap round to the bottom past the top); the Game Boy takes half the AMOUNT and BEND SHAPE's ×2 bit (2-semitone steps past 2 octaves); the NES stays at 2 octaves at most (its bends stop there).
@@ -390,8 +392,11 @@ Row 14 shows the effect the C= keys work on, the setting and its value
 
 | RUN/STOP + | Does |
 |---|---|
-| A S D F G / Z X C V B | Beat bank / beat in it (bank 1: ELECTRO, JUNGLE, DNB, BOOMBAP, ROCK; bank 2: 6/8) |
-| : / ; | The previous / next beat |
+| A S D F G / Z X C V B | Beat bank / beat in it (v0.61: BASIC, CHILL, BREAK, GLOBE, SWING; see Beats) |
+| : / ; | The previous / next beat (one that's playing keeps the tempo) |
+| N | The part: A → B → A+B → A↔B (A one time round, B the next); row 12 shows it |
+| H / J | The hat layer / the accent layer, the next (SHIFT: the one before) |
+| K / L | The time signature / the swing, the next (SHIFT: the one before) |
 | , / . | Tempo −1 / +1 BPM (SYNTHCART SYNC: its next tempo) |
 | SPACE | FILL while held |
 

@@ -145,10 +145,12 @@ BendTick:
 	cmp #0
 	bne .vm
 	lda nowL                ; turning again: the beat and arp go on from now
-	sta beatAtL             ;  (not after the long step they had while stopped)
-	sta arpNext
+	sta beatAtL             ;  (not after the long step they had while stopped;
+	sta beatBaseL           ;  v0.61: the beat's base too, or the step after
+	sta arpNext             ;  this one still waited out that long step)
 	lda nowH
 	sta beatAtH
+	sta beatBaseH
 	sta arpNext+1
 .vm:
 	jsr MuteChanged

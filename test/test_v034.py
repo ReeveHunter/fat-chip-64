@@ -59,7 +59,7 @@ def sel(c, label):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.60", "V0.60" in c.screen_row(0), c.screen_row(0))
+check("header V0.61", "V0.61" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- no jumps
 send(c, BY["TREMOLO GATE"])

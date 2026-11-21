@@ -489,8 +489,8 @@ CMD_SHIFT   equ CMD_PLAIN+13
 CMD_CBM     equ CMD_SHIFT+7
 	.byte K_A,K_Z,K_X,K_L,K_COLON,K_SEMI,K_COMMA,K_PERIOD,K_SPACE,K_RETURN,0
 CMD_STOP    equ CMD_CBM+11
-	.byte K_COLON,K_SEMI,K_COMMA,K_PERIOD,K_SPACE,0
-CMD_CTRL    equ CMD_STOP+6
+	.byte K_COLON,K_SEMI,K_COMMA,K_PERIOD,K_SPACE,K_N,K_H,K_J,K_K,K_L,0
+CMD_CTRL    equ CMD_STOP+11
 	.byte K_A,K_S,K_D,K_F,K_H,K_J,K_L,K_M,K_COMMA,K_PERIOD,0
 CMD_END     equ CMD_CTRL+11
 
@@ -501,7 +501,8 @@ CMD_END     equ CMD_CTRL+11
 	.byte {1}SplitPointKey,{1}LeadPrev,{1}LeadNext,{1}TransDown,{1}TransUp,{1}MomentDown,0
 	.byte {1}CbmArp,{1}EnvAtkKey,{1}EnvRelKey
 	.byte {1}FocusSync,{1}FocusPrevFx,{1}FocusNextFx,{1}FocusSlower,{1}FocusFaster,{1}CbmSpace,{1}FocusMenu,0
-	.byte {1}BeatPrev,{1}BeatNext,{1}TempoDown,{1}TempoUp,{1}StopSpace,0
+	.byte {1}BeatPrev,{1}BeatNext,{1}TempoDown,{1}TempoUp,{1}StopSpace
+	.byte {1}BeatPartKey,{1}BeatHatsKey,{1}BeatAccKey,{1}BeatTsKey,{1}BeatSwgKey,0
 	.byte {1}ChipKey,{1}ChipKey,{1}ChipKey,{1}ScSyncKey,{1}FineDown,{1}FineUp,{1}LatchStyleKey,{1}Panic
 	.byte {1}SpaceBack,{1}SpaceNext,0
 	endm
@@ -632,6 +633,55 @@ BeatSet:
 	sty beatBank
 	pla
 	jmp BeatChoose
+
+; v0.61: RUN/STOP + N the part (A, B, A+B, A<->B), H the hat layer, J the
+; accent layer, K the time signature, L the swing: each steps to its next
+; (SHIFT: the one before)
+BeatPartKey:
+	ldx #0
+	beq BeatSetKey
+BeatHatsKey:
+	ldx #1
+	bne BeatSetKey
+BeatAccKey:
+	ldx #2
+	bne BeatSetKey
+BeatTsKey:
+	ldx #3
+	bne BeatSetKey
+BeatSwgKey:
+	ldx #4
+BeatSetKey:
+	subroutine
+	lda beatVarCnt,x
+	sta t3
+	ldy beatVarOfs,x
+	lda shiftDown
+	bne .dn
+	lda beatPart,y
+	clc
+	adc #1
+	cmp t3
+	bcc .s
+	lda #0
+	beq .s
+.dn:
+	lda beatPart,y
+	bne .d
+	lda t3
+.d:
+	sec
+	sbc #1
+.s:
+	sta beatPart,y
+	cpx #3
+	bne .x
+	jsr MakeCycle           ; (a new time signature: its cycle)
+.x:
+	jmp Dirty
+; (beatPart, beatHats, beatAcc, beatTs, beatSwg: one after another in defs)
+beatVarOfs: .byte 0,1,2,3,4
+beatVarCnt: .byte 4,NUM_HATS+1,NUM_ACCS+1,NUM_TS,NUM_SWINGS
 
 ; ------------------------------------------------------------ the patches
 ; A S D F G: that bank, the same slot (or its first patch if that's empty)

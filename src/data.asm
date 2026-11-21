@@ -35,7 +35,7 @@ vIdx:       .byte 0,0,0, 1,1,1, 2,2,2      ; SID voice / channel offset from the
 vBass:      .byte 0,0,0, 0,0,0, 0,1,1      ; GB wave and NES triangle: bass, octave down
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64  V0.60        RETURN: MENU ",0
+txtHeader:  .byte " FAT CHIP 64  V0.61        RETURN: MENU ",0
 txtBlank6:  .byte "       ",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0
@@ -125,6 +125,12 @@ txtMono:    .byte "MONO",0
 txtFatBass: .byte "FAT BASS",0
 txtNoBass:  .byte "        ",0
 txtPlay:    .byte "PLAY",0
+partTxt0:   .byte "A   ",0
+partTxt1:   .byte "B   ",0
+partTxt2:   .byte "A+B ",0
+partTxt3:   .byte "ALT ",0
+partTxtLo:  .byte <partTxt0,<partTxt1,<partTxt2,<partTxt3
+partTxtHi:  .byte >partTxt0,>partTxt1,>partTxt2,>partTxt3
 txtStop:    .byte "STOP",0
 octTxtLo:   .byte <tO0,<tO1,<tO2
 octTxtHi:   .byte >tO0,>tO1,>tO2

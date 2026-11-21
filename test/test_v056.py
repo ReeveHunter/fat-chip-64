@@ -33,7 +33,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(500)
-check("header V0.60", "V0.60" in c.screen_row(0), c.screen_row(0))
+check("header V0.61", "V0.61" in c.screen_row(0), c.screen_row(0))
 t0 = c.cpu.processorCycles
 c._raw_press("ctrl", ms=30); c._raw_tap("crsrdown", ms=40); c._raw_release("ctrl", ms=200)
 m = cc90(c, t0)

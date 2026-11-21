@@ -61,7 +61,7 @@ def name(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.60", "V0.60" in c.screen_row(0), c.screen_row(0))
+check("header V0.61", "V0.61" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)
@@ -69,7 +69,7 @@ r = rows(c)
 check("main page: HELP first, then SID / GAME BOY / MIDINES, all ON", all("ON" in r[i][23:] for i in (4, 5, 6))
       and r[2].startswith("> HELP") and r[4][2:].startswith("SID"), r[2:7])
 check("... the SHS-10's page (in use); the DH-100 and Synthcart hidden",
-      r[13][2:].startswith("YAMAHA SHS-10") and "CASIO" not in "".join(r) and "SYNTHCART" not in "".join(r))
+      r[14][2:].startswith("YAMAHA SHS-10") and "CASIO" not in "".join(r) and "SYNTHCART" not in "".join(r))
 c.tap("f3", ms=30); c.tap("f3", ms=30)
 c.tap("f7", ms=150)
 check("F3 x2 (past the gap): GAME BOY; F7 turns it off", c.v("devOn", 3) == [1, 0, 1] and "OFF" in c.screen_row(5), c.v("devOn", 3))
@@ -102,9 +102,9 @@ check("all three changed", c.v("useShs") == 0 and c.v("useDh") == 1 and c.v("use
 back(c)
 r = rows(c)
 check("main page: the DH-100 and Synthcart pages, not the SHS-10's (the lines move up)",
-      r[13][2:].startswith("CASIO DH-100") and r[14][2:].startswith("ATARI SYNTHCART") and "YAMAHA" not in "".join(r), r[10:13])
+      r[14][2:].startswith("CASIO DH-100") and r[15][2:].startswith("ATARI SYNTHCART") and "YAMAHA" not in "".join(r), r[10:16])
 check("... the cursor back on DEVICES", c.screen_row(11).startswith("> DEVICES"))
-c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30)
+c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30)   # (BEATS, v0.61)
 check("CRSR DOWN skips the gaps and hidden lines: wraps from SYNTHCART to HELP", c.screen_row(2).startswith("> HELP"), c.screen_row(2))
 check("SHS-10 not in use: no keytar tempo, start / stop or drums", c.v("syncTempo") == 1 and c.v("syncStart") == 1
       and c.v("syncDrums") == 0, (c.v("syncTempo"), c.v("syncStart")))

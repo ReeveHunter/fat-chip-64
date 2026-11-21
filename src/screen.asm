@@ -633,6 +633,14 @@ ScrTempo:
 	sta t1
 	ldx #6
 	jsr PutDecZ
+	ldx beatPart            ; v0.61: the part (A, B, A+B, ALT) before the name
+	lda partTxtLo,x
+	sta ptr
+	lda partTxtHi,x
+	sta ptr+1
+	ldx #15
+	ldy #12
+	jsr PrintAt
 	lda #<nameBuf
 	sta ptr
 	lda #>nameBuf

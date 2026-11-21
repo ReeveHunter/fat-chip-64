@@ -118,7 +118,6 @@ BASS_LO     equ 28            ; Fat Bass: the bass voices keep the lowest note i
 BASS_HI     equ 40            ;  folding by octaves
 FX_EVERY    equ 4             ; ms per SID effect step (vibrato, glide, filter, width)
 DRUM_CH_IN  equ 15            ; MIDI in channel 16: the keytar's rhythm
-NUM_BEATS   equ 6
 MIDI_FIRST  equ 24            ; note indexes: 0-23 overlay, 24-31 MIDI in
 MIDI_SLOTS  equ 8
 NIDX        equ MIDI_FIRST+MIDI_SLOTS
@@ -212,9 +211,11 @@ linkLoad    ds 1               ; estimated bytes waiting in the Teensyboy (IRQ o
 midiIrq     ds 1               ; 1 = the MIDI chip's interrupts reach the C64 (v0.16)
 gSrc        ds 2               ; GLITCH datamosh source
 
-; ------------------------------------------------------------ RAM ($C000-$CFFF)
+; ------------------------------------------------------------ RAM (RAM_BASE-$CFFF)
+; (v0.61: from $C400, was $C000: the code may run to $C3FF)
+RAM_BASE    equ $C400
 	seg.u ram
-	org $C000
+	org RAM_BASE
 wireBuf     ds 256
 gbqS        ds 64
 gbqD1       ds 64
@@ -870,8 +871,33 @@ scrFxP      ds 1               ;   and setting               ; GbChanTo / NesCha
 kitBuf      ds 12              ; its kit (kick g/h/a, snare g/h/a, toms h/m/l, perc g/h/a)
 nameBuf     ds 9               ; its name
 beatBuf     ds 128             ; its steps (2 bytes each, up to 64)
+; v0.61: the 25 beats
+beatPart    ds 1               ; RUN/STOP N: 0 A, 1 B, 2 A+B, 3 A<->B (by loop)
+beatHats    ds 1               ; RUN/STOP H: 0 the beat's, else hat layer + 1
+beatAcc     ds 1               ; RUN/STOP J: 0 the beat's, else accent layer + 1
+beatTs      ds 1               ; RUN/STOP K: time signature
+beatSwg     ds 1               ; RUN/STOP L: 0 the beat's, else swingT
+beatDev     ds 1               ; menu BEATS ON: 0 MIDINES, 1 GAME BOY, 2 BOTH
+beatSplit   ds 1               ; menu BOTH: 0 LAYER, 1 SPLIT (NES drums, Game Boy hats)
+gbBtHats    ds 1               ; menu GB HATS: 0 SAMPLE, 1 NOISE
+beatLoop    ds 1               ; loops of the cycle played (A<->B)
+cycLen      ds 1               ; the cycle (the time signature over the beat's 32 steps)
+cycSrc      ds 32              ;  each step's place in the beat
+cycPos      ds 32              ;  its place in its bar
+cycBar      ds 32              ;  which bar
+hitLo       ds 1               ; this step's lanes (bit = LANES order: kick .. hi hat)
+hitHi       ds 1               ;  (open hat .. clave)
+hitSt       ds 1               ; its accent: 0 soft, 1 normal, 2 strong
+hitFill     ds 1               ; (a fill: the levels are its own)
+tripK       ds 1               ; triplet hats: the next of the beat's three (3 = none)
+tripJ       ds 1               ;  the first one's place in the layer's 12
+tripMs      ds 2               ;  a third of a beat, ms
+tripAtL     ds 1
+tripAtH     ds 1
+gbKitSent   ds 1               ; the Game Boy drum kit (CC 70) last sent + 1 (0: not yet)
+gbHatSent   ds 1               ; its HATS (CC 71) + 1
 ramEnd      ds 0
-  if ramEnd > $CB00
-    echo "RAM variables run past $CB00: clear more in Start"
+  if ramEnd > $D000
+    echo "RAM variables run past $D000 (the I/O)"
     err
   endif

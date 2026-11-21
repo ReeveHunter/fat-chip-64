@@ -24,6 +24,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import gen_patches as G  # noqa: E402
+import gen_beats  # noqa: E402
 
 ROOT = os.path.join(HERE, "..")
 DEF = G.DEF
@@ -273,9 +274,8 @@ HELP = [
     (W, "/ RANDOM  <- UNDO  = TAP  , . NUDGE"),
     (W, "F1 F3 OCT  F5 FAT BASS  F7 VOICES"),
     (W, "SPACE FX  CRSR 1-KEY  RESTORE SCREEN"),
-    (OR, "SHIFT  A-G Z-B : ; LEAD PATCH"),
-    (OR, "  K SPLIT POINT  F5 ON/OFF  F7 MODE"),
-    (OR, "  F1 F3 LEAD + 1-KEY OCT  , . TRANSPOSE"),
+    (OR, "SHIFT  A-G Z-B : ; LEAD  K SPLIT POINT"),
+    (OR, "  F5/F7 SPLIT  F1 F3 OCT  , . TRANSPOSE"),
     (GR, "C=  A ARP S RPT D DUTY F FILT G GLIDE"),
     (GR, "  H DETUNE J WARBLE K BLIP Z ATK X REL"),
     (GR, "  C TREM V VIB B BEND IN N OUT M PWM"),
@@ -284,6 +284,7 @@ HELP = [
     (GR, "  F1 F3 ARP OCT  F5 SYNC  F7 TYPE"),
     (BL, "STOP  A-G Z-B BEAT  : ; PREV / NEXT"),
     (BL, "  , . TEMPO  SPACE FILL  TAP: GO/STOP"),
+    (BL, "  N PART H HATS J ACCENT K TIME L SWING"),
     (RD, "CTRL  A S D CHIPS  F SYNTHCART SYNC"),
     (RD, "  H J TUNE  L LATCH STYLE  M PANIC"),
     (RD, "  , . SPACE FX  F1 F3 MIDI  CRSR DRONE"),
@@ -316,6 +317,7 @@ def build_pages(params, effects):
         page("PLAYING", "playing"),
         page("ONE KEY PLAY", "okp"),
         page("DEVICES", "devices"),
+        page("BEATS", "beats"),
         None,
         page("YAMAHA SHS-10", "shs", show="useShs"),
         page("CASIO DH-100", "dh", show="useDh"),
@@ -367,6 +369,18 @@ def build_pages(params, effects):
         enum("GAME BOY", "gbFc", ["FAT CHIP GB", "OTHER (MGB)"]),
         enum("GAME BOY CHANNELS", "gbBase", CHANS, hook="GbChanHook"),
         enum("MIDINES CHANNELS", "nesBase", CHANS, hook="NesChanHook"),
+    ], parent="main")
+    bl = gen_beats.menu_labels()
+    add_page("beats", "BEATS", "RUN/STOP + A-G Z-B: A BEAT", [
+        enum("PART (STOP N)", "beatPart", ["A", "B", "A+B", "A<->B"], hook="Dirty"),
+        enum("HAT LAYER (STOP H)", "beatHats", bl["hats"], hook="Dirty"),
+        enum("ACCENT (STOP J)", "beatAcc", bl["accs"], hook="Dirty"),
+        enum("TIME (STOP K)", "beatTs", bl["ts"], hook="BeatTsHook"),
+        enum("SWING (STOP L)", "beatSwg", bl["swings"], hook="Dirty"),
+        None,
+        enum("BEATS ON", "beatDev", ["MIDINES", "GAME BOY", "BOTH"]),
+        enum("BOTH", "beatSplit", ["LAYER", "SPLIT"]),
+        enum("GAME BOY HATS", "gbBtHats", ["SAMPLE", "NOISE"]),
     ], parent="main")
     add_page("shs", "YAMAHA SHS-10", "MIDI IN", [
         enum("TEMPO", "shsTempo", ["FOLLOW", "IGNORE"], hook="SyncDerive"),

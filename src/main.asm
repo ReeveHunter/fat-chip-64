@@ -24,6 +24,9 @@ Start:
 	jsr InitHardware
 	jsr InitState
 	jsr BeatLoad            ; (beat 0's kit, name and steps, from under the I/O)
+	jsr MakeCycle           ; (v0.61: 4/4's)
+	lda #3
+	sta tripK
 	jsr ScreenInit
 	jsr SidInit
 	jsr SoundSid
@@ -184,17 +187,18 @@ InitState:
 	bne .zp
 	tax
 .ram:
-	sta $C000,x
-	sta $C100,x
-	sta $C200,x
-	sta $C300,x
-	sta $C400,x
+	sta $C400,x             ; (v0.61: the variables from RAM_BASE = $C400 to $CFFF)
 	sta $C500,x
 	sta $C600,x
-	sta $C700,x             ; (v0.21: the variables reach into $C7xx)
-	sta $C800,x             ; (v0.22: and $C8xx)
-	sta $C900,x             ; (v0.28: and $C9xx)
-	sta $CA00,x             ; (v0.52: and $CAxx; the unpacker above is done with)
+	sta $C700,x
+	sta $C800,x
+	sta $C900,x
+	sta $CA00,x
+	sta $CB00,x
+	sta $CC00,x
+	sta $CD00,x
+	sta $CE00,x
+	sta $CF00,x
 	inx
 	bne .ram
 	ldx #NUM_VOICES-1
@@ -509,9 +513,9 @@ Nmi:
 	include "beats.asm"
 	include "bendtab.asm"
 codeEnd:
-  if codeEnd > $C000
+  if codeEnd > RAM_BASE
     ; (an unresolved name, not err: the first pass guesses the code long)
-    .byte PROGRAM_RUNS_PAST_C000_INTO_THE_VARIABLES
+    .byte PROGRAM_RUNS_PAST_RAM_BASE_INTO_THE_VARIABLES
   endif
 
 ; ---- tables that live under the KERNAL: assembled here, after the code;

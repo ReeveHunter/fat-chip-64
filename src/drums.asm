@@ -342,10 +342,7 @@ BeatLoad:
 	sta ptr
 	lda beatIoHi,x
 	sta ptr+1
-	lda beatLen,x
-	asl
-	clc
-	adc #21                 ; kit 12 + name 9 + the steps
+	lda beatSize,x          ; kit 12 + name 9 + its lanes
 	tax
 	php
 	sei
@@ -363,38 +360,89 @@ BeatLoad:
 	plp
 	rts
 
-; ------------------------------------------------------------ beat demos
-; G: next beat (its kit and tempo)
-; A = beat: chosen (G, or the keytar's rhythm buttons)
+; ------------------------------------------------------------ v0.61: the 25 beats
+; Each beat's lanes say per step: A, B or both (beatsio.asm). The part
+; (RUN/STOP N) picks which play; a hat layer (H) stands in for the beat's own
+; hats, an accent layer (J) sets each step's level, the time signature (K)
+; takes runs of the beat's steps (the cycle), swing (L) delays the off-beats.
+; The hits go to the MidiNES (one sample, one noise sound: DrumHit) and / or
+; Fat Chip GB (notes on its drum channel: two at once, its own hats), as the
+; menu's BEATS ON / BOTH say.
+
+; A = beat: chosen (RUN/STOP keys, the keytar's rhythm buttons). A beat that's
+; playing keeps the tempo (Reeve, v0.61); stopped, BEAT TEMPO DEFAULT gives it
+; its own.
 BeatChoose:
 	subroutine
 	sta beatSel
 	jsr BeatLoad
-	ldx beatSel
-	lda beatStep
-	cmp beatLen,x
-	bcc .t
-	lda #0
-	sta beatStep
-	sta beatSub
-.t:
-	lda beatTempo           ; BEAT TEMPO DEFAULT: the beat's own tempo
+	lda beatRun
+	bne .d
+	lda beatTempo
 	bne .d
 	sta beatFresh
+	ldx beatSel
 	lda beatBpm,x
 	jsr SetBpm
 .d:
 	jmp Dirty
 
-; F5: start / stop
-BeatRunKey:
-	subroutine
-	lda beatRun
-	beq BeatBegin
-	lda #0
-	sta beatRun
-	jsr NoiseOff
+; menu TIME: the new time signature's cycle
+BeatTsHook:
+	jsr MakeCycle
 	jmp Dirty
+
+; the time signature's runs of the beat's 32 steps -> the cycle
+MakeCycle:
+	subroutine
+	ldx beatTs
+	lda tsLo,x
+	sta ptr
+	lda tsHi,x
+	sta ptr+1
+	ldy #0
+	ldx #0
+	lda #$FF
+	sta t2                  ; bar
+.seg:
+	lda (ptr),y
+	cmp #$FF
+	beq .end
+	iny
+	sta t0                  ; first step (bit 7: a bar starts)
+	bpl .same
+	inc t2
+	lda #0
+	sta t3                  ; place in the bar
+.same:
+	lda (ptr),y
+	iny
+	sta t1                  ; steps
+	lda t0
+	and #$7F
+	sta t0
+.st:
+	lda t0
+	sta cycSrc,x
+	lda t3
+	sta cycPos,x
+	lda t2
+	sta cycBar,x
+	inc t0
+	inc t3
+	inx
+	dec t1
+	bne .st
+	beq .seg
+.end:
+	stx cycLen
+	lda beatStep
+	cmp cycLen
+	bcc .x
+	lda #0
+	sta beatStep
+.x:
+	rts
 
 ; the beat starts now, from step 1
 BeatBegin:
@@ -406,6 +454,9 @@ BeatBegin:
 	sta beatSub
 	sta beatFrac
 	sta beatWait
+	sta beatLoop
+	lda #3
+	sta tripK
 	lda beatFresh           ; BEAT TEMPO DEFAULT, and no tempo set since the
 	beq .t                  ;  beat was chosen (power on): the beat's own
 	lda beatTempo
@@ -422,6 +473,645 @@ BeatBegin:
 	lda nowH
 	sta beatBaseH
 	sta beatAtH
+	jmp Dirty
+
+; Z clear (A = 1) if the Game Boy plays the beats: on, Fat Chip GB, BEATS ON
+; GAME BOY or BOTH
+GbBeats:
+	subroutine
+	lda devOn+DEV_GB
+	beq .x
+	lda gbFc
+	bne .no
+	lda beatDev
+	beq .x
+	lda #1
+	rts
+.no:
+	lda #0
+.x:
+	rts
+
+; main loop: the Game Boy's side of the beats. While it plays them its wave
+; channel is the drums' (the synth gets no note on it), and its drum kit and
+; HATS follow the beat and the menu
+GbBeatsTick:
+	subroutine
+	lda beatRun
+	beq .w
+	jsr GbBeats
+.w:
+	cmp vDrum+7             ; (voice 7: the Game Boy's wave)
+	beq .k
+	sta vDrum+7
+	lda #1
+	sta reallocFlag
+.k:
+	jsr GbBeats
+	beq .x
+	ldx beatSel             ; CC 70: the kit
+	lda beatGbKit,x
+	tax
+	inx
+	cpx gbKitSent
+	beq .h
+	stx gbKitSent
+	dex
+	lda #70
+	jsr GbDrumCc
+.h:
+	ldx #1                  ; CC 71: HATS (0 SAMPLE, 127 NOISE)
+	lda gbBtHats
+	beq .hs
+	ldx #128
+.hs:
+	cpx gbHatSent
+	beq .x
+	stx gbHatSent
+	dex
+	lda #71
+	jmp GbDrumCc
+.x:
+	rts
+
+; A = CC, X = value, on the Game Boy's drum channel
+GbDrumCc:
+	subroutine
+	sta mD1
+	stx mD2
+	lda gbBase
+	clc
+	adc #4
+	and #15
+	ora #$B0
+	sta mS
+	jmp GbPut
+
+; A = the swing for the next step (0: on time): BEAT'S or the chosen amount,
+; on the odd sixteenths, and twice it on the off-beat eighth in a grid of 8ths
+SwingNow:
+	subroutine
+	ldx beatSel
+	lda beatSwing,x
+	ldy beatSwg
+	beq .v
+	lda swingT-1,y
+.v:
+	sta t2
+	ldy beatStep
+	lda cycPos,y
+	lsr
+	bcs .one                ; odd: once
+	and #1
+	beq .no                 ; (on the beat)
+	lda beatGrid8,x
+	beq .no
+	lda t2                  ; the off-beat eighth: twice
+	asl
+	rts
+.one:
+	lda t2
+	rts
+.no:
+	lda #0
+	rts
+
+; A = lane (0-13): it plays this step
+SetLane:
+	subroutine
+	cmp #8
+	bcs .hi
+	tax
+	lda bitT,x
+	ora hitLo
+	sta hitLo
+	rts
+.hi:
+	and #7
+	tax
+	lda bitT,x
+	ora hitHi
+	sta hitHi
+	rts
+bitT:       .byte 1,2,4,8,16,32,64,128
+
+; X = hat layer, Y = place (0-15): its closed and open hats there
+HatAt:
+	subroutine
+	cpy #8
+	bcs .h
+	lda hatChL,x
+	and bitT,y
+	beq .o0
+	lda #7
+	jsr SetLaneX
+.o0:
+	lda hatOhL,x
+	and bitT,y
+	beq .x
+	lda #8
+	jmp SetLaneX
+.h:
+	tya
+	and #7
+	tay
+	lda hatChH,x
+	and bitT,y
+	beq .o1
+	lda #7
+	jsr SetLaneX
+.o1:
+	lda hatOhH,x
+	and bitT,y
+	beq .x
+	lda #8
+	jmp SetLaneX
+.x:
+	rts
+SetLaneX:                       ; (SetLane keeping X and Y)
+	stx t2
+	sty t3
+	jsr SetLane
+	ldx t2
+	ldy t3
+	rts
+
+; the hat layer in use (0: the beat's own hats)
+CurHat:
+	subroutine
+	lda beatHats
+	beq .d
+	sec
+	sbc #1
+	rts
+.d:
+	ldx beatSel
+	lda beatHatDef,x
+	rts
+
+; A = the step's accent (0 soft, 1 normal, 2 strong) at place Y in bar X
+AccentAt:
+	subroutine
+	sty t2
+	txa
+	and #1
+	asl
+	asl
+	asl
+	asl
+	ora t2
+	and #31
+	sta t2                  ; 0-31: the place in the layer's two bars
+	lda beatAcc
+	beq .d
+	sec
+	sbc #1
+	jmp .l
+.d:
+	ldx beatSel
+	lda beatAccDef,x
+.l:
+	cmp #ACC_HUMAN
+	bne .t
+	jsr Random              ; HUMAN: strong 15%, soft 25%
+	cmp #38
+	bcc .s
+	cmp #102
+	bcc .w
+	lda #1
+	rts
+.t:
+	asl
+	asl
+	asl
+	sta t3                  ; layer x 8
+	lda t2
+	lsr
+	lsr
+	lsr
+	clc
+	adc t3
+	tax                     ; its strong byte (soft: 4 on)
+	lda t2
+	and #7
+	tay
+	lda accBits,x
+	and bitT,y
+	bne .s
+	lda accBits+4,x
+	and bitT,y
+	bne .w
+	lda #1
+	rts
+.s:
+	lda #2
+	rts
+.w:
+	lda #0
+	rts
+
+; the current step: its lanes (the part, the hat layer), its accent, out to
+; the devices
+BeatPlay:
+	subroutine
+	lda beatStep            ; (the cycle starts: a synced TREMOLO starts its cycle)
+	bne .vc
+	lda nesTremSync
+	beq .vc
+	lda #0
+	sta tremPhL
+	sta tremPhH
+.vc:
+	lda vinylCut            ; VINYL STOP has stopped: no drums
+	beq .run
+	rts
+.run:
+	lda #0
+	sta hitLo
+	sta hitHi
+	sta hitFill
+	lda actCnt+A_FILL       ; BEAT FILL held: snare and toms instead
+	beq .pat
+	ldy fillK
+	lda fillL,y
+	sta hitLo
+	lda fillV,y
+	sta hitSt
+	inc hitFill
+	iny
+	tya
+	and #15
+	sta fillK
+	jmp BeatSend
+.pat:
+	; the part: A 1, B 2, A+B 3, A<->B: A on even loops, B on odd
+	ldy beatPart
+	lda partMaskT,y
+	cpy #3
+	bne .pm
+	lda beatLoop
+	and #1
+	clc
+	adc #1
+.pm:
+	sta bB
+	jsr CurHat
+	sta bA                  ; (0: the beat's own hats)
+	ldx beatStep
+	lda cycSrc,x
+	sta t0                  ; the beat's step
+	and #3
+	asl
+	sta t2                  ; its two bits' place in a lane's byte
+	lda t0
+	lsr
+	lsr
+	sta t1
+	lda beatBuf             ; lanes
+	sta t3
+	sec
+	adc t1                  ; (1 + n + byte)
+	tay
+	ldx #0
+.ln:
+	cpx t3
+	bcs .lnd
+	lda beatBuf,y
+	stx drumTom             ; (a spare byte here)
+	ldx t2
+	beq .ns
+.sh:
+	lsr
+	dex
+	bne .sh
+.ns:
+	and bB                  ; the part
+	beq .nx
+	ldx drumTom
+	lda beatBuf+1,x         ; the lane
+	cmp #7                  ; (a hat layer stands in for the beat's hats)
+	beq .hat
+	cmp #8
+	bne .set
+.hat:
+	ldx bA
+	bne .nx
+.set:
+	sty t1
+	jsr SetLane
+	ldy t1
+.nx:
+	ldx drumTom
+	inx
+	tya
+	clc
+	adc #8
+	tay
+	jmp .ln
+.lnd:
+	ldx beatStep            ; the accent
+	ldy cycPos,x
+	lda cycBar,x
+	tax
+	jsr AccentAt
+	sta hitSt
+	ldx bA                  ; the hat layer's hats
+	beq .fe
+	ldy beatStep
+	lda cycPos,y
+	tay
+	lda hatTrip,x
+	bne .tr
+	tya
+	and #15
+	tay
+	jsr HatAt
+	jmp .fe
+.tr:
+	tya                     ; triplets: three to a beat, from its start
+	and #3
+	bne .fe
+	tya
+	lsr
+	lsr
+	sta t0                  ; the beat in the bar
+	asl
+	adc t0                  ; x 3
+.m12:
+	cmp #12
+	bcc .j
+	sbc #12
+	bcs .m12
+.j:
+	sta tripJ
+	tay
+	jsr HatAt               ; the first now
+	lda #1
+	sta tripK
+	lda beat16L             ; a third of a beat, in ms (beat / 48 of 1/16 ms)
+	sta dvdL
+	lda beat16H
+	sta dvdH
+	lda #48
+	sta dvsL
+	lda #0
+	sta dvsH
+	jsr Div16
+	lda dvdL
+	sta tripMs
+	lda dvdH
+	sta tripMs+1
+	lda beatBaseL
+	clc
+	adc tripMs
+	sta tripAtL
+	lda beatBaseH
+	adc tripMs+1
+	sta tripAtH
+.fe:
+	lda fillEnd             ; a fill just ended: crash and kick
+	beq BeatSend
+	lda hitLo
+	ora #1
+	sta hitLo
+	lda hitHi
+	ora #2
+	sta hitHi
+	lda #2
+	sta hitSt
+	lda fillEnd
+	cmp #2
+	bne .fe2
+	lda #0                  ; the fill started the beat: it stops now
+	sta beatRun
+	sta fillSolo
+	jsr Dirty
+.fe2:
+	lda #0
+	sta fillEnd
+	; (on to BeatSend)
+
+; hitLo / hitHi / hitSt out: to the Game Boy (a note per lane on its drum
+; channel), then the MidiNES (the most important sample, the most important
+; noise sound). SPLIT: the NES the drums (kick .. lo tom), the Game Boy the
+; hats, cymbals, shaker, cowbell and clave.
+BeatSend:
+	subroutine
+	lda hitLo
+	sta bA
+	lda hitHi
+	sta bB
+	jsr GbBeats
+	beq .nes
+	lda beatDev
+	cmp #2
+	bne .gall
+	lda beatSplit
+	beq .gall
+	lda bA                  ; SPLIT: the Game Boy's lanes
+	and #$80
+	sta bA
+.gall:
+	lda gbBase
+	clc
+	adc #4
+	and #15
+	ora #$90
+	sta mS
+	ldy #0
+.g:
+	cpy #14
+	bcs .nes
+	lsr bB
+	ror bA
+	bcc .gn
+	lda gbDrumNote,y
+	sta mD1
+	jsr VelOf
+	sta mD2
+	sty t0
+	jsr GbPut
+	ldy t0
+.gn:
+	iny
+	bne .g
+.nes:
+	lda beatDev
+	cmp #1
+	beq .x                  ; (GAME BOY only)
+	lda hitLo
+	sta bA
+	lda hitHi
+	sta bB
+	lda beatDev
+	beq .n2
+	lda beatSplit
+	beq .n2
+	lda bA                  ; SPLIT: the NES's lanes
+	and #$7F
+	sta bA
+	lda #0
+	sta bB
+.n2:
+	ldy #0                  ; the sample: the first there is
+.d:
+	cpy #9
+	bcs .z
+	lda dmcOrder,y
+	jsr LaneIn
+	bne .dh
+	iny
+	bne .d
+.dh:
+	lda dmcOrder,y
+	jsr NesLevel
+	lda dmcTomT,y
+	sta t0
+	lda dmcKindT,y
+	ldy t0
+	jsr DrumHit
+.z:
+	ldy #0                  ; the noise sound
+.e:
+	cpy #5
+	bcs .x
+	lda nzOrder,y
+	jsr LaneIn
+	bne .zh
+	iny
+	bne .e
+.zh:
+	lda nzOrder,y
+	jsr NesLevel
+	lda nzKindT,y
+	jmp DrumHit
+.x:
+	rts
+
+; A = lane: Z clear if it's in bA / bB. Keeps Y.
+LaneIn:
+	subroutine
+	cmp #8
+	bcs .h
+	tax
+	lda bitT,x
+	and bA
+	rts
+.h:
+	and #7
+	tax
+	lda bitT,x
+	and bB
+	rts
+
+; A = lane -> X = the NES level (0 ghost, 1 hit, 2 accent): kick, snare, clap
+; and rim take only the strong steps, the shaker plays soft. Keeps Y.
+NesLevel:
+	subroutine
+	ldx hitSt
+	cmp #11
+	beq .sh
+	cmp #4
+	bcs .x
+	ldx hitFill             ; (a fill's levels are its own)
+	bne .f
+	ldx #1
+	lda hitSt
+	cmp #2
+	bne .x
+	ldx #2
+.x:
+	rts
+.f:
+	ldx hitSt
+	rts
+.sh:
+	ldx #0
+	lda hitSt
+	cmp #2
+	bne .x
+	inx
+	rts
+
+; Y = lane -> A = the Game Boy velocity (as NesLevel: 56 / 100 / 127). Keeps Y.
+VelOf:
+	subroutine
+	tya
+	jsr NesLevel
+	lda velT,x
+	rts
+velT:       .byte 56,100,127
+
+; the sample's order (kick, snare, clap, toms, rim, cowbell, clave) and the
+; noise sound's (crash, ride, open hat, closed hat, shaker)
+dmcOrder:   .byte 0,1,2,4,5,6,3,12,13
+dmcKindT:   .byte DK_KICK,DK_SNARE,DK_PERC,DK_TOM,DK_TOM,DK_TOM,DK_PERC,DK_PERC,DK_PERC
+dmcTomT:    .byte 0,0,0,0,1,2,0,0,0
+nzOrder:    .byte 9,10,8,7,11
+nzKindT:    .byte DK_CY,DK_CY,DK_OH,DK_CH,DK_CH
+partMaskT:  .byte 1,2,3
+
+; BeatTick, first: the triplet hat layer's second and third hats of a beat
+TripTick:
+	subroutine
+	lda tripK
+	cmp #3
+	bcs .x
+	jsr GetTicks
+	lda nowL
+	sec
+	sbc tripAtL
+	lda nowH
+	sbc tripAtH
+	bmi .x
+	lda #0
+	sta hitLo
+	sta hitHi
+	sta hitFill
+	lda #1                  ; (between the steps: normal)
+	sta hitSt
+	jsr CurHat
+	tax
+	lda hatTrip,x           ; (the layer changed meanwhile: no more)
+	beq .stop
+	lda tripJ
+	clc
+	adc tripK
+	tay
+	jsr HatAt
+	inc tripK
+	lda tripAtL
+	clc
+	adc tripMs
+	sta tripAtL
+	lda tripAtH
+	adc tripMs+1
+	sta tripAtH
+	lda hitLo
+	ora hitHi
+	beq .x
+	jmp BeatSend
+.stop:
+	lda #3
+	sta tripK
+.x:
+	rts
+
+; BEAT FILL: one bar of snare and toms, round again while held (lanes, level)
+fillL:      .byte 2,2,2,2, $10,$10,$20,$20, 2,2,$20,$20, $40,$40,2,2
+fillV:      .byte 2,0,1,1, 1,1,1,1, 2,1,1,1, 1,1,1,2
+
+
+; F5: start / stop
+BeatRunKey:
+	subroutine
+	lda beatRun
+	bne .stop
+	jmp BeatBegin
+.stop:
+	lda #0
+	sta beatRun
+	jsr NoiseOff
 	jmp Dirty
 
 ; A = BPM, the beat's own: the tempo, unless the keytar's clock sets it
@@ -459,11 +1149,13 @@ SetBpm:
 ; main loop: play a step when it's due
 BeatTick:
 	subroutine
+	jsr GbBeatsTick         ; (v0.61: the Game Boy's side)
 	lda beatRun
 	bne .on
 	sta beatClkNew          ; (stopped: no beat clock left waiting)
 	rts
 .on:
+	jsr TripTick            ; (v0.61: a triplet hat layer's hats between steps)
 	jsr BeatFollow
 .wait:
 	lda beatWait
@@ -490,8 +1182,7 @@ BeatTick:
 	sta dvdL
 	lda beat16H
 	sta dvdH
-	ldx beatSel
-	lda beatSpb,x
+	lda #4                  ; (four steps to a beat)
 	sta dvsL
 	lda #0
 	sta dvsH
@@ -500,7 +1191,9 @@ BeatTick:
 	sta step16L
 	lda dvdH
 	sta step16H
-	lda vinylLvl            ; VINYL STOP: slower, up to 8x
+	lda actCnt+A_VINYL      ; VINYL STOP held: slower, up to 8x (v0.61: let go,
+	beq .nv                 ;  the beat's straight back while the pitch winds up)
+	lda vinylLvl
 	beq .nv
 	lda step16L
 	sta mulA
@@ -556,17 +1249,17 @@ BeatTick:
 	lda nowH
 	sta beatBaseH
 .ok:
-	ldx beatSel
-	inc beatStep
+	inc beatStep            ; (v0.61: through the cycle the time signature makes)
 	lda beatStep
-	cmp beatLen,x
+	cmp cycLen
 	bcc .n
 	lda #0
 	sta beatStep
+	inc beatLoop
 .n:
 	inc beatSub
 	lda beatSub
-	cmp beatSpb,x
+	cmp #4
 	bcc .sw
 	lda #0
 	sta beatSub
@@ -575,11 +1268,9 @@ BeatTick:
 	sta beatAtL
 	lda beatBaseH
 	sta beatAtH
-	; swing: odd steps late by step x swing / 256
-	lda beatStep
-	and #1
-	beq .x
-	lda beatSwing,x
+	; swing: odd steps late by step x swing / 256 (grid of 8ths: the off-beat
+	; eighth twice that); the step's place in its bar decides
+	jsr SwingNow
 	beq .x
 	pha
 	lda step16L
@@ -636,14 +1327,12 @@ BeatFollow:
 	sta beatClkNew
 	jsr FollowActive
 	beq .no
-	ldx beatSel
 	lda beatSub
 	bne .k
 .anc:
 	jmp .anchor
 .k:
-	lda beatSpb,x
-	lsr
+	lda #2                  ; (half a beat)
 	cmp beatSub
 	bcc .skip
 	; rebase: the next step = clock + k steps
@@ -690,14 +1379,14 @@ BeatFollow:
 	sta beatAtH
 	rts
 .skip:
-	lda beatSpb,x           ; jump to the next beat
+	lda #4                  ; jump to the next beat
 	sec
 	sbc beatSub
 	clc
 	adc beatStep
-	cmp beatLen,x
+	cmp cycLen
 	bcc .st
-	sbc beatLen,x
+	sbc cycLen
 .st:
 	sta beatStep
 .anchor:
@@ -713,143 +1402,6 @@ BeatFollow:
 	sta beatAtH
 .x:
 	rts
-
-; the current step's hits: one sample (kick, snare, tom, perc: the first
-; there is) and one noise sound (cymbal, open hat, closed hat)
-BeatPlay:
-	subroutine
-	lda beatStep            ; (the bar starts: a synced TREMOLO starts its cycle)
-	bne .vc
-	lda nesTremSync
-	beq .vc
-	lda #0
-	sta tremPhL
-	sta tremPhH
-.vc:
-	lda vinylCut            ; VINYL STOP has stopped: no drums
-	beq .run
-	rts
-.run:
-	lda actCnt+A_FILL       ; BEAT FILL held: snare and toms instead
-	beq .pat
-	ldy fillK
-	lda fillA,y
-	sta bA
-	lda #0
-	sta bB
-	iny
-	tya
-	and #15
-	sta fillK
-	jmp .play
-.pat:
-	lda beatStep
-	asl
-	tay
-	lda beatBuf,y
-	sta bA
-	lda beatBuf+1,y
-	sta bB
-	lda fillEnd             ; a fill just ended: crash and kick
-	beq .play
-	lda bA
-	ora #3
-	sta bA
-	lda bB
-	ora #$30
-	sta bB
-	lda fillEnd
-	cmp #2
-	bne .fe
-	lda #0                  ; the fill started the beat: it stops now
-	sta beatRun
-	sta fillSolo
-	jsr Dirty
-.fe:
-	lda #0
-	sta fillEnd
-.play:
-	lda bA
-	and #3
-	beq .s
-	tax
-	dex
-	lda #DK_KICK
-	jsr DrumHit
-	jmp .noise
-.s:
-	lda bA
-	lsr
-	lsr
-	and #3
-	beq .t
-	tax
-	dex
-	lda #DK_SNARE
-	jsr DrumHit
-	jmp .noise
-.t:
-	lda bA
-	lsr
-	lsr
-	lsr
-	lsr
-	and #3
-	beq .p
-	tay
-	dey
-	ldx #1
-	lda #DK_TOM
-	jsr DrumHit
-	jmp .noise
-.p:
-	lda bA
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr
-	beq .noise
-	tax
-	dex
-	lda #DK_PERC
-	jsr DrumHit
-.noise:
-	lda bB
-	lsr
-	lsr
-	lsr
-	lsr
-	and #3
-	beq .o
-	tax
-	dex
-	lda #DK_CY
-	jmp DrumHit
-.o:
-	lda bB
-	lsr
-	lsr
-	and #3
-	beq .c
-	tax
-	dex
-	lda #DK_OH
-	jmp DrumHit
-.c:
-	lda bB
-	and #3
-	beq .x
-	tax
-	dex
-	lda #DK_CH
-	jmp DrumHit
-.x:
-	rts
-
-; BEAT FILL: one bar of snare and toms, round again while held
-fillA:      .byte $0C,$04,$08,$08, $10,$10,$20,$20, $0C,$08,$20,$20, $30,$30,$08,$0C
 
 ; BEAT FILL held (A = 1) / let go (0): with no beat playing, the fill starts
 ; it, and it stops after the crash

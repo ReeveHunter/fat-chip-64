@@ -1,109 +1,177 @@
 #!/usr/bin/env python3
-"""Fat Chip 64 beat demos (G picks, RETURN starts / stops) -> src/beats.asm
-(the small per-beat tables) and src/beatsio.asm (kits, names, steps: v0.60,
-in the RAM under the I/O at $D000).
+"""Fat Chip 64's beats (v0.61: the 25 of patch/beats.json, from
+tools/gen_beat_book.py) -> src/beats.asm (the small tables: per beat, the
+hat / accent layers, the time signatures) and src/beatsio.asm (each beat's
+kit, name and lanes, in the RAM under the I/O at $D000; BeatLoad copies one
+out).
 
-The patterns are six of the Beat Lab's (reevehunter.com/fatchip/beatlab),
-drums only. Each beat also names its kit: the MidiNES samples for kick, snare,
-toms and percussion (ghost / hit / accent), picked from Reeve's Sound Sorter
-types and style tags (2026-11-06). The keytar's drums (MIDI channel 16) play
-through the kit of the beat chosen with G. Hats and cymbals are NES noise.
+A beat under the I/O:
+  kit   12 bytes   MidiNES samples: kick g/h/a, snare g/h/a, toms h/m/l, perc g/h/a
+                   (bit 7 = bank B)
+  name   9 bytes   8 characters and a 0
+  n      1 byte    how many lanes it uses
+  ids    n bytes   which (LANES order: 0 kick ... 13 clave)
+  lanes  n x 8     32 steps, 2 bits each (step s: byte s / 4, bits 2 x (s & 3)):
+                   0 rest, 1 A only, 2 B only, 3 A and B
 
-Pattern strings: . rest, o ghost, x hit, X accent; toms 1 / 2 / 3 = hi / mid /
-lo. Each step is two bytes:
-  A = kick | snare << 2 | tom << 4 | perc << 6     (0 rest, 1 ghost, 2 hit, 3 accent; tom 1-3)
-  B = closed hat | open hat << 2 | cymbal << 4
+Kits: the MidiNES can't hear Reeve's Sound Sorter here, so each beat borrows
+the nearest of the six curated kits the demo beats had (2026-11-06) and its
+percussion follows its first percussion lane (a clap, or a clave for rim /
+cowbell / clave). The keytar's drums play through the chosen beat's kit.
 """
+import json
 import os
 
-ROOT = os.path.join(os.path.dirname(__file__), "..")
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+DOC = json.load(open(os.path.join(ROOT, "patch", "beats.json")))
+LANES = DOC["lanes"]
+assert LANES == ["bd", "sd", "cp", "rm", "ht", "mt", "lt", "ch", "oh", "cy", "rd", "sh", "cb", "cl"]
 
-BEATS = [
-    dict(name="ELECTRO", bpm=124, spb=4, swing=0,
-         bd="X.....x...x..... X.....x...x..xo.",
-         sd="....X.......X... ....X.......X..o",
-         ch="XoxoXoxoXoxoXoxo XoxoXoxoXoxoXo..",
-         oh="................ ..............x.",
-         p1="..x.....X.....x. ..x.....X..x....",
-         kit=dict(kick=("A67", "A10", "A0"), snare=("A65", "A23", "A71"), perc=("A41", "A41", "A40"))),
-    dict(name="JUNGLE", bpm=168, spb=4, swing=0,
-         bd="X.x.......Xx.... X.x.......x...o.",
-         sd="....X..o.o.oX..o ....X..o.o.o..Xo",
-         ch="x.X.x.X.x.X.x.X. x.X.x.X.x.X.xoXo",
-         cy="X............... ................",
-         kit=dict(kick=("B10", "B12", "A112"), snare=("A90", "A93", "A99"))),
-    dict(name="DNB", bpm=174, spb=4, swing=0,
-         bd="X.........x..... X.........x.o.x.",
-         sd="....X..o....X..o ....X..o.o..X..o",
-         ch="o.x.o.x.o.x.o.x. o.x.o.x.o.x.o...",
-         oh="................ ..............X.",
-         kit=dict(kick=("A106", "A100", "B3"), snare=("A109", "A125", "A117"))),
-    dict(name="BOOMBAP", bpm=90, spb=4, swing=55,
-         bd="X......x..x....o X.x....x..x..x..",
-         sd="....X..o....X... ....X..o.o..X..o",
-         ch="X.x.x.x.X.x.x.x. X.x.x.x.X.x.x.o.",
-         kit=dict(kick=("A119", "A115", "B7"), snare=("A28", "B9", "A11"))),
-    dict(name="ROCK", bpm=118, spb=4, swing=0,
-         bd="X.......X.x..... X.......X.x.....",
-         sd="....X......oX... ....X...........",
-         ch="X.x.X.x.X.x.X.x. X.x.X.x.........",
-         cy="X............... ................",
-         tom="................ ........1.1.2.33",
-         kit=dict(kick=("A92", "A68", "A91"), snare=("A9", "A7", "A8"))),
-    dict(name="6/8", bpm=60, spb=6, swing=0,
-         bd="X.....x..... X.....x...o.",
-         sd="...o..X..... ...o..X..oo.",
-         ch="X.x.x.X.x.x. X.x.x.X.x.x.",
-         cy="X........... ............",
-         kit=dict(kick=("A5", "A4", "A68"), snare=("A35", "A29", "A33"))),
-]
+# the six curated kits (kick ghost / hit / accent, snare g / h / a)
+KITS = dict(
+    electro=dict(kick=("A67", "A10", "A0"), snare=("A65", "A23", "A71")),
+    jungle=dict(kick=("B10", "B12", "A112"), snare=("A90", "A93", "A99")),
+    dnb=dict(kick=("A106", "A100", "B3"), snare=("A109", "A125", "A117")),
+    boombap=dict(kick=("A119", "A115", "B7"), snare=("A28", "B9", "A11")),
+    rock=dict(kick=("A92", "A68", "A91"), snare=("A9", "A7", "A8")),
+    soft=dict(kick=("A5", "A4", "A68"), snare=("A35", "A29", "A33")),
+)
+KIT_OF = {
+    "ROCK": "rock", "DISCO": "rock", "SYNTHPOP": "electro", "FUNK": "boombap", "MOTORIK": "electro",
+    "LO-FI": "boombap", "TRIP HOP": "boombap", "DUB": "soft", "TRAP": "electro", "SLOW JAM": "boombap",
+    "DNB": "dnb", "JUNGLE": "jungle", "BREAKS": "jungle", "HOUSE": "electro", "TECHNO": "electro",
+    "SALSA": "soft", "CUMBIA": "soft", "REGGAE": "soft", "BOSSA": "soft", "AFROBEAT": "rock",
+    "SHUFFLE": "rock", "BOOM BAP": "boombap", "NEW JACK": "boombap", "JAZZ": "soft", "GO-GO": "boombap",
+}
 TOMS = ("A47", "A46", "A43")            # hi, mid, lo (by name only: not yet checked by ear)
-PERC = ("A41", "A41", "A40")            # 808 clave, clave, clap on accents
-LEVEL = {".": 0, "o": 1, "x": 2, "X": 3, "1": 1, "2": 2, "3": 3}
+CLAVE = ("A41", "A41", "A40")           # 808 clave, clave, clap on accents
+CLAP = ("A40", "A40", "A40")
+
+# the menus' and keys' choices
+HAT_LABEL = {"OFF": "OWN HATS"}
+SWINGS = [("BEAT'S", None), ("OFF", 0), ("33%", 33), ("50%", 50), ("58%", 58), ("66%", 66)]
+GB_KIT_CC = [round(k * 127 / 6) for k in range(7)]        # CC 70 on the Game Boy's drum channel
+GB_NOTE = dict(bd=36, rm=37, sd=38, cp=39, lt=41, ch=42, mt=45, oh=46, ht=48, cy=49, rd=51, sh=70, cb=56, cl=75)
 
 
 def sample(sid):
-    bank, note = sid[0], int(sid[1:])
-    return (0x80 if bank == "B" else 0) | note
+    return (0x80 if sid[0] == "B" else 0) | int(sid[1:])
+
+
+def swing_val(pct):
+    return round(pct / 100 * 0.5 * 256)          # odd steps late by step x this / 256
+
+
+def bits16(s):
+    return sum(1 << i for i, c in enumerate(s) if c == "x")
+
+
+def beats():
+    return [b for bank in DOC["banks"] for b in bank["beats"]]
 
 
 def build():
-    out = ["; Generated by tools/gen_beats.py - do not edit."]
-    data = []
-    for i, b in enumerate(BEATS):
-        tr = {k: b.get(k, "").replace(" ", "") for k in ("bd", "sd", "tom", "p1", "ch", "oh", "cy")}
-        n = max(len(v) for v in tr.values())
-        assert n <= 64
-        for k, v in tr.items():
-            assert len(v) in (0, n), (b["name"], k)
-        lv = lambda k, s: LEVEL[tr[k][s]] if tr[k] else 0      # noqa: E731
-        steps = []
-        for s in range(n):
-            a = lv("bd", s) | lv("sd", s) << 2 | lv("tom", s) << 4 | lv("p1", s) << 6
-            c = lv("ch", s) | lv("oh", s) << 2 | lv("cy", s) << 4
-            steps += [a, c]
-        k = b["kit"]
-        kit = list(k["kick"]) + list(k["snare"]) + list(k.get("toms", TOMS)) + list(k.get("perc", PERC))
-        # under the I/O: the kit (12), the name (9), then the steps
-        data.append(f"beatIo{i}:   ; {b['name']}: " + " ".join(kit))
-        data.append("     .byte " + ",".join(f"${sample(x):02X}" for x in kit))
-        data.append(f'     .byte "{b["name"]:8s}",0')
-        data.append("     .byte " + ",".join(f"${x:02X}" for x in steps))
-        b["steps"] = n
-    out.append("beatIoLo:   .byte " + ",".join(f"<beatIo{i}" for i in range(len(BEATS))))
-    out.append("beatIoHi:   .byte " + ",".join(f">beatIo{i}" for i in range(len(BEATS))))
-    out.append("beatLen:    .byte " + ",".join(str(b["steps"]) for b in BEATS))
-    out.append("beatSpb:    .byte " + ",".join(str(b["spb"]) for b in BEATS))
-    out.append("beatBpm:    .byte " + ",".join(str(b["bpm"]) for b in BEATS))
-    # swing: odd steps late by swing% x half a step, as the Beat Lab; x 256
-    out.append("beatSwing:  .byte " + ",".join(str(round(b["swing"] / 100 * 0.5 * 256)) for b in BEATS))
-    open(os.path.join(ROOT, "src", "beats.asm"), "w").write("\n".join(out) + "\n")
+    out = ["; Generated by tools/gen_beats.py from patch/beats.json - do not edit."]
     io = ["; Generated by tools/gen_beats.py - do not edit.",
-          "; Under the I/O at $D000: each beat's kit (kick ghost/hit/accent, snare g/h/a,",
-          "; toms hi/mid/lo, perc g/h/a; bit 7 = bank B), name, steps. BeatLoad copies one out."]
-    open(os.path.join(ROOT, "src", "beatsio.asm"), "w").write("\n".join(io + data) + "\n")
-    return len(BEATS)
+          "; Under the I/O at $D000: each beat's kit, name, lanes (see gen_beats.py)."]
+    B = beats()
+    hats = [h["name"] for h in DOC["hatLayers"]]
+    accs = [a["name"] for a in DOC["accentLayers"]]
+    sizes = []
+    for i, b in enumerate(B):
+        k = KITS[KIT_OF[b["name"]]]
+        first_perc = next((l for l in ("cp", "rm", "cb", "cl") if l in b["lanes"]), None)
+        perc = CLAP if first_perc == "cp" else CLAVE
+        kit = list(k["kick"]) + list(k["snare"]) + list(TOMS) + list(perc)
+        ids = [LANES.index(l) for l in LANES if l in b["lanes"]]
+        data = []
+        for l in LANES:
+            if l not in b["lanes"]:
+                continue
+            s = b["lanes"][l].replace(" ", "")
+            assert len(s) == 32
+            codes = [".abx".index(c) for c in s]
+            data += [codes[j] | codes[j + 1] << 2 | codes[j + 2] << 4 | codes[j + 3] << 6 for j in range(0, 32, 4)]
+        io.append(f"beatIo{i}:   ; {b['name']}: kit {KIT_OF[b['name']]}, lanes " + " ".join(l for l in LANES if l in b["lanes"]))
+        io.append("     .byte " + ",".join(f"${sample(x):02X}" for x in kit))
+        io.append(f'     .byte "{b["name"]:8s}",0')
+        io.append(f"     .byte {len(ids)}," + ",".join(str(x) for x in ids))
+        for j in range(0, len(data), 16):
+            io.append("     .byte " + ",".join(f"${x:02X}" for x in data[j:j + 16]))
+        size = 12 + 9 + 1 + len(ids) + len(data)
+        assert size - 21 <= 128, b["name"]
+        sizes.append(size)
+    n = len(B)
+    out.append(f"NUM_BEATS   equ {n}")
+    out.append(f"NUM_HATS    equ {len(hats)}")
+    out.append(f"NUM_ACCS    equ {len(accs)}")
+    out.append(f"NUM_TS      equ {len(DOC['timeSigs'])}")
+    out.append(f"NUM_SWINGS  equ {len(SWINGS)}")
+    out.append(f"ACC_HUMAN   equ {accs.index('HUMAN')}")
+    out.append("beatIoLo:   .byte " + ",".join(f"<beatIo{i}" for i in range(n)))
+    out.append("beatIoHi:   .byte " + ",".join(f">beatIo{i}" for i in range(n)))
+    out.append("beatSize:   .byte " + ",".join(str(x) for x in sizes))
+    out.append("beatBpm:    .byte " + ",".join(str(b["bpm"]) for b in B))
+    out.append("beatSwing:  .byte " + ",".join(str(swing_val(b["swing"])) for b in B))
+    out.append("beatGrid8:  .byte " + ",".join("1" if b["grid"] == 8 else "0" for b in B))
+    out.append("beatHatDef: .byte " + ",".join(str(hats.index(b["hats"])) for b in B))
+    out.append("beatAccDef: .byte " + ",".join(str(accs.index(b["accent"])) for b in B))
+    out.append("beatGbKit:  .byte " + ",".join(str(GB_KIT_CC[DOC["gbKits"].index(b["gb"])]) for b in B))
+    # hat layers: 0 = the beat's own hats; triplet layers on 12 steps a bar
+    hl = DOC["hatLayers"]
+    out.append("; hat layers (" + ", ".join(hats) + "): bit i = step i of the bar")
+    out.append("hatTrip:    .byte " + ",".join("1" if h.get("grid") == 12 else "0" for h in hl))
+    for k in ("ch", "oh"):
+        v = [bits16(h.get(k, "")) for h in hl]
+        out.append(f"hat{k.capitalize()}L:    .byte " + ",".join(str(x & 255) for x in v))
+        out.append(f"hat{k.capitalize()}H:    .byte " + ",".join(str(x >> 8) for x in v))
+    # accent layers: 32 steps (a bar's 16 twice, or BUILD's two bars), strong and soft bits
+    out.append("; accent layers (" + ", ".join(accs) + "): 4 bytes of strong steps, then 4 of soft")
+    rows = []
+    for a in DOC["accentLayers"]:
+        st = a["steps"].replace(" ", "")
+        if st == "random":
+            st = "n" * 16
+        if len(st) == 16:
+            st = st * 2
+        strong = sum(1 << j for j, c in enumerate(st) if c == "S")
+        soft = sum(1 << j for j, c in enumerate(st) if c == "s")
+        rows.append(",".join(str((strong >> (8 * j)) & 255) for j in range(4)) + ", " +
+                    ",".join(str((soft >> (8 * j)) & 255) for j in range(4)))
+    out.append("accBits:")
+    for r, a in zip(rows, accs):
+        out.append(f"     .byte {r}   ; {a}")
+    # time signatures: runs of steps, [first | $80 if a bar starts, steps], $FF
+    out.append("; time signatures: runs of the beat's steps (first step, $80 = a bar starts here; steps); $FF ends")
+    labels = []
+    for i, t in enumerate(DOC["timeSigs"]):
+        segs = []
+        for bar in t["bars"]:
+            for j, (first, cnt) in enumerate(bar):
+                segs += [first | (0x80 if j == 0 else 0), cnt]
+        assert sum(c for bar in t["bars"] for _, c in bar) <= 32
+        out.append(f"ts{i}:        .byte " + ",".join(str(x) for x in segs) + ",255   ; " + t["name"])
+        labels.append(f"ts{i}")
+    out.append("tsLo:       .byte " + ",".join(f"<{x}" for x in labels))
+    out.append("tsHi:       .byte " + ",".join(f">{x}" for x in labels))
+    out.append("swingT:     .byte " + ",".join(str(swing_val(p)) for _, p in SWINGS[1:]))
+    out.append("; the Game Boy's drum notes, lanes in order")
+    out.append("gbDrumNote: .byte " + ",".join(str(GB_NOTE[l]) for l in LANES))
+    open(os.path.join(ROOT, "src", "beats.asm"), "w").write("\n".join(out) + "\n")
+    open(os.path.join(ROOT, "src", "beatsio.asm"), "w").write("\n".join(io) + "\n")
+    return n, sum(sizes)
 
+
+def menu_labels():
+    """gen_menu.py's value labels"""
+    return dict(hats=["BEAT'S"] + [HAT_LABEL.get(h["name"], h["name"]) for h in DOC["hatLayers"]],
+                accs=["BEAT'S"] + [a["name"] for a in DOC["accentLayers"]],
+                ts=[t["short"] for t in DOC["timeSigs"]],
+                swings=[s for s, _ in SWINGS])
+
+
+BEATS = [dict(name=b["name"]) for b in beats()]       # (tests: the names, in order)
 
 if __name__ == "__main__":
-    print(build(), "beats")
+    n, size = build()
+    print(n, "beats,", size, "bytes under the I/O")

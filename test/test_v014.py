@@ -46,7 +46,7 @@ c.run_ms(400)
 
 # ---------------------------------------------------------------- play screen
 rows = [c.screen_row(r) for r in range(25)]
-check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.60") and rows[0].endswith("RETURN: MENU "), rows[0])
+check("header: V0.14, RETURN: MENU", rows[0].startswith(" FAT CHIP 64  V0.61") and rows[0].endswith("RETURN: MENU "), rows[0])
 check("one line per chip: SID ON, GAME BOY 11-15, MIDINES 1-5",
       rows[4].startswith("SID      ON ") and rows[5].startswith("GAME BOY 11-15") and rows[6].startswith("MIDINES  1-5 "),
       rows[4:7])
@@ -68,27 +68,29 @@ c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=10)
 check("SHIFT+RETURN on the play screen: nothing", c.v("menuOn") == 0 and c.v("beatRun") == 0)
 
 # ---------------------------------------------------------------- BEAT TEMPO
-check("power on: 120 BPM, ELECTRO chosen", c.v("bpm") == 120 and c.v("beatSel") == 0)
+check("power on: 120 BPM, ROCK chosen (v0.61)", c.v("bpm") == 120 and c.v("beatSel") == 0)
 c.tap("f5", ms=200)
-check("F5: the beat starts at its own tempo (ELECTRO 124)", c.v("beatRun") == 1 and c.v("bpm") == 124, c.v("bpm"))
+check("F5: the beat starts at its own tempo (ROCK 116)", c.v("beatRun") == 1 and c.v("bpm") == 116, c.v("bpm"))
 taps(c, 600)
 check("tap: 100 BPM", abs(c.v("bpm") - 100) <= 1, c.v("bpm"))
 c.tap("f5", ms=100); c.tap("f5", ms=150)
 check("F5 F5: stopped and started again, the tapped tempo kept", c.v("beatRun") == 1 and abs(c.v("bpm") - 100) <= 1, c.v("bpm"))
 c.tap("g", ms=150)
-check("G: a new beat (JUNGLE) sets its tempo (168)", c.v("bpm") == 168, c.v("bpm"))
+check("v0.61: G while it plays: the new beat keeps the tempo (100)", c.v("beatSel") == 1 and abs(c.v("bpm") - 100) <= 1, c.v("bpm"))
 c.tap("f5", ms=100)
+c.tap("g", ms=150)
+check("G while stopped: the new beat (SYNTHPOP) sets its tempo (112)", c.v("beatSel") == 2 and c.v("bpm") == 112, c.v("bpm"))
 c.set("beatTempo", 1)                        # IGNORE
 c.run_ms(2100)                               # (a fresh set of taps)
 taps(c, 500)
 c.tap("g", ms=150)
-check("BEAT TEMPO IGNORE: G keeps the tempo (120)", c.v("beatSel") == 2 and abs(c.v("bpm") - 120) <= 1, c.v("bpm"))
+check("BEAT TEMPO IGNORE: G keeps the tempo (120)", c.v("beatSel") == 3 and abs(c.v("bpm") - 120) <= 1, c.v("bpm"))
 c.tap("f5", ms=150)
 check("... and so does starting it", c.v("beatRun") == 1 and abs(c.v("bpm") - 120) <= 1, c.v("bpm"))
 c.tap("f5", ms=100)
 c.set("beatTempo", 0)
-c.tap("g", ms=20); c.tap("g", ms=20); c.tap("g", ms=20); c.tap("g", ms=150)   # DNB -> round to ELECTRO
-check("back to ELECTRO, 124", c.v("beatSel") == 0 and c.v("bpm") == 124, (c.v("beatSel"), c.v("bpm")))
+c.tap("g", ms=150)
+check("BEAT TEMPO DEFAULT again: MOTORIK, 132", c.v("beatSel") == 4 and c.v("bpm") == 132, (c.v("beatSel"), c.v("bpm")))
 
 # (v0.24: the old menu's VIBRATO / GLIDE / DETUNE / TREMOLO / MONO / WARBLE
 # switches are gone: the PATCH pages edit the patch itself, test_v024.py)

@@ -71,9 +71,9 @@ class C64:
         self.under = bytearray(rnd.randrange(256) for _ in range(0x1000))
         if prg.endswith("-image.prg"):
             hp, hs, he = self.sym["hiPhys"], self.sym["hiStart"], self.sym["hiEnd"]
-            raw[hs:he] = raw[hp:hp + he - hs]
             ip, i0, i1 = self.sym["ioPhys"], self.sym["ioStart"], self.sym["ioEnd"]
-            self.under[i0 - 0xD000:i1 - 0xD000] = raw[ip:ip + i1 - i0]
+            self.under[i0 - 0xD000:i1 - 0xD000] = raw[ip:ip + i1 - i0]   # (first: the image
+            raw[hs:he] = raw[hp:hp + he - hs]                               #  can reach $E000)
         self.raw = raw
         self.mem = ObservableMemory(subject=raw)
         self.pressed = set()

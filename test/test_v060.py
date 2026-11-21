@@ -45,16 +45,16 @@ for i, b in enumerate(beats):
         print("  (couldn't pick beat", i, ")")
         continue
     p = c.raw[s["beatIoLo"] + i] | c.raw[s["beatIoHi"] + i] << 8
-    n = c.raw[s["beatLen"] + i] * 2
-    want = bytes(c.under[p - 0xD000:p - 0xD000 + 21 + n])
-    got = bytes(c.raw[s["kitBuf"]:s["kitBuf"] + 21 + n])
+    n = c.raw[s["beatSize"] + i]                          # (v0.61: kit, name and lanes)
+    want = bytes(c.under[p - 0xD000:p - 0xD000 + n])
+    got = bytes(c.raw[s["kitBuf"]:s["kitBuf"] + n])
     ok = want == got and got[12:20].decode().rstrip() == b["name"]
     ok_all &= ok
     if not ok:
         print("  beat", i, got[12:21])
 check("each beat's kit, name and steps are copied out when it's chosen", ok_all)
 check("the I/O is switched back on after", c.raw[1] == 0x35, hex(c.raw[1]))
-check("the play screen names the beat", "BEAT " + beats[c.v("beatSel")]["name"][:6] in " ".join(c.screen_row(r) for r in range(25)))
+check("the play screen names the beat", beats[c.v("beatSel")]["name"] in c.screen_row(12), c.screen_row(12))
 
 # the beat plays from the copy (RETURN... RUN/STOP tapped starts it)
 mod(c, "runstop", ";")                                # (back round to the first)
