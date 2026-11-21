@@ -68,7 +68,7 @@ peak = [0, 0]
 c.press("q", "e", "t", "u")                 # C E G B
 for _ in range(150):                        # 3 s at 10 ms steps
     c.run_ms(20)
-    peak[0] = max(peak[0], (c.v("gbqHead") - c.v("gbqTail")) & 63)
+    peak[0] = max(peak[0], (c.v("gbqHead") - c.v("gbqTail")) & 127)
     peak[1] = max(peak[1], (c.v("nesqHead") - c.v("nesqTail")) & 63)
 sid_ons = [x for x in c.midi(since=t0)]
 check("10 ms arp: the queues stay short (no overflow)", peak[0] < 20 and peak[1] < 20, peak)

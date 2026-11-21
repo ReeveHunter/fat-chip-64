@@ -35,12 +35,12 @@ def sound(c, i):
     gb = c.v("gbBase")
     return [(s & 15, d1, d2) for t, s, d1, d2 in c.midi()
             if t >= t0 and s & 0xF0 == 0xB0 and 0 <= (s & 15) - gb < 3
-            and d1 not in (103, 113) and not (d1 == 114 and d2 >= 64)]    # (v0.50: the sync and status: test_v050)
+            and d1 not in (103, 113) and not (d1 == 114 and d2 >= 64) and (d1, d2) != (102, 70)]   # (v0.63: the profile again with a sound)    # (v0.50: the sync and status: test_v050)
 
 
 c = C64(channels=None)
 c.run_ms(500)
-check("header V0.62", "V0.62" in c.screen_row(0), c.screen_row(0))
+check("header V0.63", "V0.63" in c.screen_row(0), c.screen_row(0))
 check("DEVICES > GAME BOY: FAT CHIP GB by default", c.v("gbFc") == 0)
 gb = c.v("gbBase")
 

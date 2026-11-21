@@ -229,7 +229,7 @@ BendTick:
 	lda gbqHead
 	sec
 	sbc gbqTail
-	and #63
+	and #127
 	cmp #Q_BACKLOG
 	bcs .x
 .q2:

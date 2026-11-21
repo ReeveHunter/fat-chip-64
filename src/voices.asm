@@ -982,7 +982,7 @@ QBacklog:
 	lda gbqHead
 	sec
 	sbc gbqTail
-	and #63
+	and #127
 	rts
 .nes:
 	lda nesqHead

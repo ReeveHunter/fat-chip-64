@@ -48,7 +48,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(500)
-check("header V0.62", "V0.62" in c.screen_row(0), c.screen_row(0))
+check("header V0.63", "V0.63" in c.screen_row(0), c.screen_row(0))
 gb = c.v("gbBase")
 sound(c, 4)
 t0 = c.cpu.processorCycles
@@ -69,7 +69,8 @@ m = gbcc(c, t0)
 check("OTHER (MGB): the CCs, then the status (64 + 13) last", m and m[-1][1:] == (114, 64 + 13) and len(m) > 10, m[-3:])
 c.set("gbFc", 0)
 t0 = sound(c, 4)
-check("FAT CHIP GB: just CC 114 4 (no status after it)", [x[1:] for x in gbcc(c, t0)] == [(114, 4)], gbcc(c, t0))
+check("FAT CHIP GB: its channels and profile (v0.63), then just CC 114 4 (no status after it)",
+      [x[1:] for x in gbcc(c, t0)] == [(113, 64 + gb), (102, 70), (114, 4)], gbcc(c, t0))
 
 # an edited sound: its name gets a *: CUSTOM
 t0 = c.cpu.processorCycles

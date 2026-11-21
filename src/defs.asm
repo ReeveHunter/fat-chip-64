@@ -187,7 +187,7 @@ scrAt       ds 1               ; ... for the next screen step
 lastStatus  ds 1               ; running status on the wire
 wireHead    ds 1               ; wire ring: head = write, tail = read
 wireTail    ds 1
-gbqHead     ds 1               ; Game Boy message queue (64 entries)
+gbqHead     ds 1               ; Game Boy message queue (128 entries)
 gbqTail     ds 1
 gbNext      ds 1               ; ticks (low byte) when the next GB message may go
 nesqHead    ds 1
@@ -217,9 +217,9 @@ RAM_BASE    equ $C400
 	seg.u ram
 	org RAM_BASE
 wireBuf     ds 256
-gbqS        ds 64
-gbqD1       ds 64
-gbqD2       ds 64
+gbqS        ds 128             ; (v0.63: 128, was 64: a whole sound and more fits)
+gbqD1       ds 128
+gbqD2       ds 128
 nesqS       ds 64
 nesqD1      ds 64
 nesqD2      ds 64

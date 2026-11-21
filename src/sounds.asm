@@ -795,6 +795,7 @@ SoundGb:
 	bne .on
 	rts
 .on:
+	jsr GbHello             ; (v0.63: its channels and profile first)
 	lda gbFresh             ; v0.46: a built-in sound as it is, to Fat Chip GB:
 	beq .full               ;  one CC 114 (it has its own copy of the CCs below)
 	lda #0

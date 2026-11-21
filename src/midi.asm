@@ -156,7 +156,7 @@ Schedule:
 	lda gbqTail
 	clc
 	adc #1
-	and #63
+	and #127
 	sta gbqTail
 	lda ticks
 	clc
@@ -280,7 +280,7 @@ GbPut:
 	txa
 	clc
 	adc #1
-	and #63
+	and #127
 	cmp gbqTail
 	beq .full
 	sta gbqHead
@@ -444,6 +444,24 @@ GbStartup:
 	sta gbWaitOk
 .done:
 	rts
+
+; v0.63: before a sound goes to the Game Boy, its channels (CC 113, heard on
+; any channel) and the FAT CHIP profile again: a Game Boy switched on late,
+; still booting when Fat Chip 64 started, or reset since, sits on its own
+; channels 1-5 and heard nothing; changing the sound now brings it back. (No
+; timed resync: v0.52 dropped the 2 s one, it blinked the Teensyboy.) Fat
+; Chip GB ignores both when nothing has changed.
+GbHello:
+	subroutine
+	lda gbBase
+	clc
+	adc #64
+	tax
+	lda #GCC_CHANNELS
+	jsr GbGlobal
+	lda #GCC_PROFILE
+	ldx #PROFILE_F
+	jmp GbGlobal
 
 ; MidiNES startup: CC7 = 127 on every voice (levels 0-7 are silent and CC7
 ; scales velocity), sweep shift CC16 = 127 on the pulses (lowest octave).
