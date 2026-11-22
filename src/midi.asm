@@ -6,7 +6,8 @@
 ; drops messages when MIDI arrives at full speed (measured on Reeve's
 ; Teensyboy Pro: 1 per 2 ms is clean, 1 per 1 ms loses), so its queue is
 ; paced, and the shared link budget (linkLoad) covers NES traffic too.
-; The wire uses running status. The main loop and the IRQ both feed the ACIA.
+; The wire uses running status, except that every Game Boy message carries its
+; status byte (v0.64). The main loop and the IRQ both feed the ACIA.
 
 MidiInit:
 	subroutine
@@ -147,8 +148,10 @@ Schedule:
 	bne .done               ; (and the NES waits too: the Game Boy goes first)
 	jsr LinkRoom
 	bcc .nes
-	ldx gbqTail
-	lda gbqS,x
+	lda #$FF                ; v0.64: every Game Boy message carries its status
+	sta lastStatus          ; byte (no running status): the link drops a byte
+	ldx gbqTail             ; now and then, and in a run of nothing but drum
+	lda gbqS,x              ; notes that left every later note out of step
 	ldy gbqD2,x
 	sty irqT
 	ldy gbqD1,x

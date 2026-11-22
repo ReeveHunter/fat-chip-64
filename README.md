@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.64**: every message to the Game Boy carries its status byte (no running status on its messages). The link drops a byte now and then; in a run of nothing but Game Boy drum notes (beats on the Game Boy alone) one lost byte put every later note out of step, so it played one quiet wrong sound over and over. Now a lost byte costs one message.
+
 **v0.63**: every sound sent to the Game Boy starts with its channels (CC 113) and the FAT CHIP profile again, so a Game Boy switched on late (or still booting when Fat Chip 64 started, or reset since), stuck on its own channels 1–5, comes back on the next sound change. The Game Boy's MIDI queue holds 128 messages (was 64), so a whole sound never overflows it.
 
 **v0.62**: the SHS-10's RHYTHM BUTTONS: **IN ORDER** (the default: the keytar's 00–44 pick bank and beat, 00 = BASIC 1, 43 = SWING 4), BY FEEL (its style picks the nearest beat, as before) or IGNORE.

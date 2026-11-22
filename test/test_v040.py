@@ -42,7 +42,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.63", "V0.63" in c.screen_row(0), c.screen_row(0))
+check("header V0.64", "V0.64" in c.screen_row(0), c.screen_row(0))
 S = c.sym
 
 # ---------------------------------------------------------------- plain keys
@@ -144,8 +144,10 @@ check("C= + V: VIBRATO on, the one C= works on (row 14)", fx_on(c, S["FXI_VIBRAT
 check("... row 14: its first setting (DEPTH)", "DEPTH" in c.screen_row(14), c.screen_row(14))
 d0 = c.screen_row(14)[29:].strip()
 mod(c, "cbm", "crsrright")                                   # (v0.45: was C= + ;)
+c.run_ms(250)                                                # (v0.64: the Game Boy's messages carry their status bytes, so its sound takes a little longer and the row redraws after)
 check("C= + CRSR RIGHT: its setting a step up", c.screen_row(14)[29:].strip() != d0, (d0, c.screen_row(14)))
 mod(c, "cbm", ".")
+c.run_ms(250)
 check("C= + . : faster (row 14: RATE)", "RATE" in c.screen_row(14), c.screen_row(14))
 mod(c, "cbm", "crsrdown")                                    # (v0.45: was C= + RETURN)
 c.run_ms(100)                                                # (the row redrawn)
