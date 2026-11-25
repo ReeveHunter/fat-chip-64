@@ -15,6 +15,8 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+os.environ["FATCHIP_REAL"] = "1"               # (v0.65: the real build and patches, not the tests' copy)
+os.environ.pop("FATCHIP_PATCHES", None)
 sys.path.insert(0, os.path.join(HERE, "..", "test"))
 sys.path.insert(0, HERE)
 from sim import C64  # noqa: E402
@@ -25,7 +27,13 @@ SHORT = {"DUTY LEAD": "DUTY LD", "SCREAMER": "SCREAMER", "WARBLE PAD": "WARB PAD
          "DUTY SHIMMER PAD": "SHIMMER", "WARM SID PAD": "WARM PAD", "BREATHING PAD": "BREATHE",
          "ELECTRIC PIANO": "E.PIANO", "COMBO ORGAN": "ORGAN", "VIBRAPHONE": "VIBES",
          "GLIDE BASS": "GLD BASS", "WAVE BASS": "WAV BASS", "SEASICK CHORUS": "SEASICK",
-         "REPEAT LEAD": "RPT LEAD", "ECHO PLUCK": "ECHO PLK", "TREMOLO GATE": "TREMGATE"}
+         "REPEAT LEAD": "RPT LEAD", "ECHO PLUCK": "ECHO PLK", "TREMOLO GATE": "TREMGATE",
+         # (2026-11-22: Reeve's Chip Lab patches)
+         "FAT CHIPS": "FATCHIPS", "FAT ATTACK": "FAT ATK", "FAT VIBES": "FATVIBES", "FAT ORGAN": "FATORGAN",
+         "FAT WARBLE": "FAT WARB", "CAVE MYSTERY PAD": "CAVE PAD", "DUTIFUL PADDING": "DUTIFUL",
+         "MUSIC BOX": "MUSICBOX", "WHISTLING": "WHISTLNG", "EXCUSE ME": "EXCUSEME", "WHINGE CORE": "WHINGE",
+         "FAST PUMP": "FASTPUMP", "SLOW PUMP": "SLOWPUMP", "BABY CANYON": "CANYON", "UNFAIR COIN TOSS": "COINTOSS",
+         "DRIPPING UPWARD": "DRIPPING", "SINGER SEWING": "SEWING", "CHEEKY KOBOLD": "KOBOLD"}
 
 
 def short(name):
@@ -34,7 +42,8 @@ def short(name):
 
 
 def capture():
-    c = C64(channels=None)
+    B = os.path.join(HERE, "..", "bin")
+    c = C64(prg=os.path.join(B, "fatchip64-image.prg"), sym=os.path.join(B, "fatchip64.sym"), channels=None)   # (the real build)
     c.run_ms(500)
     gb = c.v("gbBase")
     out = []
@@ -64,8 +73,8 @@ def capture():
             v = (s & 15) - gb
             if not 0 <= v < 3:
                 continue
-            if d1 == 114:                         # (the status after the CCs: not part of the sound)
-                continue
+            if d1 in (114, 113, 102):             # (the status after the CCs, and v0.63's channels and
+                continue                          #  profile before them: not part of the sound)
             if d1 >= 102:
                 glob.append((d1, d2))
             else:

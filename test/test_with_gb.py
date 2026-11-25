@@ -33,6 +33,7 @@ def check(name, cond, info=""):
 # ---------------------------------------------------------------- the C64 side
 c = C64()
 c.run_ms(150)
+c.set("gbFc", 1)   # (v0.65: the tests' patches aren't the Game Boy ROM's built-in copy: send every sound as CCs)
 c.press("q", "e", "t", ms=120)          # C-E-G chord, held
 t_chord = c.cpu.processorCycles
 c.run_ms(200)

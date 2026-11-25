@@ -65,7 +65,7 @@ def shift(c, key, ms=150):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.64", "V0.64" in c.screen_row(0), c.screen_row(0))
+check("header V0.65", "V0.65" in c.screen_row(0), c.screen_row(0))
 check("row 3: SPLIT OFF, the lead's patch dark grey (v0.36)", c.screen_row(3).startswith("SPLIT OFF")
       and "DUTY LEAD" in c.screen_row(3) and c.raw[0xD800 + 3 * 40 + 22] & 15 == 11, c.screen_row(3))
 

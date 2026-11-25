@@ -44,7 +44,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(500)
-check("header V0.64", "V0.64" in c.screen_row(0), c.screen_row(0))
+check("header V0.65", "V0.65" in c.screen_row(0), c.screen_row(0))
 m = send(c, amount=36, time=300, shape=1)
 check("STEP +36: the Game Boy gets +18 (CC 80) and BEND SHAPE STEP + x2 (9)", m.get(80) == gen_patches.cc(18 + 24, 48) and m.get(89) == 9, (m.get(80), m.get(89)))
 c.set("monoMode", 1)

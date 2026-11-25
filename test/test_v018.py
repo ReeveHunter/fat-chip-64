@@ -20,10 +20,11 @@ def check(name, cond, info=""):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.64", "V0.64" in c.screen_row(0), c.screen_row(0))
+check("header V0.65", "V0.65" in c.screen_row(0), c.screen_row(0))
 size = c.sym["PATCH_SIZE"] if "PATCH_SIZE" in c.sym else None
 n = c.sym.get("NUM_SOUNDS", 19)
-names = [l.split('"')[1].rstrip() for l in open(os.path.join(ROOT, "src", "soundtab.asm")) if l.startswith('        .byte "')]
+import json  # noqa: E402
+names = [p["name"][:16] for p in json.load(open(os.environ["FATCHIP_PATCHES"]))["patches"]]   # (v0.65: the tests' patches)
 check("19 built-in patches", len(names) == 19, len(names))
 check("at start: FAT in the live patch", c.v("livePatch", size) == c.v("patch0", size))
 

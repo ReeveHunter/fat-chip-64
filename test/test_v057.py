@@ -38,7 +38,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(500)
-check("header V0.64", "V0.64" in c.screen_row(0), c.screen_row(0))
+check("header V0.65", "V0.65" in c.screen_row(0), c.screen_row(0))
 c.set("spaceAct", 4)                                         # SPACE: TREMOLO
 patch(c)
 t0 = c.cpu.processorCycles

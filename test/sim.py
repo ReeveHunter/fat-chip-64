@@ -19,6 +19,9 @@ from py65.memory import ObservableMemory
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..")
+# (v0.65: the tests' build uses patch/patches-test.json; so do the tools tests import)
+if not os.environ.get("FATCHIP_REAL") and os.path.exists(os.path.join(ROOT, "bin", "test", "fatchip64.sym")):
+    os.environ.setdefault("FATCHIP_PATCHES", os.path.join(ROOT, "patch", "patches-test.json"))
 CYCLES_PER_MS = 1023
 IRQ_CYCLES = 256
 BYTE_CYCLES = 327
@@ -57,8 +60,11 @@ class C64:
         # (v0.41: bin/fatchip64.prg unpacks itself, about a second on a C64;
         #  the tests load what it unpacks to: the image, its tables at $E000.
         #  test_crunch runs the packed file and checks they match)
-        prg = prg or os.path.join(ROOT, "bin", "fatchip64-image.prg")
-        sym = sym or os.path.join(ROOT, "bin", "fatchip64.sym")
+        # (v0.65: the tests run bin/test/, the same program built with patch/patches-test.json,
+        #  so they don't change whenever the built-in patches do; FATCHIP_REAL=1: the real one)
+        sub = "bin" if os.environ.get("FATCHIP_REAL") or not os.path.exists(os.path.join(ROOT, "bin", "test", "fatchip64.sym")) else os.path.join("bin", "test")
+        prg = prg or os.path.join(ROOT, sub, "fatchip64-image.prg")
+        sym = sym or os.path.join(ROOT, sub, "fatchip64.sym")
         self.sym = load_symbols(sym)
         data = open(prg, "rb").read()
         load = data[0] | (data[1] << 8)

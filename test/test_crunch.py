@@ -22,7 +22,7 @@ packed = os.path.join(ROOT, "bin", "fatchip64.prg")
 size = os.path.getsize(packed)
 check("the program file ends below the I/O at $D000", 0x0801 + size - 2 <= 0xD000, hex(0x0801 + size - 2))
 
-c = C64(prg=packed, channels=None, boot=False)
+c = C64(prg=packed, sym=os.path.join(ROOT, "bin", "fatchip64.sym"), channels=None, boot=False)   # (the real build: v0.65 tests otherwise run bin/test/)
 line = bytes(c.raw[0x0805:0x0810])
 check("10 SYS (the unpacker, at the end of the file)", line[0] == 0x9E, line)
 c.cpu.pc = int(line[1:line.index(0)])

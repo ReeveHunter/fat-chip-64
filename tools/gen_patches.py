@@ -22,7 +22,9 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 NAME_LEN = 16                      # the name as the screen shows it
 
 DEF = json.load(open(os.path.join(ROOT, "patch", "effects.json")))
-_PJ = json.load(open(os.path.join(ROOT, "patch", "patches.json")))
+# (v0.65: FATCHIP_PATCHES=patch/patches-test.json builds the tests' copy, bin/test/: the
+#  pre-2026-11-22 patches, so the tests don't change whenever the built-in patches do)
+_PJ = json.load(open(os.environ.get("FATCHIP_PATCHES") or os.path.join(ROOT, "patch", "patches.json")))
 PATCHES = _PJ["patches"]
 BANKS = _PJ.get("banks", [])
 EFFECTS = {e["id"]: e for e in DEF["effects"]}

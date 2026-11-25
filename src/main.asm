@@ -510,7 +510,6 @@ Nmi:
 	include "nestables.asm"
 	include "soundtab.asm"
 	include "menutab.asm"
-	include "beats.asm"
 	include "bendtab.asm"
 codeEnd:
   if codeEnd > RAM_BASE
@@ -524,6 +523,7 @@ hiPhys:
 	rorg $E000
 hiStart:
 	include "menuhi.asm"
+	include "beats.asm"     ; (v0.65: the beat tables, to make room for 25 patches)
 hiEnd:
 	rend
   if hiEnd > $FFFA

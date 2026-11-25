@@ -22,13 +22,14 @@ def check(name, cond, info=""):
 r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "check_effects.py")], capture_output=True, text=True)
 check("effects.json and patches.json check out", r.returncode == 0, r.stdout.strip()[-120:])
 tab = open(os.path.join(ROOT, "src", "soundtab.asm")).read()
-subprocess.run([sys.executable, os.path.join(ROOT, "tools", "gen_patches.py")], capture_output=True)
+env = {k: v for k, v in os.environ.items() if k != "FATCHIP_PATCHES"}   # (v0.65: the real patches, not the tests' copy)
+subprocess.run([sys.executable, os.path.join(ROOT, "tools", "gen_patches.py")], capture_output=True, env=env)
 check("soundtab.asm is up to date with patches.json", open(os.path.join(ROOT, "src", "soundtab.asm")).read() == tab)
 
 c = C64(channels=None)
 c.run_ms(400)
 c.set("gbFc", 1)                 # (v0.46: the CC way, which these check)
-check("header V0.64", "V0.64" in c.screen_row(0), c.screen_row(0))
+check("header V0.65", "V0.65" in c.screen_row(0), c.screen_row(0))
 
 
 def gb_ccs(c, t0):
