@@ -201,6 +201,12 @@ InitState:
 	sta $CF00,x
 	inx
 	bne .ram
+	ldx #15                 ; (v0.66: no effect settings kept yet)
+	lda #0
+.fm:
+	sta fxMemOk,x
+	dex
+	bpl .fm
 	ldx #NUM_VOICES-1
 	lda #NO_NOTE
 .v:
@@ -525,6 +531,15 @@ hiStart:
 	include "menuhi.asm"
 	include "beats.asm"     ; (v0.65: the beat tables, to make room for 25 patches)
 hiEnd:
+; v0.66: under the KERNAL, past its tables (cleared at start): each patch
+; setting's step when its effect was last switched off, and per effect
+; whether that's been kept (patchedit.asm FxOff / FxOn)
+fxMem       equ hiEnd
+fxMemOk     equ hiEnd+64
+  if fxMemOk+16 > $FFF0
+    echo "fxMem runs into the vectors"
+    err
+  endif
 	rend
   if hiEnd > $FFFA
     echo "the $E000 tables run into the CPU's vectors"

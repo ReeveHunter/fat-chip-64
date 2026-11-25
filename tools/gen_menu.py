@@ -381,6 +381,7 @@ def build_pages(params, effects):
         enum("BEATS ON", "beatDev", ["MIDINES", "GAME BOY", "BOTH"]),
         enum("BOTH", "beatSplit", ["LAYER", "SPLIT"]),
         enum("GAME BOY HATS", "gbBtHats", ["SAMPLE", "NOISE"]),
+        enum("GAME BOY TREMOLO", "gbBtTrem", ["OFF FOR BEATS", "ALWAYS"]),
     ], parent="main")
     add_page("shs", "YAMAHA SHS-10", "MIDI IN", [
         enum("TEMPO", "shsTempo", ["FOLLOW", "IGNORE"], hook="SyncDerive"),

@@ -137,33 +137,34 @@ mL124:      .byte "SWING (STOP L) ",0
 mL125:      .byte "BEATS ON ",0
 mL126:      .byte "BOTH ",0
 mL127:      .byte "GAME BOY HATS ",0
-mL128:      .byte "TEMPO ",0
-mL129:      .byte "SHS-10 RHYTHM ",0
-mL130:      .byte "START/STOP ",0
-mL131:      .byte "VOICE BUTTONS ",0
-mL132:      .byte "RHYTHM BUTTONS ",0
-mL133:      .byte "WHEEL ",0
-mL134:      .byte "VIBRATO BUTTON ",0
-mE134      equ mE97
-mL135:      .byte "PORTAMENTO BUTTON ",0
+mL128:      .byte "GAME BOY TREMOLO ",0
+mL129:      .byte "TEMPO ",0
+mL130:      .byte "SHS-10 RHYTHM ",0
+mL131:      .byte "START/STOP ",0
+mL132:      .byte "VOICE BUTTONS ",0
+mL133:      .byte "RHYTHM BUTTONS ",0
+mL134:      .byte "WHEEL ",0
+mL135:      .byte "VIBRATO BUTTON ",0
 mE135      equ mE97
-mL136:      .byte "SUSTAIN BUTTON ",0
+mL136:      .byte "PORTAMENTO BUTTON ",0
 mE136      equ mE97
-mL137:      .byte "BREATH ",0
-mL138:      .byte "BREATH FX1 ",0
-mL139:      .byte "BREATH FX2 ",0
-mE139      equ mE138
-mL140:      .byte "BREATH FEEL ",0
-mL141:      .byte "NOTES ",0
-mL142:      .byte "PORTAMENTO BUTTON ",0
-mE142      equ mE97
-mL143:      .byte "TONE BUTTONS ",0
-mL144:      .byte "TEMPO ",0
-mL145:      .byte "TRIM ",0
-mU145:      .byte "",0
-mL146:      .byte "TUNE TO ",0
-mL147:      .byte "MATCH KEY ",0
-mE147      equ mE1
+mL137:      .byte "SUSTAIN BUTTON ",0
+mE137      equ mE97
+mL138:      .byte "BREATH ",0
+mL139:      .byte "BREATH FX1 ",0
+mL140:      .byte "BREATH FX2 ",0
+mE140      equ mE139
+mL141:      .byte "BREATH FEEL ",0
+mL142:      .byte "NOTES ",0
+mL143:      .byte "PORTAMENTO BUTTON ",0
+mE143      equ mE97
+mL144:      .byte "TONE BUTTONS ",0
+mL145:      .byte "TEMPO ",0
+mL146:      .byte "TRIM ",0
+mU146:      .byte "",0
+mL147:      .byte "TUNE TO ",0
+mL148:      .byte "MATCH KEY ",0
+mE148      equ mE1
 pW0:  .byte 0,$FF,$00,0,$FF,$01
 pS0:  .byte "POLY",0,"MONO",0
 pW1:  .byte 5,$FF,$00,5,$FF,$01

@@ -880,6 +880,9 @@ beatSwg     ds 1               ; RUN/STOP L: 0 the beat's, else swingT
 beatDev     ds 1               ; menu BEATS ON: 0 MIDINES, 1 GAME BOY, 2 BOTH
 beatSplit   ds 1               ; menu BOTH: 0 LAYER, 1 SPLIT (NES drums, Game Boy hats)
 gbBtHats    ds 1               ; menu GB HATS: 0 SAMPLE, 1 NOISE
+gbBtTrem    ds 1               ; v0.66 menu GAME BOY TREMOLO: 0 STOPS FOR BEATS, 1 ALWAYS
+gbTremOff   ds 1               ; v0.66: 1 while the Game Boy's tremolo is held off for its beats
+fxE         ds 1               ; v0.66: the effect FxOn / FxOff work on (FxMode can change peE)
 beatLoop    ds 1               ; loops of the cycle played (A<->B)
 cycLen      ds 1               ; the cycle (the time signature over the beat's 32 steps)
 cycSrc      ds 32              ;  each step's place in the beat

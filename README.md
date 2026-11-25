@@ -6,6 +6,8 @@ Chip 64 plays the SID itself and drives the other two over the Kerberos MIDI
 out. The plans are in `../fat-chip/fat-chip-brief.md`; the Game Boy protocol is
 `../fat-chip-gb/docs/fatchip-protocol.md`.
 
+**v0.66**: effect settings are remembered for the session: switch an effect off and on again (C= + its key) and it comes back as you left it, on any patch, until the C64 is reset (an effect never switched off starts from the patch's own settings, as before). BEATS has GAME BOY TREMOLO: OFF FOR BEATS (the default) holds the Game Boy's tremolo at full volume while its beats play, so they don't pump with the patch; ALWAYS lets it through. MIDI in is read once more while a Game Boy message goes out (a long tick could miss a byte of a SysEx patch).
+
 **v0.65**: Reeve's Chip Lab patches are the built-in patches: 25 in five banks, FAT (FAT CHIPS, FAT ATTACK, FAT VIBES, FAT ORGAN, FAT WARBLE), DREAM (CAVE MYSTERY PAD, DUTIFUL PADDING, WARM SID PAD, SEASICK CHORUS, VIBRAPHONE), GLARE (MUSIC BOX, WHISTLING, DUTY LEAD, EXCUSE ME, WHINGE CORE), CYCLE (FAST PUMP, SLOW PUMP, OH DANG, LESLIE, BABY CANYON) and SPARK (UNFAIR COIN TOSS, DRIPPING UPWARD, SINGER SEWING, CHEEKY KOBOLD, CLAVICLE); Fat Chip GB v0.19 has the same 25. The tests run `bin/test/`, the same program built with the older patches (`patch/patches-test.json`), so they don't change whenever the patches do.
 
 **v0.64**: every message to the Game Boy carries its status byte (no running status on its messages). The link drops a byte now and then; in a run of nothing but Game Boy drum notes (beats on the Game Boy alone) one lost byte put every later note out of step, so it played one quiet wrong sound over and over. Now a lost byte costs one message.

@@ -857,8 +857,27 @@ SoundGb:
 ; FREE rate in Hz x 100. Each only when it changes (gbCcS+12...).
 ; v0.57: TREMOLO held too: the patch's (on the Game Boy whatever its chips),
 ; or with none the held tremolo's own (DEEP, 6 HZ); let go: the patch's again.
+; v0.66: C set = the Game Boy's tremolo is held off: it plays the beats and
+; the menu's GAME BOY TREMOLO says OFF FOR BEATS (its tremolo is the whole Game
+; Boy's volume, the drums too)
+GbTremHeld:
+	subroutine
+	lda gbBtTrem
+	bne .no
+	lda beatRun
+	beq .no
+	jsr GbBeats
+	beq .no
+	sec
+	rts
+.no:
+	clc
+	rts
+
 GbTrem:
 	subroutine
+	jsr GbTremHeld          ; (v0.66: held off while the Game Boy plays the beats)
+	bcs .none
 	lda tremBtn
 	beq .pat
 	lda nesTrem

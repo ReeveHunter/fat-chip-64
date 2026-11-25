@@ -143,6 +143,8 @@ Schedule:
 	; against the next). While a Game Boy message is due, the NES doesn't
 	; start one (v0.11), so NES bursts fill the Game Boy's gaps instead of
 	; holding its notes back.
+	jsr RxByte              ; (v0.66: MIDI in now too: the Game Boy's message
+	                        ;  and the NES's after it outlast a byte's time)
 	lda wireHead
 	cmp wireTail
 	bne .done               ; (and the NES waits too: the Game Boy goes first)

@@ -26,7 +26,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(400)
-check("header V0.65", "V0.65" in c.screen_row(0), c.screen_row(0))
+check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
 c.midi_in(*gen_patches.sysex(PATCH), ms=300)
 check("NES LAG NOTE: glide on (k 3)", c.v("glideK") == 3, c.v("glideK"))
 nb = c.v("nesBase")

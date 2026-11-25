@@ -233,7 +233,8 @@ FxPairsV:
 .x:
 	rts
 
-; X = effect: on, every setting at its default
+; X = effect: on, every setting at its default, or (v0.66) where it was when
+; it was last switched off this session (fxMem)
 FxOn:
 	subroutine
 	stx peE
@@ -254,9 +255,17 @@ FxOn:
 	lda peCnt
 	beq .d
 	ldx peE
+	stx fxE                 ; (FxMode can change peE: FxIsOn)
 	jsr FxMode
+	ldx fxE
+	stx peE
+	ldy fxMemOk,x
 	ldx peP
 	lda prDef,x
+	cpy #0
+	beq .w
+	lda fxMem,x             ; (v0.66: as it was)
+.w:
 	jsr ParamWrite
 	inc peP
 	dec peCnt
@@ -265,10 +274,38 @@ FxOn:
 	ldx peE
 	jmp FxLfo
 
-; X = effect: off
+; X = effect: off. v0.66: if it was on, its settings are kept first (fxMem)
+; so switching it back on this session brings them back
 FxOff:
 	subroutine
 	stx peE
+	jsr FxIsOn
+	beq .o
+	ldx peE
+	stx fxE
+	lda #1
+	sta fxMemOk,x
+	jsr FxMode              ; (it can change peE: FxIsOn)
+	ldx fxE
+	stx peE
+	lda efP0,x
+	sta peP
+	lda efNP,x
+	sta peCnt
+.s:
+	lda peCnt
+	beq .o
+	ldx peP
+	jsr ParamNearest
+	ldx peP
+	sta fxMem,x
+	inc peP
+	dec peCnt
+	bne .s
+	ldx fxE
+	stx peE
+.o:
+	ldx peE
 	lda efOffLo,x
 	sta FxPairsF+1
 	sta FxPairsV+1
@@ -590,3 +627,8 @@ PatchRefresh:
 	jsr SoundVars
 	jsr SoundApply
 	jmp Dirty
+
+	if NUM_PARAMS > 64 || NUM_FX > 16
+	echo "fxMem / fxMemOk too small for NUM_PARAMS / NUM_FX"
+	err
+	endif

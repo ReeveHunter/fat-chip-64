@@ -497,6 +497,14 @@ GbBeats:
 ; HATS follow the beat and the menu
 GbBeatsTick:
 	subroutine
+	jsr GbTremHeld          ; (v0.66: the tremolo off / back when that changes)
+	lda #0
+	rol
+	cmp gbTremOff
+	beq .t
+	sta gbTremOff
+	jsr GbTrem
+.t:
 	lda beatRun
 	beq .w
 	jsr GbBeats
