@@ -239,8 +239,6 @@ InitState:
 	sta btnTask+1
 	lda #A_SUS
 	sta btnTask+2
-	lda #1                  ; v0.24: the SHS-10 in use, as before
-	sta useShs
 	lda #8                  ; Synthcart TRIM 0
 	sta scTrim
 	lda #1                  ; Synthcart: TUNE TO SQUARE, MATCH KEY ON (once in use)

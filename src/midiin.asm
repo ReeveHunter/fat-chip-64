@@ -144,36 +144,18 @@ MidiInService:
 ; A full message: rxStatus, rxD1, rxD2
 MidiInMsg:
 	subroutine
-	lda rxStatus
-	and #15
-	cmp #DRUM_CH_IN         ; channel 16: the keytar's rhythm
-	bne .notes
-	lda rxStatus
-	and #$F0
-	cmp #$C0
-	bne .dr
-	jmp KeytarStyle         ; its style buttons
-.dr:
-	cmp #$90
-	bne .x
-	lda rxD2
-	beq .x
-	lda syncDrums           ; its drum notes: on the MidiNES if the menu says PLAY
-	beq .x
-	jmp KeytarDrum
-.notes:
-	cmp #MIDI_IN_CHANS
-	bcs .x                  ; channels 12-15: the keytar's accompaniment
+	lda rxStatus            ; (v0.67: every channel plays; the SHS-10's channel 16
+	and #15                 ;  rhythm and 12-15 accompaniment are gone, see README)
 	sta t3
 	lda rxStatus
 	and #$F0
 	cmp #$B0
 	bne .pc
-	jmp KeytarCC            ; its vibrato / portamento / sustain buttons
+	jmp KeytarCC            ; CC 1 / 65 / 64 (and the DH-100's buttons)
 .pc:
 	cmp #$C0
 	bne .pb
-	jmp KeytarVoice         ; its voice buttons
+	jmp KeytarVoice         ; PROGRAM CHANGE: a patch (or the DH-100's tones)
 .pb:
 	cmp #$D0
 	bne .pw
@@ -181,7 +163,7 @@ MidiInMsg:
 .pw:
 	cmp #$E0
 	bne .nt
-	jmp KeytarWheel
+	jmp KeytarWheel         ; PITCH WHEEL
 .nt:
 	cmp #$80
 	beq .off

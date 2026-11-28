@@ -42,7 +42,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
+check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
 S = c.sym
 
 # ---------------------------------------------------------------- plain keys
@@ -222,17 +222,7 @@ mod(c, "ctrl", "f3")
 
 # ---------------------------------------------------------------- the menu
 c._raw_tap("return", ms=80)
-c._raw_tap("return", ms=80)                          # (HELP: THE KEYS, the first line)
-rows = [c.screen_row(r) for r in range(25)]
-cols = [c.raw[0xD800 + r * 40 + 2] & 15 for r in range(25)]
-r_sh = next(r for r in range(25) if rows[r].startswith(" SHIFT"))
-r_cb = next(r for r in range(25) if rows[r].startswith(" C="))
-r_st = next(r for r in range(25) if rows[r].startswith(" STOP"))
-r_ct = next(r for r in range(25) if rows[r].startswith(" CTRL"))
-check("help: the plain keys white, SHIFT orange, C= green, RUN/STOP light blue, CTRL light red",
-      (cols[2], cols[r_sh], cols[r_cb], cols[r_st], cols[r_ct]) == (1, 8, 5, 14, 10), cols)
-c._raw_press("lshift", ms=8); c._raw_tap("return", ms=60); c._raw_release("lshift", ms=60)
-check("back: the menu's own colour again", c.raw[0xD800 + r_sh * 40 + 2] & 15 == 13)
+# (v0.67: the HELP page is gone: docs/fat-chip-64-keys)
 for _ in range(40):
     if any(c.screen_row(r).startswith("> DEVICES") for r in range(25)):
         break

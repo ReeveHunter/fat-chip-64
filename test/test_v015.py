@@ -33,7 +33,7 @@ def ons(c, t0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
+check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- OCTAVE UP
 c.set("spaceAct", A_OCTUP)

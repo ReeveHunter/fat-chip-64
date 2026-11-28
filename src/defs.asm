@@ -117,11 +117,9 @@ NES_BASE_DEFAULT equ 0        ; MidiNES on channels 1-5 (its power-on default)
 BASS_LO     equ 28            ; Fat Bass: the bass voices keep the lowest note in E1-E2,
 BASS_HI     equ 40            ;  folding by octaves
 FX_EVERY    equ 4             ; ms per SID effect step (vibrato, glide, filter, width)
-DRUM_CH_IN  equ 15            ; MIDI in channel 16: the keytar's rhythm
 MIDI_FIRST  equ 24            ; note indexes: 0-23 overlay, 24-31 MIDI in
 MIDI_SLOTS  equ 8
 NIDX        equ MIDI_FIRST+MIDI_SLOTS
-MIDI_IN_CHANS equ 11          ; MIDI in plays channels 1-11 (12-16: SHS-10 accompaniment)
 MIDI_OCT_MAX equ 4
 ; actions (v0.13, v0.14): what SPACE and the keytar's three buttons do. The
 ; first A_HELD act while held, the rest on a press.
@@ -446,8 +444,6 @@ latchStyle  ds 1               ; = turns latch on in this style (SMART / HOLD / 
 fbLock      ds 1               ; Fat Bass: 0 as the sound says, 1 always, 2 never
 syncTempo   ds 1               ; 0 KEYTAR, 1 OWN, 2 SYNTHCART
 syncStart   ds 1               ; 0 KEYTAR, 1 OWN
-syncRhythm  ds 1               ; 0 IN ORDER, 1 BY FEEL, 2 IGNORE (v0.62)
-syncDrums   ds 1               ; 0 IGNORE, 1 PLAY
 syncVoice   ds 1               ; 0 PICK SOUND, 1 IGNORE
 syncWheel   ds 1               ; 0 BEND, 1 OFF
 btnTask     ds 3               ; the keytar's vibrato / portamento / sustain buttons' tasks
@@ -686,12 +682,10 @@ peSP        ds 1
 peSE        ds 1
 mvRow       ds 1               ; the menu line's screen row
 ; v0.24: the devices
-useShs      ds 1               ; DEVICES: 1 = in use
 useDh       ds 1
 useSc       ds 1
-shsTempo    ds 1               ; SHS-10 TEMPO: 0 FOLLOW, 1 IGNORE
-shsRhythm   ds 1               ;   SHS-10 RHYTHM: 0 IGNORE, 1 PLAY ON MIDINES
-shsStart    ds 1               ;   START/STOP: 0 BUILT-IN BEATS, 1 IGNORE
+shsTempo    ds 1               ; MIDI IN CLOCK: 0 FOLLOW, 1 IGNORE (v0.67: was the SHS-10's)
+shsStart    ds 1               ;   START/STOP: 0 BEATS, 1 IGNORE
 dhBreath    ds 1               ; DH-100 BREATH: 0 VOLUME, 1 VOLUME+FILTER, 2 FILTER, 3 OFF
 dhFx1       ds 1               ;   BREATH FX 1, 2 (BREATH_FX)
 dhFx2       ds 1

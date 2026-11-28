@@ -40,7 +40,7 @@ def send(c, trem, on=None):
 
 c = C64(channels=None)
 c.run_ms(500)
-check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
+check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
 m = send(c, {"depth": 100, "tremRate": 2, "shape": 0})
 check("TREMOLO 100 %, 2 Hz, TRI: depth 15, TRI, FREE, rate 200 (1 x 128 + 72)",
       dict(m) == {115: 15, 116: 0, 117: 0, 118: 1, 119: 72} or (dict(m).get(115) == 15 and dict(m).get(118) == 1 and abs(dict(m).get(119, 0) - 72) <= 1), m)

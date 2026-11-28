@@ -25,7 +25,7 @@ def chips(c, m, ms=150):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
+check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
 check("all three on at start", c.v("devOn", 3) == [1, 1, 1])
 chips(c, 0b110)
 check("m = 6: the SID off, Game Boy and NES on", c.v("devOn", 3) == [0, 1, 1], c.v("devOn", 3))

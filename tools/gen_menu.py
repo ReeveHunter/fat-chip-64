@@ -79,7 +79,10 @@ SHORT = {"OCTAVE + 5TH": "OCT + 5TH", "GATE X.X.XX.X": "X.X.XX.X", "GATE XX.XX.X
 FXNAME = {"patch": "PATCH", "tone": "TONE", "env": "ENVELOPE", "dutyseq": "DUTY STEPS"}
 PNAME = {("patch", "mono"): "MONO", ("patch", "fatBass"): "FAT BASS", ("vibrato", "vibRate"): "RATE",
          ("tremolo", "tremRate"): "RATE", ("tremolo", "tremSync"): "SYNC", ("vibrato", "vibSync"): "SYNC", ("pwm", "pwmSync"): "SYNC", ("repeat", "shift"): "SHIFT", ("pwm", "pwmRate"): "RATE", ("filter", "filtLfoRate"): "LFO RATE",
-         ("tone", "gbWaveShape"): "GB WAVE SHAPE", ("tone", "sidPwSpread"): "SID WIDTHS"}
+         ("tone", "gbWaveShape"): "GB WAVE SHAPE", ("tone", "sidPwSpread"): "SID WIDTHS",
+         # v0.67: the values are bare numbers, so the name says the unit
+         ("penv", "amount"): "SEMITONES", ("rdrop", "amount"): "SEMITONES", ("detune", "cents"): "CENTS",
+         ("vibrato", "depth"): "DEPTH CENTS", ("warble", "amount"): "CENTS", ("repeat", "shift"): "SHIFT"}
 
 
 def qdef(eid, pid):
@@ -97,7 +100,7 @@ def label(eid, pid, v):
     elif q["type"] == "enum":
         s = SHORT.get(q["values"][v], q["values"][v])
     elif q.get("unit") == "semitones":
-        s = f"{v:+d}" if pid == "shift" else f"{v:+d} SEMIS"
+        s = f"{v:+d}"                      # (v0.67: the units the name says)
     elif q["type"] == "ms" or q.get("unit") == "ms" or pid in ("delay", "stepMs"):
         s = (f"{v / 1000:g} S" if v >= 1000 else f"{v} MS") if v else "NONE" if pid == "delay" else f"{v} MS"
     elif q["type"] == "hz":
@@ -105,7 +108,7 @@ def label(eid, pid, v):
     elif pid == "sidPw":
         s = f"{round(v * 100 / 4096)} %"
     elif q.get("unit") == "cents" or pid in ("cents",) or (eid in ("vibrato", "warble") and pid in ("depth", "amount")):
-        s = f"{v} CENTS"
+        s = f"{v}"
     elif q.get("unit") == "%" or pid in ("level", "drift") or (eid in ("tremolo", "pwm") and pid == "depth"):
         s = f"{v} %"
     else:
@@ -261,34 +264,6 @@ def note(lbl, var, count, key=False, hook=None, show=None):
     return dict(kind=5, lbl=lbl, var=var, count=count, suffix="~K" if key else "~N", hook=hook, show=show)
 
 
-def text(lbl):
-    return dict(kind=4, lbl=lbl)
-
-
-# v0.40: grouped by modifier (named once), each group its colour (Reeve's
-# sheet; white for none, as the screen is black): C64 colours
-W, OR, GR, BL, RD = 1, 8, 5, 14, 10
-HELP = [
-    (W, "A-G BANK  Z-B PATCH  : ; PREV / NEXT"),
-    (W, "K KEY  L LATCH  N CHORD  M MUTE"),
-    (W, "/ RANDOM  <- UNDO  = TAP  , . NUDGE"),
-    (W, "F1 F3 OCT  F5 FAT BASS  F7 VOICES"),
-    (W, "SPACE FX  CRSR 1-KEY  RESTORE SCREEN"),
-    (OR, "SHIFT  A-G Z-B : ; LEAD  K SPLIT POINT"),
-    (OR, "  F5/F7 SPLIT  F1 F3 OCT  , . TRANSPOSE"),
-    (GR, "C=  A ARP S RPT D DUTY F FILT G GLIDE"),
-    (GR, "  H DETUNE J WARBLE K BLIP Z ATK X REL"),
-    (GR, "  C TREM V VIB B BEND IN N OUT M PWM"),
-    (GR, "  CRSR SETTING/VALUE  , . SPEED  L SYNC"),
-    (GR, "  : ; EFFECT  RETURN MENU  SPACE VINYL"),
-    (GR, "  F1 F3 ARP OCT  F5 SYNC  F7 TYPE"),
-    (BL, "STOP  A-G Z-B BEAT  : ; PREV / NEXT"),
-    (BL, "  , . TEMPO  SPACE FILL  TAP: GO/STOP"),
-    (BL, "  N PART H HATS J ACCENT K TIME L SWING"),
-    (RD, "CTRL  A S D CHIPS  F SYNTHCART SYNC"),
-    (RD, "  H J TUNE  L LATCH STYLE  M PANIC"),
-    (RD, "  , . SPACE FX  F1 F3 MIDI  CRSR DRONE"),
-]
 
 
 CHANS = [f"{i + 1}-{i + 5}" for i in range(12)]
@@ -307,8 +282,6 @@ def add_page(name, title, header, items, parent=None):
 
 def build_pages(params, effects):
     add_page("main", "FAT CHIP 64 MENU", None, [
-        page("HELP: THE KEYS", "help"),
-        None,
         enum("SID", "devOn", ["OFF", "ON"], hook="DevHook"),
         enum("GAME BOY", "devOn+1", ["OFF", "ON"], hook="DevHook"),
         enum("MIDINES", "devOn+2", ["OFF", "ON"], hook="DevHook"),
@@ -319,11 +292,10 @@ def build_pages(params, effects):
         page("DEVICES", "devices"),
         page("BEATS", "beats"),
         None,
-        page("YAMAHA SHS-10", "shs", show="useShs"),
+        page("MIDI IN", "midi"),
         page("CASIO DH-100", "dh", show="useDh"),
         page("ATARI SYNTHCART", "sc", show="useSc"),
     ])
-    add_page("help", "HELP: THE KEYS", None, [text(h) for c, h in HELP], parent="main")
     pl = []
     for e in effects:
         if e["eid"] == "patch":
@@ -339,7 +311,7 @@ def build_pages(params, effects):
     add_page("playing", "PLAYING", None, [
         enum("LATCH STYLE (CTRL L)", "latchStyle", ["SMART", "HOLD", "ADD"], hook="LatchStyleHook"),
         enum("SPACE", "spaceAct", ACTS, hook="SpaceHook"),
-        enum("BEND RANGE", "bendRange", [f"{i} SEMITONE" + ("S" if i > 1 else "") for i in range(1, 25)]),
+        enum("BEND SEMITONES", "bendRange", [str(i) for i in range(1, 25)]),
         enum("BEAT TEMPO", "beatTempo", ["DEFAULT", "IGNORE"]),
         None,
         number("FINE TUNE", "fineTune", 50, " CENTS", hook="SyncDerive"),
@@ -362,7 +334,6 @@ def build_pages(params, effects):
         enum("EACH PRESS", "okpRing", ["CUTS", "RINGS ON"]),
     ], parent="main")
     add_page("devices", "DEVICES", "WHAT'S PLUGGED IN", [
-        enum("YAMAHA SHS-10", "useShs", ["NOT USED", "IN USE"], hook="UseHook"),
         enum("CASIO DH-100", "useDh", ["NOT USED", "IN USE"], hook="UseHook"),
         enum("ATARI SYNTHCART", "useSc", ["NOT USED", "IN USE"], hook="UseHook"),
         None,
@@ -383,16 +354,15 @@ def build_pages(params, effects):
         enum("GAME BOY HATS", "gbBtHats", ["SAMPLE", "NOISE"]),
         enum("GAME BOY TREMOLO", "gbBtTrem", ["OFF FOR BEATS", "ALWAYS"]),
     ], parent="main")
-    add_page("shs", "YAMAHA SHS-10", "MIDI IN", [
-        enum("TEMPO", "shsTempo", ["FOLLOW", "IGNORE"], hook="SyncDerive"),
-        enum("SHS-10 RHYTHM", "shsRhythm", ["IGNORE", "PLAY ON MIDINES"], hook="SyncDerive"),
-        enum("START/STOP", "shsStart", ["BUILT-IN BEATS", "IGNORE"], hook="SyncDerive"),
-        enum("VOICE BUTTONS", "syncVoice", ["PICK PATCH", "IGNORE"]),
-        enum("RHYTHM BUTTONS", "syncRhythm", ["IN ORDER", "BY FEEL", "IGNORE"]),
-        enum("WHEEL", "syncWheel", ["BEND", "OFF"], hook="WheelHook"),
-        enum("VIBRATO BUTTON", "btnTask", ACTS),
-        enum("PORTAMENTO BUTTON", "btnTask+1", ACTS),
-        enum("SUSTAIN BUTTON", "btnTask+2", ACTS),
+    add_page("midi", "MIDI IN", "ANY CONTROLLER, ANY CHANNEL", [
+        enum("CLOCK", "shsTempo", ["FOLLOW", "IGNORE"], hook="SyncDerive"),
+        enum("START/STOP", "shsStart", ["BEATS", "IGNORE"], hook="SyncDerive"),
+        enum("PROGRAM CHANGE", "syncVoice", ["PICK PATCH", "IGNORE"]),
+        enum("PITCH WHEEL", "syncWheel", ["BEND", "OFF"], hook="WheelHook"),
+        None,
+        enum("CC 1 (MOD WHEEL)", "btnTask", ACTS),
+        enum("CC 64 (SUSTAIN)", "btnTask+2", ACTS),
+        enum("CC 65 (PORTAMENTO)", "btnTask+1", ACTS),
     ], parent="main")
     add_page("dh", "CASIO DH-100", "MIDI IN: BREATH, BUTTONS", [
         enum("BREATH", "dhBreath", ["VOLUME", "VOLUME+FILTER", "FILTER", "OFF"], hook="BreathFxHook"),
@@ -497,8 +467,6 @@ def main():
     lo_hi("hookL", hl)
     lo_hi("showL", sl)
     lo_hi("mLbl", lbls)
-    A(f"HELP_FIRST  equ {PAGES[pnum['help']]['first']}")
-    A("helpCol:    .byte " + ",".join(str(c) for c, h in HELP))
     pool = {}
 
     def sref(v):
@@ -559,11 +527,19 @@ def main():
     lo_hi("prK", [f"pK{i}" for i in range(len(params))])
     lo_hi("prL", [f"pS{i}" for i in range(len(params))])
     A("prLW:       .byte " + ",".join(str(max(len(x) for x in p["labels"]) + 1) for p in params))
+    seen_lbl = {}
     for i, p in enumerate(params):
         A(f"pW{i}:  .byte " + ",".join(f"{f},${m:02X},${v:02X}" for row in p["writes"] for f, m, v in row))
         A(f"pK{i}:  .word " + ",".join(str(k) for k in p["keyvals"]))
-        w = max(len(x) for x in p["labels"])
-        A(f"pS{i}:  .byte " + ",".join(f'"{x:{w}s}",0' for x in p["labels"]))
+        # v0.67: one after another (StepLabel counts the 0s and pads to prLW - 1),
+        # a list the same as an earlier one shared
+        key = tuple(p["labels"])
+        assert sum(len(x) + 1 for x in key) < 256, p["labels"]
+        if key in seen_lbl:
+            A(f"pS{i}  equ {seen_lbl[key]}")
+        else:
+            seen_lbl[key] = f"pS{i}"
+            A(f"pS{i}:  .byte " + ",".join(f'"{x}",0' for x in p["labels"]))
     A("; the effects: params, off row (field, value), detection count, on row, dice")
     A("efP0:       .byte " + ",".join(str(e["p0"]) for e in effects))
     A("efNP:       .byte " + ",".join(str(e["np"]) for e in effects))
@@ -622,7 +598,7 @@ def main():
             cur = [None, []]
             groups.append(cur)
         cur[1].append(line)
-    room, high_kinds = 8150, []
+    room, high_kinds = int(os.environ.get("MENU_HI_ROOM", 7000)), []
     for kind in ["pS", "mL", "pW", "mS", "pK", "eO", "eN", "mU"]:
         n = sum(size(l) for g in groups if g[0] == kind for l in g[1])
         if n <= room:

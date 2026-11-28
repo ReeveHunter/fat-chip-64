@@ -1,22 +1,21 @@
-; Fat Chip 64 - device sync (v0.13): the keytar (Yamaha SHS-10) and Synthcart
+; Fat Chip 64 - device sync (v0.13): MIDI in (v0.67: any controller; it was
+; the Yamaha SHS-10's page, whose own parts - its rhythm on channel 16 and its
+; style buttons - are gone: git tag shs10-last) and Synthcart
 ;
-; Menu, DEVICE SYNC (defaults first):
+; Menu, MIDI IN (defaults first), as it was for the keytar:
 ;   TEMPO FROM      KEYTAR / OWN / SYNTHCART
-;                   KEYTAR: its MIDI clock (24 a beat, sent even while stopped)
+;                   KEYTAR: MIDI clock (24 a beat, sent even while stopped)
 ;                   sets the tempo, averaged over beats (the clock jitters about
 ;                   4 ms). Without a clock for 300 ms, Fat Chip's own tempo
 ;                   (B taps) is back. SYNTHCART: taps and beat tempos snap to
 ;                   Synthcart's ten NTSC tempos (whole Atari frames a beat).
 ;   START/STOP      KEYTAR / OWN: its Start and Stop start / stop the beat demo
 ;                   (a start waits for the next beat clock: step 1 lands on it)
-;   RHYTHM BUTTONS  IN ORDER / BY FEEL / IGNORE: its rhythm (Program Change on
-;                   channel 16, the keytar's 00-44) picks beat n (bank n / 5), or
-;                   the beat nearest its style (styleBeat)
-;   DRUM NOTES      IGNORE / PLAY: its drum notes on the MidiNES (drums.asm)
-;   VOICE BUTTONS   PICK SOUND / IGNORE: its voice (Program Change 0-24 on the
-;                   key channel) picks a sound (voiceSound)
-;   WHEEL           BEND / OFF: +-BEND RANGE on everything (bend.asm)
-;   VIBRATO / PORTAMENTO / SUSTAIN BUTTON  an action each (CC 1 / 65 / 64,
+;   PROGRAM CHANGE  PICK PATCH / IGNORE: Program Change 0-24 picks bank slot
+;                   n (bank n / 5, slot n mod 5)
+;   PITCH WHEEL     BEND / OFF: +-BEND RANGE on everything (bend.asm)
+;   CC 1 / CC 65 / CC 64  an action each (the keytar's vibrato / portamento /
+;                   sustain buttons;
 ;                   127 held, 0 let go), the same list as SPACE (actions below)
 ;
 ; The IRQ (RxByte) counts clocks itself and stamps every 24th (clkAt*, to the
@@ -403,33 +402,11 @@ KeytarStop:
 .x:
 	rts
 
-; Program Change rxD1 on channel 16: a rhythm style
-KeytarStyle:
-	subroutine
-	lda useShs
-	beq .x
-	ldx rxD1
-	cpx #25
-	bcs .x
-	lda syncRhythm          ; v0.62: IN ORDER (00-44: bank, then beat), BY FEEL, IGNORE
-	cmp #2
-	bcs .x
-	txa
-	ldy syncRhythm
-	beq .go
-	lda styleBeat,x
-.go:
-	jmp BeatChoose
-.x:
-	rts
-
 ; Program Change rxD1 on a key channel: a voice button
 KeytarVoice:
 	subroutine
-	lda useShs
-	bne .shs
 	lda useDh
-	beq .x
+	beq .shs
 	jmp DhTone              ; (the DH-100's tone buttons)
 .shs:
 	lda syncVoice
@@ -446,16 +423,6 @@ KeytarVoice:
 	jmp SoundSet
 .x:
 	rts
-
-; the keytar's 25 rhythm styles -> the beats (v0.61: the 25 in BASIC, CHILL,
-; BREAK, GLOBE, SWING), for RHYTHM BUTTONS BY FEEL
-;   R&B 1/2 SLOW JAM / NEW JACK, Fusion 1/2 FUNK / BREAKS, Slow Rock TRIP HOP,
-;   Swing JAZZ, Big Band / Dixie / Boogie Woogie SHUFFLE, Jazz Waltz JAZZ,
-;   R'n'R 1/2 ROCK / SHUFFLE, Rock-a-Ballad SLOW JAM, Hard Rock ROCK, Reggae
-;   REGGAE, Bossa Nova BOSSA, Samba SALSA, Tango CUMBIA, Country MOTORIK,
-;   Bluegrass DISCO, March 1/2 TECHNO / HOUSE, Lullaby LO-FI, Baroque
-;   SYNTHPOP, Fanfare AFROBEAT
-styleBeat:  .byte 9,22,3,12,6,23,20,20,20,23,0,20,9,0,17,18,15,16,4,1,14,13,5,2,19
 
 ; Control change rxD1 = rxD2 on a key channel: the three buttons
 KeytarCC:
@@ -481,8 +448,6 @@ KeytarCC:
 	lda dhAct
 	jmp DoAction
 .shs:
-	lda useShs
-	beq .x
 	ldx #2
 .f:
 	lda btnCC,x
@@ -806,8 +771,6 @@ StutterTick:
 ; Pitch Bend rxD1 / rxD2 on a key channel: the wheel
 KeytarWheel:
 	subroutine
-	lda useShs
-	beq .x
 	lda syncWheel
 	bne .x
 	lda rxD2

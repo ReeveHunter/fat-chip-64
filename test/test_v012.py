@@ -78,8 +78,8 @@ check("startup: sample channel at full pitch (CC3 = 127 on ch 5)", (0xB4, 3, 127
 check("screen: Game Boy CH 11-15, MidiNES CH 1-5, no overlap warning",
       c.screen_row(5).startswith("GAME BOY 11-15") and c.screen_row(6).startswith("MIDINES  1-5 ")
       and "OVERLAP" not in c.screen_row(7), (c.screen_row(5), c.screen_row(6)))
-check("screen: header V0.66, sound line, tempo / beat line",
-      "V0.66" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
+check("screen: header V0.67, sound line, tempo / beat line",
+      "V0.67" in c.screen_row(0) and c.screen_row(2).startswith("FAT   1 FAT ") and "POLY" in c.screen_row(2)
       and "FAT BASS" in c.screen_row(2) and c.screen_row(12).rstrip() == "TEMPO 120 BPM  A    ROCK     STOP",
       (c.screen_row(2), c.screen_row(12)))
 t0 = c.cpu.processorCycles
@@ -203,35 +203,7 @@ c.tap("v", ms=200)
 c.release("q", "t", ms=2500)
 check("sound changes while holding: nothing left on", notes_on(c.midi()) == {}, notes_on(c.midi()))
 
-# ---------------------------------------------------------------- keytar drums (MIDI in ch 16)
-c.set("syncDrums", 1)                        # v0.13: the menu's DRUM NOTES = PLAY (default IGNORE)
-t0 = c.cpu.processorCycles
-c.midi_in(0x9F, 45, 127, ms=20)              # kick accent
-c.midi_in(0x9F, 57, 64, ms=20)               # hat
-msgs = since(c, t0)
-dmc = [x[1:] for x in msgs if (x[1] & 15) == DMC]
-check("keytar kick (accent): bank A (CC14 = 0), sample A91 (v0.61: ROCK's kit)",
-      (0xB4, 14, 0) in dmc and (0x94, 91, 127) in dmc, dmc)
-nz = [x[1:] for x in msgs if (x[1] & 15) == NOISE]
-check("keytar hat: NES noise level (CC7) and a closed-hat note 49-51",
-      any(s == 0xB3 and a == 7 for s, a, _ in nz) and any(s == 0x93 and 49 <= a <= 51 for s, a, _ in nz), nz)
-c.run_ms(60)
-offs = [x for x in since(c, t0) if x[1] == 0x83 or (x[1] == 0x93 and x[3] == 0)]
-check("keytar hat: noise note-off after ~45 ms", len(offs) == 1, offs)
-t0 = c.cpu.processorCycles
-c.midi_in(0x9F, 52, 56, ms=5)               # snare ghost
-c.midi_in(0x9F, 45, 64, ms=20)              # a kick 2 ms later: more important, plays
-d = [x[1:] for x in since(c, t0) if (x[1] & 0xF0) == 0x90 and (x[1] & 15) == DMC and x[3]]
-check("keytar snare ghost (A9), then a kick right after it still plays (A68)", d == [(0x94, 9, 127), (0x94, 68, 127)], d)
-t0 = c.cpu.processorCycles
-c.midi_in(0x9F, 45, 64, ms=2)
-c.midi_in(0x9F, 52, 64, ms=20)              # snare 2 ms after a kick: dropped
-d = [x[1:] for x in since(c, t0) if (x[1] & 0xF0) == 0x90 and (x[1] & 15) == DMC and x[3]]
-check("a snare right after a kick is dropped (one sample at a time)", d == [(0x94, 68, 127)], d)
-t0 = c.cpu.processorCycles
-c.midi_in(0x9B, 60, 64, 0x9E, 36, 64, ms=40)   # accompaniment channels: still ignored
-check("channels 12-15 still ignored", since(c, t0) == [], since(c, t0))
-c.midi_in(0x8B, 60, 0, 0x8E, 36, 0, ms=20)
+# (v0.67: the keytar's drum notes on channel 16 are gone: git tag shs10-last)
 
 # ---------------------------------------------------------------- beats (v0.61: the 25)
 def pick(c, n):
@@ -293,9 +265,6 @@ check("SHIFT+F7 panic stops the beat", c.v("beatRun") == 0 and not [x for x in s
 
 # NES off: the drums go quiet
 c._raw_press("cbm", ms=10); c._raw_tap("f5", ms=40); c._raw_release("cbm", ms=100)
-t0 = c.cpu.processorCycles
-c.midi_in(0x9F, 45, 127, 0x9F, 57, 64, ms=60)
-check("NES off: keytar drums send nothing", since(c, t0) == [], since(c, t0))
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

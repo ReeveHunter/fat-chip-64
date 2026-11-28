@@ -25,7 +25,7 @@ P = json.load(open(os.path.join(ROOT, "patch", "patches.json")))
 B = os.path.join(ROOT, "bin")
 c = C64(prg=os.path.join(B, "fatchip64-image.prg"), sym=os.path.join(B, "fatchip64.sym"), channels=None)
 c.run_ms(400)
-check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
+check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
 check("25 built-in patches", c.sym["NUM_SOUNDS"] == 25 and len(P["patches"]) == 25, c.sym["NUM_SOUNDS"])
 check("the banks: FAT, DREAM, GLARE, CYCLE, SPARK", [b["name"] for b in P["banks"]] == ["FAT", "DREAM", "GLARE", "CYCLE", "SPARK"])
 want = ["FAT CHIPS", "FAT ATTACK", "FAT VIBES", "FAT ORGAN", "FAT WARBLE", "CAVE MYSTERY PAD", "DUTIFUL PADDING",

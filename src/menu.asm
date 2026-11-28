@@ -36,9 +36,6 @@ MenuPage:
 .in:
 	ldx menuRow             ; (a hidden line or text: the first one to choose)
 	jsr ItemShown
-	beq .f
-	lda mKind,x
-	cmp #4
 	bne .vis
 .f:
 	ldy menuPage
@@ -49,9 +46,6 @@ MenuPage:
 .fl:
 	stx menuRow
 	jsr ItemShown
-	beq .fn
-	lda mKind,x
-	cmp #4
 	bne .vis
 .fn:
 	inx
@@ -109,10 +103,6 @@ MenuDraw:
 	ldx exK
 	jsr ItemRow
 	sta mvRow
-	ldx exK
-	lda mKind,x
-	cmp #4
-	beq .txt
 	lda #<mDots             ; the dots, then the label over them
 	sta ptr
 	lda #>mDots
@@ -120,25 +110,13 @@ MenuDraw:
 	ldx #2
 	ldy mvRow
 	jsr PrintAt
-	ldx #2
-	bne .lb
-.txt:
-	lda exK                 ; (v0.40: the help's lines in their group's colour)
-	sec
-	sbc #HELP_FIRST
-	tax
-	lda helpCol,x
-	jsr RowColour
-	ldx #1                  ; (text: from column 1)
-.lb:
-	stx t0
 	ldy mvRow
 	ldx exK
 	lda mLblLo,x
 	sta ptr
 	lda mLblHi,x
 	sta ptr+1
-	ldx t0
+	ldx #2
 	jsr PrintAt
 .n:
 	ldx exK
@@ -244,27 +222,6 @@ ColourReset:
 	bne .c
 	rts
 
-; A = colour: all of row mvRow (keeps nothing but mvRow)
-RowColour:
-	subroutine
-	pha
-	lda #1
-	sta colDirty
-	ldy mvRow
-	ldx #0
-	jsr ScreenAddr
-	lda ptr2+1
-	clc
-	adc #>(COLRAM-SCREEN)
-	sta ptr2+1
-	pla
-	ldy #39
-.c:
-	sta (ptr2),y
-	dey
-	bpl .c
-	rts
-
 ; every value on the page and the cursor (and the patch name, on its pages)
 MenuVals:
 	subroutine
@@ -305,11 +262,6 @@ MenuVals:
 ; line X: cursor and value
 MenuVal:
 	subroutine
-	lda mKind,x
-	cmp #4
-	bne .v
-	rts                     ; (text: nothing to show)
-.v:
 	stx exK
 	jsr ItemRow
 	sta mvRow
@@ -549,27 +501,48 @@ mOffTxt:    .byte "OFF",0
 mBar:       .byte "                     SHIFT+RETURN: BACK ",0
 mDots:      .byte ".................... ",0
 
-; A = step of param Y -> ptr = its label (prLW bytes each)
+; A = step of param Y -> ptr = numBuf: its label, padded to prLW - 1
+; (v0.67: the labels one after another, each ending in 0; was prLW bytes each)
 StepLabel:
 	subroutine
 	tax
+	lda prLW,y
+	sta t0
 	lda prLLo,y
 	sta ptr
 	lda prLHi,y
 	sta ptr+1
+	ldy #0
 	txa
-	beq .x
-.m:
-	lda ptr
-	clc
-	adc prLW,y
-	sta ptr
-	bcc .n
-	inc ptr+1
-.n:
+	beq .c
+.sk:
+	lda (ptr),y             ; (a list is under 256 bytes: gen_menu.py)
+	iny
+	cmp #0
+	bne .sk
 	dex
-	bne .m
-.x:
+	bne .sk
+.c:
+	lda (ptr),y
+	beq .pad
+	sta numBuf,x
+	iny
+	inx
+	bne .c
+.pad:
+	inx
+	cpx t0
+	bcs .z
+	lda #$20
+	sta numBuf-1,x
+	bne .pad
+.z:
+	lda #0
+	sta numBuf-1,x
+	lda #<numBuf
+	sta ptr
+	lda #>numBuf
+	sta ptr+1
 	rts
 
 ; A = key code (commands only: notes never come here)
@@ -589,10 +562,6 @@ MenuKey:
 	ldx menuRow
 	lda mKind,x
 	beq .open
-	cmp #4
-	bne .nt
-	rts                     ; (a line of text)
-.nt:
 	cmp #2
 	bne .n2
 	jmp .fxt
@@ -771,9 +740,6 @@ MenuKey:
 	adc pgFirst,y
 	tax
 	jsr ItemShown
-	beq .m
-	lda mKind,x
-	cmp #4
 	beq .m
 	stx menuRow
 	ldx t3

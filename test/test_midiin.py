@@ -66,9 +66,9 @@ check("data without a status (after sysex) is ignored", sounding(c) == set())
 c.run_ms(900)                               # (v0.19: the NES rings out with the SID)
 n0 = len(c.midi())
 c.midi_in(0x9B, 60, 64, 0x9F, 36, 127, 0x9E, 48, 64, ms=80)   # ch 12, 16, 15
-check("channels 12-16 (SHS-10 accompaniment, drums) are ignored, nothing passed on",
-      len(c.midi()) == n0, c.midi()[n0:])
+check("v0.67: channels 12-16 play too (the SHS-10's are gone)", {60, 36, 48} <= sounding(c), sounding(c))
 c.midi_in(0x8B, 60, 0, 0x8F, 36, 0, 0x8E, 48, 0, ms=20)
+c.run_ms(900)
 c.midi_in(0x9A, 67, 64, ms=120)             # ch 11 plays (and the screen catches up)
 check("channel 11 plays", 67 in sounding(c) and "CH11" in c.screen_row(16), c.screen_row(16))
 c.midi_in(0x8A, 67, 0, ms=60)

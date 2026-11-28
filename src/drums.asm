@@ -301,37 +301,6 @@ NoiseOff:
 .x:
 	rts
 
-; ------------------------------------------------------------ keytar
-; MIDI in channel 16 note-on (rxD1, velocity rxD2)
-KeytarDrum:
-	subroutine
-	ldx #4
-.f:
-	lda keytarNote,x
-	cmp rxD1
-	beq .hit
-	dex
-	bpl .f
-	rts
-.hit:
-	lda keytarKind,x
-	pha
-	ldx #2                  ; 80 = the SHS-10's accent (measured), 64 hit, 56 ghost
-	lda rxD2
-	cmp #72
-	bcs .l
-	dex
-	cmp #61
-	bcs .l
-	dex
-.l:
-	ldy #1                  ; the keytar's one tom: mid
-	pla
-	jmp DrumHit
-
-keytarNote: .byte 45,48,52,57,62
-keytarKind: .byte DK_KICK,DK_TOM,DK_SNARE,DK_CH,DK_CY
-
 ; ------------------------------------------------------------ v0.60: beats under the I/O
 ; BeatLoad: copy beat beatSel's kit, name and steps from under the I/O at
 ; $D000 (beatsio.asm) into kitBuf, nameBuf and beatBuf

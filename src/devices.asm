@@ -43,33 +43,20 @@ BFX_HELD    equ 5
 ; the devices' settings -> what the MIDI code checks
 SyncDerive:
 	subroutine
-	ldx #TEMPO_OWN
-	lda useShs
+	ldx #TEMPO_SC           ; (v0.67: the Synthcart's sync first: it's asked for;
+	lda useSc               ;  then MIDI IN CLOCK, FOLLOW by default)
 	beq .t1
-	lda shsTempo
-	bne .t1
-	ldx #TEMPO_KEYTAR
+	lda scSync
 	bne .t
 .t1:
-	lda useSc
-	beq .t
-	lda scSync
-	beq .t
-	ldx #TEMPO_SC
+	ldx #TEMPO_OWN
+	lda shsTempo
+	bne .t
+	ldx #TEMPO_KEYTAR
 .t:
 	stx syncTempo
-	lda #1                  ; start / stop: 0 = the keytar's
-	ldx useShs
-	beq .s
-	lda shsStart
-.s:
+	lda shsStart            ; start / stop: 0 = MIDI in's
 	sta syncStart
-	lda #0                  ; drum notes: 1 = play them
-	ldx useShs
-	beq .d
-	lda shsRhythm
-.d:
-	sta syncDrums
 	jsr BreathFlags
 	jsr ScTune              ; (Synthcart: tuning and key)
 	jsr ApplySettings       ; (DH-100 NOTES)

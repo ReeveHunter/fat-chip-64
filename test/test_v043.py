@@ -30,7 +30,7 @@ c.keys_039 = False
 c.fkeys_036 = False
 c.menu_fkeys = False
 c.run_ms(400)
-check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
+check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
 
 c._raw_tap("return", ms=100)
 r = rows(c)
@@ -68,15 +68,7 @@ c._raw_tap("f1", ms=80)
 check("F1 in the menu: its play job (an octave up)", c.v("octBase") == oct0 + 12, (oct0, c.v("octBase")))
 c._raw_tap("f3", ms=80)
 
-# the help page
-c._raw_press("lshift", ms=10); c._raw_tap("return", ms=60); c._raw_release("lshift", ms=40)
-for _ in range(30):
-    if sel_row(c).startswith("> HELP"):
-        break
-    c._raw_tap("crsrdown", ms=25)
-c._raw_tap("return", ms=100)
-check("HELP: / RANDOM", any("/ RANDOM" in x for x in rows(c)) and not any("DICE" in x for x in rows(c)),
-      [x for x in rows(c) if "/" in x][:2])
+# (v0.67: the help page is gone)
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

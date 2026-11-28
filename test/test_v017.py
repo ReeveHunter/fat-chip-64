@@ -43,7 +43,7 @@ c = C64(channels=None)
 c.run_ms(400)
 c.set("detLock", 2)                          # (no detune on top: exact sums)
 c.set("detNow", 0)
-check("header V0.66", "V0.66" in c.screen_row(0), c.screen_row(0))
+check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
 check("Game Boy bend range 24 sent at start (CC 85 = 127)",
       all((0xB0 | ch, 85, 127) in [(s, a, b) for _, s, a, b in c.midi()] for ch in GB))
 
@@ -94,14 +94,14 @@ c.set("bendRange", 1)
 
 # menu: BEND RANGE goes to 24
 c.tap("return", ms=80)
-c.set("menuRow", 5)                          # PLAYING (HELP first)
+c.set("menuRow", 4)                          # PLAYING (v0.67: no HELP)
 c.tap("return", ms=80)
 c.tap("crsrdown", ms=30); c.tap("crsrdown", ms=30)   # BEND RANGE
 for _ in range(22):
     c.tap("crsrright", ms=20)
-check("menu: BEND RANGE up to 24 SEMITONES", c.v("bendRange") == 23 and "24 SEMITONES" in c.screen_row(4), c.screen_row(4))
+check("menu: BEND SEMITONES up to 24", c.v("bendRange") == 23 and c.screen_row(4).split()[-1] == "24", c.screen_row(4))
 c.tap("crsrright", ms=40)
-check("... then round to 1 SEMITONE", c.v("bendRange") == 0 and "1 SEMITONE" in c.screen_row(4), c.screen_row(4))
+check("... then round to 1", c.v("bendRange") == 0 and c.screen_row(4).split()[-1] == "1", c.screen_row(4))
 c.press("lshift", ms=10); c.tap("return", ms=80); c.tap("return", ms=80); c.release("lshift", ms=100)
 
 # VINYL STOP let go from a stop: the beat comes straight back

@@ -57,18 +57,18 @@ c.run_ms(400)
 c.tap("return", ms=60)
 check("RETURN: the menu", c.v("menuOn") == 1 and "MENU" in c.screen_row(0), c.screen_row(0))
 rows = [c.screen_row(r) for r in range(25)]
-check("menu: HELP, the chips, PATCH, PLAYING, DEVICES, BEATS (v0.61), the SHS-10 (in use)",
-      rows[2].startswith("> HELP") and rows[4][2:].startswith("SID") and rows[5][2:].startswith("GAME BOY")
-      and rows[6][2:].startswith("MIDINES") and rows[8][2:].startswith("PATCH") and rows[9][2:].startswith("PLAYING")
-      and rows[10][2:].startswith("ONE KEY PLAY") and rows[11][2:].startswith("DEVICES") and rows[12][2:].startswith("BEATS")
-      and rows[14][2:].startswith("YAMAHA SHS-10") and rows[15].strip() == "", rows[2:16])
-for _ in range(5):
+check("menu: the chips, PATCH, PLAYING, DEVICES, BEATS (v0.61), MIDI IN (v0.67: no HELP, no SHS-10)",
+      rows[2].startswith("> SID") and rows[3][2:].startswith("GAME BOY")
+      and rows[4][2:].startswith("MIDINES") and rows[6][2:].startswith("PATCH") and rows[7][2:].startswith("PLAYING")
+      and rows[8][2:].startswith("ONE KEY PLAY") and rows[9][2:].startswith("DEVICES") and rows[10][2:].startswith("BEATS")
+      and rows[12][2:].startswith("MIDI IN") and rows[13].strip() == "", rows[2:14])
+for _ in range(4):
     c.tap("crsrdown", ms=40)
-check("CRSR DOWN x5 (past the gaps): PLAYING", c.screen_row(9).startswith("> PLAYING"), c.screen_row(9))
+check("CRSR DOWN x4 (past the gap): PLAYING", c.screen_row(7).startswith("> PLAYING"), c.screen_row(7))
 c.tap("return", ms=60)
 rows = [c.screen_row(r) for r in range(25)]
 check("PLAYING: its page and defaults", "PLAYING" in rows[0] and rows[2].startswith("> LATCH STYLE") and "SMART" in rows[2]
-      and "BEND DOWN" in rows[3] and "2 SEMITONES" in rows[4] and "DEFAULT" in rows[5], rows[2:6])
+      and "BEND DOWN" in rows[3] and "BEND SEMITONES" in rows[4] and rows[4].split()[-1] == "2" and "DEFAULT" in rows[5], rows[2:6])
 c.tap("crsrright", ms=40)
 check("CRSR RIGHT: HOLD", c.v("latchStyle") == 1 and "HOLD" in c.screen_row(2), c.screen_row(2))
 c.tap("=", ms=40)
@@ -79,8 +79,8 @@ c.press("q", ms=100)
 check("notes play while the menu is up", 60 - 12 in [a for _, s, a, b in since(c, t0) if (s & 0xF0) == 0x90 and b])
 c.release("q", ms=100)
 c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=40)
-check("SHIFT+RETURN: back to the main page, on PLAYING", c.v("menuPage") == 0 and c.screen_row(9).startswith("> PLAYING"),
-      c.screen_row(9))
+check("SHIFT+RETURN: back to the main page, on PLAYING", c.v("menuPage") == 0 and c.screen_row(7).startswith("> PLAYING"),
+      c.screen_row(7))
 c.press("lshift", ms=10); c.tap("return", ms=60); c.release("lshift", ms=250)
 check("SHIFT+RETURN again: back to play, the screen redrawn", c.v("menuOn") == 0 and "FAT CHIP 64" in c.screen_row(0)
       and c.screen_row(2).startswith("FAT   1 FAT") and c.screen_row(24).startswith("F5 FAT BASS"), (c.screen_row(0), c.screen_row(2)))
@@ -106,7 +106,6 @@ c.tap("b", ms=200); c.tap("b", ms=200); c.tap("b", ms=200); c.tap("b", ms=50)
 check("clock stopped: taps set the tempo again (150)", abs(c.v("bpm") - 150) <= 2, c.v("bpm"))
 
 # ---------------------------------------------------------------- keytar start / stop, beats in step
-c.set("syncDrums", 0)
 clocks(c, 100, 2.5)                          # (the keytar's clock runs even while stopped)
 c.run_ms(1400)
 beats = clocks(c, 100, 8, start=True, seed=7)
@@ -133,19 +132,9 @@ c.midi_in(0xFC, ms=200)
 check("keytar Stop: the beat stops", c.v("beatRun") == 0)
 
 # ---------------------------------------------------------------- rhythm / voice buttons
-c.midi_in(0xCF, 13, ms=200)                 # the keytar's 23 (Hard Rock)
-check("v0.62 RHYTHM BUTTONS IN ORDER: 23 (PC 13) picks bank 3's 4th, HOUSE", c.v("beatSel") == 13 and "HOUSE" in c.screen_row(12), c.screen_row(12))
-c.set("syncRhythm", 1)                      # BY FEEL
-c.midi_in(0xCF, 13, ms=200)
-check("BY FEEL: Hard Rock (PC 13) picks ROCK", c.v("beatSel") == 0 and "ROCK" in c.screen_row(12), c.screen_row(12))
-c.midi_in(0xCF, 9, ms=200)                  # Jazz Waltz
-check("BY FEEL: Jazz Waltz picks JAZZ", c.v("beatSel") == 23)
-c.set("syncRhythm", 2)                      # IGNORE
-c.midi_in(0xCF, 0, ms=200)
-check("IGNORE: the rhythm buttons pick nothing", c.v("beatSel") == 23)
-c.set("syncRhythm", 0)
+# (v0.67: the keytar's rhythm buttons, channel 16, are gone: git tag shs10-last)
 c.midi_in(0xC0, 4, ms=300)                  # voice button 4 on the key channel
-check("voice button (PC 4 on ch 1): WHISTLE", c.v("soundMode") == 4 and "WHISTLE" in c.screen_row(2), c.screen_row(2))
+check("PROGRAM CHANGE (PC 4 on ch 1): WHISTLE", c.v("soundMode") == 4 and "WHISTLE" in c.screen_row(2), c.screen_row(2))
 c.midi_in(0xC0, 0, ms=300)
 check("voice button 0: FAT", c.v("soundMode") == 0)
 
