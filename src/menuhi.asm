@@ -9,138 +9,137 @@ mL4:      .byte "PLAYING ",0
 mL5:      .byte "ONE KEY PLAY ",0
 mL6:      .byte "DEVICES ",0
 mL7:      .byte "BEATS ",0
-mL8:      .byte "MIDI IN ",0
-mL9:      .byte "CASIO DH-100 ",0
-mL10:      .byte "ATARI SYNTHCART ",0
-mL11:      .byte "MONO ",0
-mL12:      .byte "FAT BASS ",0
-mL13:      .byte "TONE ",0
-mL14:      .byte "ENVELOPE ",0
-mL15:      .byte "BEND IN ",0
-mL16:      .byte "BEND OUT ",0
-mL17:      .byte "DETUNE ",0
-mL18:      .byte "VIBRATO ",0
-mL19:      .byte "GLIDE ",0
-mL20:      .byte "WARBLE ",0
-mL21:      .byte "TREMOLO ",0
-mL22:      .byte "FILTER ",0
-mL23:      .byte "PWM ",0
-mL24:      .byte "DUTY STEPS ",0
-mL25:      .byte "REPEAT ",0
-mL26:      .byte "SID WAVE ",0
-mL27:      .byte "SID PULSE WIDTH ",0
-mL28:      .byte "SID WIDTHS ",0
-mL29:      .byte "GB PULSE 1 DUTY ",0
-mL30:      .byte "GB PULSE 2 DUTY ",0
-mL31:      .byte "GB WAVE MODE ",0
-mL32:      .byte "GB WAVE SHAPE ",0
-mL33:      .byte "NES PULSE 1 DUTY ",0
-mL34:      .byte "NES PULSE 2 DUTY ",0
-mL35:      .byte "ATTACK ",0
-mL36:      .byte "DECAY ",0
-mL37:      .byte "SUSTAIN ",0
-mL38:      .byte "RELEASE ",0
-mL39:      .byte "SEMITONES ",0
-mL40:      .byte "TIME ",0
-mL41:      .byte "SHAPE ",0
-mL42:      .byte "CLICK ",0
-mL43:      .byte "SEMITONES ",0
-mL44:      .byte "TIME ",0
-mL45:      .byte "CENTS ",0
-mL46:      .byte "DEPTH CENTS ",0
-mL47:      .byte "RATE ",0
-mL48:      .byte "DELAY ",0
-mL49:      .byte "SHAPE ",0
-mL50:      .byte "DRIFT ",0
-mL51:      .byte "SYNC ",0
-mL52:      .byte "TIME ",0
-mL53:      .byte "CENTS ",0
-mL54:      .byte "SPEED ",0
-mL55:      .byte "DEPTH ",0
-mL56:      .byte "RATE ",0
-mL57:      .byte "SHAPE ",0
-mL58:      .byte "SYNC ",0
-mL59:      .byte "CUTOFF ",0
-mL60:      .byte "RESONANCE ",0
-mL61:      .byte "ENV AMOUNT ",0
-mL62:      .byte "LFO DEPTH ",0
-mL63:      .byte "LFO RATE ",0
-mL64:      .byte "DEPTH ",0
-mL65:      .byte "RATE ",0
-mL66:      .byte "SHAPE ",0
-mL67:      .byte "SYNC ",0
-mL68:      .byte "PATTERN ",0
-mL69:      .byte "STEP ",0
-mL70:      .byte "TIME ",0
-mL71:      .byte "REPEATS ",0
-mL72:      .byte "LEVEL ",0
-mL73:      .byte "SHIFT ",0
-mL74:      .byte "SHIFT IN ",0
-mL75:      .byte "ECHOES ",0
-mL76:      .byte "LATCH STYLE (CTRL L) ",0
-mL77:      .byte "SPACE ",0
-mL78:      .byte "BEND SEMITONES ",0
-mL79:      .byte "BEAT TEMPO ",0
-mL80:      .byte "FINE TUNE ",0
-mU80:      .byte " CENTS",0
-mL81:      .byte "CHORD CHANGE ",0
-mL82:      .byte "WANDER TIME ",0
-mL83:      .byte "DRONE VOICING ",0
-mL84:      .byte "SPLIT (SHIFT F5/F7) ",0
-mL85:      .byte "SPLIT KEY ",0
-mU85:      .byte "~K",0
-mL86:      .byte "SPLIT NOTE (MIDI) ",0
-mU86:      .byte "~N",0
-mL87:      .byte "LEAD OCTAVE ",0
-mU87:      .byte "",0
-mL88:      .byte "ONE KEY PLAY ",0
-mE88      equ mE0
-mL89:      .byte "NOTES ",0
-mL90:      .byte "MOTION ",0
-mL91:      .byte "TURN ",0
-mL92:      .byte "DIRECTION ",0
-mL93:      .byte "EACH PRESS ",0
-mL94:      .byte "CASIO DH-100 ",0
-mL95:      .byte "ATARI SYNTHCART ",0
-mE95      equ mE94
-mL96:      .byte "GAME BOY ",0
-mL97:      .byte "GAME BOY CHANNELS ",0
-mL98:      .byte "MIDINES CHANNELS ",0
-mE98      equ mE97
-mL99:      .byte "PART (STOP N) ",0
-mL100:      .byte "HAT LAYER (STOP H) ",0
-mL101:      .byte "ACCENT (STOP J) ",0
-mL102:      .byte "TIME (STOP K) ",0
-mL103:      .byte "SWING (STOP L) ",0
-mL104:      .byte "BEATS ON ",0
-mL105:      .byte "BOTH ",0
-mL106:      .byte "GAME BOY HATS ",0
-mL107:      .byte "GAME BOY TREMOLO ",0
-mL108:      .byte "CLOCK ",0
-mL109:      .byte "START/STOP ",0
-mL110:      .byte "PROGRAM CHANGE ",0
-mL111:      .byte "PITCH WHEEL ",0
-mL112:      .byte "CC 1 (MOD WHEEL) ",0
-mE112      equ mE77
-mL113:      .byte "CC 64 (SUSTAIN) ",0
-mE113      equ mE77
-mL114:      .byte "CC 65 (PORTAMENTO) ",0
-mE114      equ mE77
-mL115:      .byte "BREATH ",0
-mL116:      .byte "BREATH FX1 ",0
-mL117:      .byte "BREATH FX2 ",0
-mE117      equ mE116
-mL118:      .byte "BREATH FEEL ",0
-mL119:      .byte "NOTES ",0
-mL120:      .byte "PORTAMENTO BUTTON ",0
-mE120      equ mE77
-mL121:      .byte "TONE BUTTONS ",0
-mL122:      .byte "TEMPO ",0
-mL123:      .byte "TRIM ",0
-mU123:      .byte "",0
-mL124:      .byte "TUNE TO ",0
-mL125:      .byte "MATCH KEY ",0
-mE125      equ mE0
+mL8:      .byte "SAMPLER ",0
+mL9:      .byte "MIDI IN ",0
+mL10:      .byte "CASIO DH-100 ",0
+mL11:      .byte "ATARI SYNTHCART ",0
+mL12:      .byte "MONO ",0
+mL13:      .byte "FAT BASS ",0
+mL14:      .byte "TONE ",0
+mL15:      .byte "ENVELOPE ",0
+mL16:      .byte "BEND IN ",0
+mL17:      .byte "BEND OUT ",0
+mL18:      .byte "DETUNE ",0
+mL19:      .byte "VIBRATO ",0
+mL20:      .byte "GLIDE ",0
+mL21:      .byte "WARBLE ",0
+mL22:      .byte "TREMOLO ",0
+mL23:      .byte "FILTER ",0
+mL24:      .byte "PWM ",0
+mL25:      .byte "DUTY STEPS ",0
+mL26:      .byte "REPEAT ",0
+mL27:      .byte "SID WAVE ",0
+mL28:      .byte "SID PULSE WIDTH ",0
+mL29:      .byte "SID WIDTHS ",0
+mL30:      .byte "GB PULSE 1 DUTY ",0
+mL31:      .byte "GB PULSE 2 DUTY ",0
+mL32:      .byte "GB WAVE MODE ",0
+mL33:      .byte "GB WAVE SHAPE ",0
+mL34:      .byte "NES PULSE 1 DUTY ",0
+mL35:      .byte "NES PULSE 2 DUTY ",0
+mL36:      .byte "ATTACK ",0
+mL37:      .byte "DECAY ",0
+mL38:      .byte "SUSTAIN ",0
+mL39:      .byte "RELEASE ",0
+mL40:      .byte "SEMITONES ",0
+mL41:      .byte "TIME ",0
+mL42:      .byte "SHAPE ",0
+mL43:      .byte "CLICK ",0
+mL44:      .byte "SEMITONES ",0
+mL45:      .byte "TIME ",0
+mL46:      .byte "CENTS ",0
+mL47:      .byte "DEPTH CENTS ",0
+mL48:      .byte "RATE ",0
+mL49:      .byte "DELAY ",0
+mL50:      .byte "SHAPE ",0
+mL51:      .byte "DRIFT ",0
+mL52:      .byte "SYNC ",0
+mL53:      .byte "TIME ",0
+mL54:      .byte "CENTS ",0
+mL55:      .byte "SPEED ",0
+mL56:      .byte "DEPTH ",0
+mL57:      .byte "RATE ",0
+mL58:      .byte "SHAPE ",0
+mL59:      .byte "SYNC ",0
+mL60:      .byte "CUTOFF ",0
+mL61:      .byte "RESONANCE ",0
+mL62:      .byte "ENV AMOUNT ",0
+mL63:      .byte "LFO DEPTH ",0
+mL64:      .byte "LFO RATE ",0
+mL65:      .byte "DEPTH ",0
+mL66:      .byte "RATE ",0
+mL67:      .byte "SHAPE ",0
+mL68:      .byte "SYNC ",0
+mL69:      .byte "PATTERN ",0
+mL70:      .byte "STEP ",0
+mL71:      .byte "TIME ",0
+mL72:      .byte "REPEATS ",0
+mL73:      .byte "LEVEL ",0
+mL74:      .byte "SHIFT ",0
+mL75:      .byte "SHIFT IN ",0
+mL76:      .byte "ECHOES ",0
+mL77:      .byte "LATCH STYLE (CTRL L) ",0
+mL78:      .byte "SPACE ",0
+mL79:      .byte "BEND SEMITONES ",0
+mL80:      .byte "BEAT TEMPO ",0
+mL81:      .byte "FINE TUNE ",0
+mL82:      .byte "CHORD CHANGE ",0
+mL83:      .byte "WANDER TIME ",0
+mL84:      .byte "DRONE VOICING ",0
+mL85:      .byte "SPLIT (SHIFT F5/F7) ",0
+mL86:      .byte "SPLIT KEY ",0
+mL87:      .byte "SPLIT NOTE (MIDI) ",0
+mL88:      .byte "LEAD OCTAVE ",0
+mL89:      .byte "ONE KEY PLAY ",0
+mE89      equ mE0
+mL90:      .byte "NOTES ",0
+mL91:      .byte "MOTION ",0
+mL92:      .byte "TURN ",0
+mL93:      .byte "DIRECTION ",0
+mL94:      .byte "EACH PRESS ",0
+mL95:      .byte "CASIO DH-100 ",0
+mL96:      .byte "ATARI SYNTHCART ",0
+mE96      equ mE95
+mL97:      .byte "GAME BOY ",0
+mL98:      .byte "GAME BOY CHANNELS ",0
+mL99:      .byte "MIDINES CHANNELS ",0
+mE99      equ mE98
+mL100:      .byte "PART (STOP N) ",0
+mL101:      .byte "HAT LAYER (STOP H) ",0
+mL102:      .byte "ACCENT (STOP J) ",0
+mL103:      .byte "TIME (STOP K) ",0
+mL104:      .byte "SWING (STOP L) ",0
+mL105:      .byte "BEATS ON ",0
+mL106:      .byte "BOTH ",0
+mL107:      .byte "GAME BOY HATS ",0
+mL108:      .byte "GAME BOY TREMOLO ",0
+mL109:      .byte "PAD KEYS ",0
+mL110:      .byte "PAD MIDI CHANNEL ",0
+mL111:      .byte "PAD BASE NOTE ",0
+mL112:      .byte "CLOCK ",0
+mL113:      .byte "START/STOP ",0
+mL114:      .byte "PROGRAM CHANGE ",0
+mL115:      .byte "PITCH WHEEL ",0
+mL116:      .byte "CC 1 (MOD WHEEL) ",0
+mE116      equ mE78
+mL117:      .byte "CC 64 (SUSTAIN) ",0
+mE117      equ mE78
+mL118:      .byte "CC 65 (PORTAMENTO) ",0
+mE118      equ mE78
+mL119:      .byte "BREATH ",0
+mL120:      .byte "BREATH FX1 ",0
+mL121:      .byte "BREATH FX2 ",0
+mE121      equ mE120
+mL122:      .byte "BREATH FEEL ",0
+mL123:      .byte "NOTES ",0
+mL124:      .byte "PORTAMENTO BUTTON ",0
+mE124      equ mE78
+mL125:      .byte "TONE BUTTONS ",0
+mL126:      .byte "TEMPO ",0
+mL127:      .byte "TRIM ",0
+mL128:      .byte "TUNE TO ",0
+mL129:      .byte "MATCH KEY ",0
+mE129      equ mE0
 mS0:   .byte "OFF",0
 mS1:   .byte "ON",0
 mS2:   .byte "SMART",0
@@ -287,48 +286,50 @@ mS142:   .byte "SAMPLE",0
 mS143:   .byte "NOISE",0
 mS144:   .byte "OFF FOR BEATS",0
 mS145:   .byte "ALWAYS",0
-mS146:   .byte "FOLLOW",0
-mS147:   .byte "BEATS",0
-mS148:   .byte "PICK PATCH",0
-mS149:   .byte "BEND",0
-mS150:   .byte "VOLUME",0
-mS151:   .byte "VOLUME+FILTER",0
-mS152:   .byte "FILTER",0
-mS153:   .byte "VIBRATO DEPTH",0
-mS154:   .byte "WARBLE DEPTH",0
-mS155:   .byte "DETUNE DEPTH",0
-mS156:   .byte "HELD: MUTE",0
-mS157:   .byte "HELD: BEND DOWN",0
-mS158:   .byte "HELD: BEND UP",0
-mS159:   .byte "HELD: VIBRATO",0
-mS160:   .byte "HELD: TREMOLO",0
-mS161:   .byte "HELD: ARP",0
-mS162:   .byte "HELD: STUTTER",0
-mS163:   .byte "HELD: VINYL STOP",0
-mS164:   .byte "HELD: GLIDE",0
-mS165:   .byte "HELD: SUSTAIN",0
-mS166:   .byte "HELD: OCTAVE UP",0
-mS167:   .byte "HELD: REPEAT",0
-mS168:   .byte "HELD: FILTER SWE",0
-mS169:   .byte "HELD: BEAT FILL",0
-mS170:   .byte "HELD: TAPE WOBBL",0
-mS171:   .byte "HELD: WIDE",0
-mS172:   .byte "HELD: TAP TEMPO",0
-mS173:   .byte "HELD: BEAT ON/OF",0
-mS174:   .byte "HELD: NEXT SOUND",0
-mS175:   .byte "SOFT",0
-mS176:   .byte "NORMAL",0
-mS177:   .byte "HARD",0
-mS178:   .byte "AS PLAYED",0
-mS179:   .byte "CHORD",0
-mS180:   .byte "HARMONY",0
-mS181:   .byte "PICK BANK",0
-mS182:   .byte "SYNC",0
-mS183:   .byte "SQUARE C -10",0
-mS184:   .byte "LEAD F -10",0
-mS185:   .byte "BASS C# -35",0
-mS186:   .byte "PITFALL C# -30",0
-mS187:   .byte "SAW C# +10",0
+mS146:   .byte "GRID",0
+mS147:   .byte "OVERLAY",0
+mS148:   .byte "FOLLOW",0
+mS149:   .byte "BEATS",0
+mS150:   .byte "PICK PATCH",0
+mS151:   .byte "BEND",0
+mS152:   .byte "VOLUME",0
+mS153:   .byte "VOLUME+FILTER",0
+mS154:   .byte "FILTER",0
+mS155:   .byte "VIBRATO DEPTH",0
+mS156:   .byte "WARBLE DEPTH",0
+mS157:   .byte "DETUNE DEPTH",0
+mS158:   .byte "HELD: MUTE",0
+mS159:   .byte "HELD: BEND DOWN",0
+mS160:   .byte "HELD: BEND UP",0
+mS161:   .byte "HELD: VIBRATO",0
+mS162:   .byte "HELD: TREMOLO",0
+mS163:   .byte "HELD: ARP",0
+mS164:   .byte "HELD: STUTTER",0
+mS165:   .byte "HELD: VINYL STOP",0
+mS166:   .byte "HELD: GLIDE",0
+mS167:   .byte "HELD: SUSTAIN",0
+mS168:   .byte "HELD: OCTAVE UP",0
+mS169:   .byte "HELD: REPEAT",0
+mS170:   .byte "HELD: FILTER SWE",0
+mS171:   .byte "HELD: BEAT FILL",0
+mS172:   .byte "HELD: TAPE WOBBL",0
+mS173:   .byte "HELD: WIDE",0
+mS174:   .byte "HELD: TAP TEMPO",0
+mS175:   .byte "HELD: BEAT ON/OF",0
+mS176:   .byte "HELD: NEXT SOUND",0
+mS177:   .byte "SOFT",0
+mS178:   .byte "NORMAL",0
+mS179:   .byte "HARD",0
+mS180:   .byte "AS PLAYED",0
+mS181:   .byte "CHORD",0
+mS182:   .byte "HARMONY",0
+mS183:   .byte "PICK BANK",0
+mS184:   .byte "SYNC",0
+mS185:   .byte "SQUARE C -10",0
+mS186:   .byte "LEAD F -10",0
+mS187:   .byte "BASS C# -35",0
+mS188:   .byte "PITFALL C# -30",0
+mS189:   .byte "SAW C# +10",0
 pW0:  .byte 0,$FF,$00,0,$FF,$01
 pS0:  .byte "POLY",0,"MONO",0
 pW1:  .byte 5,$FF,$00,5,$FF,$01
@@ -481,31 +482,16 @@ pW51:  .byte 69,$FF,$00,69,$FF,$02,69,$FF,$04
 pS51:  .byte "GB + NES",0,"ALL CHIPS",0,"ONE CHIP",0
 ; the effects: params, off row (field, value), detection count, on row, dice
 eO0:  .byte 0
-eN0:  .byte 0
 eO1:  .byte 0
-eN1:  .byte 0
 eO2:  .byte 0
-eN2:  .byte 0
 eO3:  .byte 70,$00,71,$05,72,$00,73,$00,74,$00,75,$3F,76,$00
-eN3:  .byte 0
 eO4:  .byte 77,$00,78,$00,79,$00,80,$00,81,$00,82,$00
-eN4:  .byte 0
 eO5:  .byte 12,$00,49,$40,50,$40
-eN5:  .byte 0
 eO6:  .byte 24,$00,25,$00,26,$00,27,$00,28,$00,87,$00,89,$00
-eN6:  .byte 44,$00
 eO7:  .byte 14,$00,37,$00,38,$00,39,$00
-eN7:  .byte 0
 eO8:  .byte 42,$00,43,$28,84,$00,85,$00,86,$00
-eN8:  .byte 86,$03
 eO9:  .byte 62,$00,63,$00,64,$00,65,$00,66,$00,67,$00,83,$00
-eN9:  .byte 83,$07
 eO10:  .byte 15,$00,16,$00,17,$00,18,$00,19,$00,20,$00
-eN10:  .byte 0
 eO11:  .byte 21,$00,22,$00,23,$00,88,$00,89,$00
-eN11:  .byte 44,$2B
 eO12:  .byte 29,$00,30,$00,31,$00
-eN12:  .byte 31,$01
 eO13:  .byte 1,$00,2,$01,3,$02,4,$03,68,$00,69,$00
-eN13:  .byte 1,$01
-; the envelope's Game Boy and NES parts from the SID's nibbles (EnvDerive)

@@ -61,7 +61,7 @@ def name(c):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
+check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- the main page
 c.tap("return", ms=80)
@@ -69,7 +69,7 @@ r = rows(c)
 check("main page: SID / GAME BOY / MIDINES first (v0.67: no HELP), all ON", all("ON" in r[i][23:] for i in (2, 3, 4))
       and r[2].startswith("> SID"), r[2:5])
 check("... MIDI IN's page (v0.67: was the SHS-10's); the DH-100 and Synthcart hidden",
-      r[12][2:].startswith("MIDI IN") and "CASIO" not in "".join(r) and "SYNTHCART" not in "".join(r), r[10:14])
+      r[13][2:].startswith("MIDI IN") and "CASIO" not in "".join(r) and "SYNTHCART" not in "".join(r), r[10:15])
 c.tap("f3", ms=30)
 c.tap("f7", ms=150)
 check("F3: GAME BOY; F7 turns it off", c.v("devOn", 3) == [1, 0, 1] and "OFF" in c.screen_row(3), c.v("devOn", 3))
@@ -91,10 +91,10 @@ check("both changed", c.v("useDh") == 1 and c.v("useSc") == 1)
 back(c)
 r = rows(c)
 check("main page: the DH-100 and Synthcart pages after MIDI IN",
-      r[13][2:].startswith("CASIO DH-100") and r[14][2:].startswith("ATARI SYNTHCART"), r[10:16])
+      r[14][2:].startswith("CASIO DH-100") and r[15][2:].startswith("ATARI SYNTHCART"), r[10:17])
 check("... the cursor back on DEVICES", c.screen_row(9).startswith("> DEVICES"))
-for _ in range(5):
-    c.tap("crsrdown", ms=30)                 # (BEATS, MIDI IN, CASIO, ATARI)
+for _ in range(6):
+    c.tap("crsrdown", ms=30)                 # (BEATS, SAMPLER, MIDI IN, CASIO, ATARI)
 check("CRSR DOWN skips the gaps: wraps from SYNTHCART to SID", c.screen_row(2).startswith("> SID"), c.screen_row(2))
 check("Synthcart in use (TEMPO OFF): MIDI clock followed, MIDI Start / Stop", c.v("syncTempo") == 0 and c.v("syncStart") == 0,
       (c.v("syncTempo"), c.v("syncStart")))

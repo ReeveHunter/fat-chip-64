@@ -61,7 +61,7 @@ def play(c, ms):
 
 c = C64(channels=None)
 c.run_ms(300)
-check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
+check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
 check("25 beats in five banks", len(gen_beats.BEATS) == 25 and c.sym["NUM_BEATS"] == 25 if "NUM_BEATS" in c.sym else len(gen_beats.BEATS) == 25)
 names = [b["name"] for b in gen_beats.BEATS]
 check("the first beat: ROCK, part A, 4/4", c.v("beatSel") == 0 and c.v("beatPart") == 0 and c.v("cycLen") == 32

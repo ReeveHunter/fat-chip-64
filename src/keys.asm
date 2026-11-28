@@ -206,6 +206,12 @@ Suspect:
 ;   RUN/STOP       tapped: beat start / stop; held + A S D F G H: pick a beat
 KeyDown:
 	subroutine
+	ldx smpOn               ; (v0.68: the sampler's keys first)
+	beq .ns
+	jsr SmpKey
+	bcc .ns
+	rts
+.ns:
 	cmp #24
 	bcc NoteDown
 	jmp .cmd
@@ -489,8 +495,8 @@ CMD_SHIFT   equ CMD_PLAIN+13
 CMD_CBM     equ CMD_SHIFT+7
 	.byte K_A,K_Z,K_X,K_L,K_COLON,K_SEMI,K_COMMA,K_PERIOD,K_SPACE,K_RETURN,0
 CMD_STOP    equ CMD_CBM+11
-	.byte K_COLON,K_SEMI,K_COMMA,K_PERIOD,K_SPACE,K_N,K_H,K_J,K_K,K_L,0
-CMD_CTRL    equ CMD_STOP+11
+	.byte K_COLON,K_SEMI,K_COMMA,K_PERIOD,K_SPACE,K_N,K_H,K_J,K_K,K_L,K_RETURN,0
+CMD_CTRL    equ CMD_STOP+12
 	.byte K_A,K_S,K_D,K_F,K_H,K_J,K_L,K_M,K_COMMA,K_PERIOD,0
 CMD_END     equ CMD_CTRL+11
 
@@ -502,7 +508,7 @@ CMD_END     equ CMD_CTRL+11
 	.byte {1}CbmArp,{1}EnvAtkKey,{1}EnvRelKey
 	.byte {1}FocusSync,{1}FocusPrevFx,{1}FocusNextFx,{1}FocusSlower,{1}FocusFaster,{1}CbmSpace,{1}FocusMenu,0
 	.byte {1}BeatPrev,{1}BeatNext,{1}TempoDown,{1}TempoUp,{1}StopSpace
-	.byte {1}BeatPartKey,{1}BeatHatsKey,{1}BeatAccKey,{1}BeatTsKey,{1}BeatSwgKey,0
+	.byte {1}BeatPartKey,{1}BeatHatsKey,{1}BeatAccKey,{1}BeatTsKey,{1}BeatSwgKey,{1}SmpToggle,0
 	.byte {1}ChipKey,{1}ChipKey,{1}ChipKey,{1}ScSyncKey,{1}FineDown,{1}FineUp,{1}LatchStyleKey,{1}Panic
 	.byte {1}SpaceBack,{1}SpaceNext,0
 	endm
@@ -1584,6 +1590,10 @@ ClearNotes:
 
 KeyUp:
 	subroutine
+	jsr SmpKeyUp            ; (v0.68: a key the sampler took)
+	bcc .go
+	rts
+.go:
 	cmp #24
 	bcs .cmd
 NoteUp:                         ; A = note index

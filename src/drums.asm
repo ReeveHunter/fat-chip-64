@@ -79,7 +79,24 @@ DrumHit:
 	tax
 	lda kitBuf,x
 	sta t1
-	; bank (CC14 on the sample channel) when it changes
+	lda #127                ; (full rate: a pad may have changed it)
+	jsr DmcPlay
+	lda t0
+	sta dmcPrio
+	lda nowL
+	sta dmcAt
+	lda nowH
+	sta dmcAt+1
+	rts
+
+; t1 = sample (bit 7: bank B), A = its rate (CC 3): the MidiNES plays it, the
+; bank (CC 14) and the rate first when they change (v0.68: DrumHit's, and the
+; sampler's). No note-off for the last sample: a note-on cuts it anyway.
+DmcPlay:
+	subroutine
+	sta t3
+	lda devOn+DEV_NES
+	beq .x
 	lda #4
 	jsr NesChStatus         ; mS = CC, sample channel
 	lda #0
@@ -88,33 +105,34 @@ DrumHit:
 	lda #127
 .a:
 	cmp dmcBank
-	beq .note
+	beq .r
 	sta dmcBank
 	sta mD2
 	lda #14
 	sta mD1
 	jsr NesPut
+.r:
+	lda t3
+	cmp dmcRate
+	beq .note
+	sta dmcRate
+	sta mD2
+	lda #3
+	sta mD1
+	jsr NesPut
 .note:
 	lda mS
 	and #$0F
-	sta t2                  ; channel
-	lda t1                  ; (no note-off for the last sample: a note-on
-	                        ;  cuts it anyway, and the hit lands 1 ms sooner)
+	ora #$90
+	sta mS
+	lda t1
 	and #$7F
 	sta dmcNote
 	sta mD1
-	lda t2
-	ora #$90
-	sta mS
 	lda #127
 	sta mD2
-	jsr NesPut
-	lda t0
-	sta dmcPrio
-	lda nowL
-	sta dmcAt
-	lda nowH
-	sta dmcAt+1
+	jmp NesPut
+.x:
 	rts
 
 dmcPrioT:   .byte 0,1,0,0,0,2,3   ; kick, snare, -, -, -, tom, perc
@@ -475,6 +493,7 @@ GbBeatsTick:
 	jsr GbTrem
 .t:
 	lda beatRun
+	ora smpOn               ; (v0.68: and the sampler's pads)
 	beq .w
 	jsr GbBeats
 .w:

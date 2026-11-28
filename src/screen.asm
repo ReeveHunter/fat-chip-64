@@ -137,6 +137,10 @@ ScreenDrawAll:
 ; the labels that never change
 ScreenStatic:
 	subroutine
+	lda smpOn               ; (v0.68)
+	beq .p
+	jmp SmpStatic
+.p:
 	lda #$80
 	sta t2
 	PRINT 0, 0, txtHeader
@@ -185,8 +189,12 @@ ScreenStep:
 	rts
 .play:
 	lda vizOn
-	beq .scr
+	beq .smp
 	jmp VizStep
+.smp:
+	lda smpOn               ; (v0.68: the sampler's screen)
+	beq .scr
+	jmp SmpScreen
 .scr:
 	lda scrStage
 	bne .run

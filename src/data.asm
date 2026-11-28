@@ -12,7 +12,7 @@ keymap:
 	; col 0: INST/DEL RETURN CRSR-R F7 F1 F3 F5 CRSR-D
 	.byte K_INSTDEL,K_RETURN,K_CRSR_RIGHT,K_F7,K_F1,K_F3,K_F5,K_CRSR_DOWN
 	; col 1: 3 W A 4 Z S E LSHIFT
-	.byte 3,2,K_A,N_,K_Z,K_S,4,K_LSHIFT
+	.byte 3,2,K_A,K_4,K_Z,K_S,4,K_LSHIFT
 	; col 2: 5 R D 6 C F T X
 	.byte 6,5,K_D,8,K_C,K_F,7,K_X
 	; col 3: 7 Y G 8 B H U V
@@ -24,7 +24,7 @@ keymap:
 	; col 6: pound * ; CLR/HOME RSHIFT = up-arrow /
 	.byte 20,19,K_SEMI,22,K_RSHIFT,K_EQUALS,21,K_SLASH
 	; col 7: 1 <- CTRL 2 SPACE C= Q RUN/STOP
-	.byte N_,K_LEFT,K_CTRL,1,K_SPACE,K_CBM,0,K_STOP
+	.byte K_1,K_LEFT,K_CTRL,1,K_SPACE,K_CBM,0,K_STOP
 
 ; SID voice register offsets
 sidOfs:     .byte 0,7,14
@@ -35,7 +35,7 @@ vIdx:       .byte 0,0,0, 1,1,1, 2,2,2      ; SID voice / channel offset from the
 vBass:      .byte 0,0,0, 0,0,0, 0,1,1      ; GB wave and NES triangle: bass, octave down
 noteNames:  .byte "C C#D D#E F F#G G#A A#B "
 
-txtHeader:  .byte " FAT CHIP 64  V0.67        RETURN: MENU ",0
+txtHeader:  .byte " FAT CHIP 64  V0.68        RETURN: MENU ",0
 txtBlank6:  .byte "       ",0
 txtSid:     .byte "SID",0
 txtGb:      .byte "GAME BOY",0

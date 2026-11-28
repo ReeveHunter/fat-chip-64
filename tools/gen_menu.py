@@ -291,6 +291,7 @@ def build_pages(params, effects):
         page("ONE KEY PLAY", "okp"),
         page("DEVICES", "devices"),
         page("BEATS", "beats"),
+        page("SAMPLER", "sampler"),
         None,
         page("MIDI IN", "midi"),
         page("CASIO DH-100", "dh", show="useDh"),
@@ -353,6 +354,12 @@ def build_pages(params, effects):
         enum("BOTH", "beatSplit", ["LAYER", "SPLIT"]),
         enum("GAME BOY HATS", "gbBtHats", ["SAMPLE", "NOISE"]),
         enum("GAME BOY TREMOLO", "gbBtTrem", ["OFF FOR BEATS", "ALWAYS"]),
+    ], parent="main")
+    add_page("sampler", "SAMPLER", "RUN/STOP + RETURN: SAMPLER MODE", [
+        enum("PAD KEYS", "padKeys", ["GRID", "OVERLAY"]),
+        None,
+        enum("PAD MIDI CHANNEL", "padCh", ["OFF"] + [str(i) for i in range(1, 17)]),
+        note("PAD BASE NOTE", "padBase", 128),
     ], parent="main")
     add_page("midi", "MIDI IN", "ANY CONTROLLER, ANY CHANNEL", [
         enum("CLOCK", "shsTempo", ["FOLLOW", "IGNORE"], hook="SyncDerive"),

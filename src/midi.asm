@@ -532,6 +532,8 @@ NesStartup:
 	lda #$FF                ; drums: nothing known or sounding
 	sta dmcBank
 	sta dmcNote
+	lda #127                ; (v0.68: its rate, CC 3, as nesInitVal)
+	sta dmcRate
 	sta nzNote
 	lda #0
 	sta nzVol

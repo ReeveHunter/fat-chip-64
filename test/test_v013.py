@@ -61,7 +61,7 @@ check("menu: the chips, PATCH, PLAYING, DEVICES, BEATS (v0.61), MIDI IN (v0.67: 
       rows[2].startswith("> SID") and rows[3][2:].startswith("GAME BOY")
       and rows[4][2:].startswith("MIDINES") and rows[6][2:].startswith("PATCH") and rows[7][2:].startswith("PLAYING")
       and rows[8][2:].startswith("ONE KEY PLAY") and rows[9][2:].startswith("DEVICES") and rows[10][2:].startswith("BEATS")
-      and rows[12][2:].startswith("MIDI IN") and rows[13].strip() == "", rows[2:14])
+      and rows[11][2:].startswith("SAMPLER") and rows[13][2:].startswith("MIDI IN") and rows[14].strip() == "", rows[2:15])
 for _ in range(4):
     c.tap("crsrdown", ms=40)
 check("CRSR DOWN x4 (past the gap): PLAYING", c.screen_row(7).startswith("> PLAYING"), c.screen_row(7))

@@ -111,6 +111,8 @@ K_CBM       equ $A2           ; v0.22: C= (a modifier: how you play)
 K_STOP      equ $A3           ; v0.22: RUN/STOP (tap: beat; held: beat keys)
 K_SLASH     equ $A4           ; v0.22: / mute, SHIFT+/ dice (v0.40: / dice)
 K_LEFT      equ $A5           ; v0.40: <- undo
+K_1         equ $A6           ; v0.68: 1 and 4 (the sampler's GRID pads)
+K_4         equ $A7
 GCC_CHANNELS equ 113          ; Fat Chip GB v0.08: 64 + n moves its voices to channels n+1..n+5 (any channel)
 GB_BASE_DEFAULT equ 10        ; Game Boy on channels 11-15
 NES_BASE_DEFAULT equ 0        ; MidiNES on channels 1-5 (its power-on default)

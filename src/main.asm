@@ -74,6 +74,10 @@ Loop:
 	jsr ClockTick           ; the keytar's clock: tempo
 	jsr BeatTick            ; beat demos
 	jsr DrumTick            ; noise hits end
+	bit padLitP             ; (v0.68: a lit pad goes out)
+	bmi .nl
+	jsr SmpTick
+.nl:
 	jsr StutterTick         ; STUTTER held
 	jsr RepeatTick          ; REPEAT's echoes
 	lda reallocFlag
@@ -201,12 +205,25 @@ InitState:
 	sta $CF00,x
 	inx
 	bne .ram
-	ldx #15                 ; (v0.66: no effect settings kept yet)
-	lda #0
+	ldx #SMP_END-fxMemOk-1  ; (v0.66: no effect settings kept yet; v0.68: the
+	lda #0                  ;  sampler's variables, its pads empty)
 .fm:
 	sta fxMemOk,x
 	dex
 	bpl .fm
+	ldx #63
+	lda #$FF
+.pk:
+	sta padKit,x
+	dex
+	bpl .pk
+	sta padLitP
+	lda #15
+	sta smpRate
+	lda #36                 ; PAD BASE NOTE C2 (36: the usual first pad)
+	sta padBase
+	lda #127                ; (the MidiNES's sample rate: full, as it starts)
+	sta dmcRate
 	ldx #NUM_VOICES-1
 	lda #NO_NOTE
 .v:
@@ -336,8 +353,8 @@ InitState:
 	ldy #63
 .ku:
 	lda keymap,y
-	cmp #K_NONE
-	beq .kn
+	cmp #K_1                ; (K_NONE, and v0.68's 1 and 4: only the sampler's
+	bcs .kn                 ;  GRID pads use them, SmpKeysUsed)
 	tya
 	lsr
 	lsr
@@ -507,6 +524,7 @@ Nmi:
 	include "lead.asm"
 	include "attack.asm"
 	include "screen.asm"
+	include "sampler.asm"
 	include "viz.asm"
 	include "nesfx.asm"
 	include "data.asm"
@@ -534,7 +552,39 @@ hiEnd:
 ; whether that's been kept (patchedit.asm FxOff / FxOn)
 fxMem       equ hiEnd
 fxMemOk     equ hiEnd+64
-  if fxMemOk+16 > $FFF0
+; v0.68: the sampler's (sampler.asm), cleared at start too
+SMP         equ fxMemOk+16
+smpOn       equ SMP+0           ; 1: the sampler's screen and keys
+smpInit     equ SMP+1           ; kit 1 made from the beat's kit
+smpArm      equ SMP+2           ; RETURN: the next pad gets the browser's sample
+smpKit      equ SMP+3           ; 0 / 1: kit 1 / 2
+smpSel      equ SMP+4           ; the browser's sample (bit 7: bank B)
+smpRate     equ SMP+5           ; its rate, 0-15
+smpFilt     equ SMP+6           ; TYPE: 0 ALL, 1-8 K S H P L T F V
+padKeys     equ SMP+7           ; PAD KEYS: 0 GRID, 1 OVERLAY
+padCh       equ SMP+8           ; PAD MIDI CHANNEL: 0 OFF, 1-16
+padBase     equ SMP+9           ; PAD BASE NOTE
+dmcRate     equ SMP+10          ; the MidiNES's sample rate (CC 3) last sent
+padLitP     equ SMP+11          ; the lit pad ($FF none), since padLitT
+padLitT     equ SMP+12
+padVel      equ SMP+13
+padNow      equ SMP+14
+padCC       equ SMP+15
+padLane     equ SMP+16
+smpCode     equ SMP+17
+smpTmp      equ SMP+18
+smpI        equ SMP+19
+smpN        equ SMP+20
+smpX        equ SMP+21
+smpY        equ SMP+22
+smpR        equ SMP+23
+smpS        equ SMP+24
+smpX2       equ SMP+25
+smpN2       equ SMP+26
+smpTaken    equ SMP+27          ; 8: the keys whose press the sampler took
+padKit      equ SMP+40          ; 2 kits x 16 pads x (sample or $FF, rate)
+SMP_END     equ SMP+104
+  if SMP_END > $FFF0
     echo "fxMem runs into the vectors"
     err
   endif
@@ -550,6 +600,7 @@ ioPhys:
 	rorg $D000
 ioStart:
 	include "beatsio.asm"
+	include "smptab.asm"    ; (v0.68: the sampler's sample types)
 ioEnd:
 	rend
   if ioEnd > $DE00

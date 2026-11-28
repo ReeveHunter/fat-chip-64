@@ -43,7 +43,7 @@ def note(c, n, on=True, ms=0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
+check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- tables under the KERNAL
 hs, hp, he = c.sym["hiStart"], c.sym["hiPhys"], c.sym["hiEnd"]
@@ -96,7 +96,7 @@ send(c, 2, penv={"amount": -12, "time": 300})
 cc = {a: b for t, s, a, b in c.midi() if t >= t0 and s & 0xF0 == 0xB0 and a in (80, 81)}
 check("BEND IN: the Game Boy's pitch envelope CCs (80 below the middle, 81 a time)",
       80 in cc and cc[80] < 64 and cc.get(81, 0) > 0, cc)
-note(c, 60, ms=14)
+note(c, 60, ms=20)                           # (v0.68: 20 ms, the NES's note can land a few ms after 14)
 f0 = sid_f(c)
 gl = max(c.v("nesGlH", 9))
 c.run_ms(60)

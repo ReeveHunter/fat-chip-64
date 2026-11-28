@@ -59,7 +59,7 @@ def since(c, t0):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.67", "V0.67" in c.screen_row(0), c.screen_row(0))
+check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- FINE TUNE
 c.midi_in(0x90, 60, 100, ms=80)

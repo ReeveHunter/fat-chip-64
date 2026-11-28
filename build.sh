@@ -9,6 +9,7 @@ python3 tools/check_effects.py >/dev/null
 python3 tools/gen_patches.py >/dev/null
 python3 tools/gen_beat_book.py >/dev/null
 python3 tools/gen_menu.py >/dev/null
+python3 tools/gen_samples.py >/dev/null
 python3 tools/gen_beats.py >/dev/null
 python3 tools/gen_bend.py >/dev/null
 cd src

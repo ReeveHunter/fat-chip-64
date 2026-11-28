@@ -147,6 +147,19 @@ MidiInMsg:
 	lda rxStatus            ; (v0.67: every channel plays; the SHS-10's channel 16
 	and #15                 ;  rhythm and 12-15 accompaniment are gone, see README)
 	sta t3
+	ldx padCh               ; v0.68: PAD MIDI CHANNEL: its notes play the pads
+	beq .np
+	dex
+	cpx t3
+	bne .np
+	lda rxStatus
+	and #$F0
+	cmp #$90
+	bne .x
+	lda rxD2
+	beq .x
+	jmp PadMidi
+.np:
 	lda rxStatus
 	and #$F0
 	cmp #$B0
