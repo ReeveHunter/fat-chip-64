@@ -838,34 +838,51 @@ NesBendRaw:
 	sta mulA
 	lda triPbHi,x
 	sta mulA+1
+	; the MidiNES's bend factor, x 8192 (v0.69: from the SID's tables, as
+	; gen_bend.py says: down = sidUp / 4, up = sidDn / 4 in the first
+	; octave; past it, k = m - 192: down 16384 + sidUp[k] / 2, up 8192 +
+	; sidDn[k] / 8)
+	lda bmL
+	sec
+	sbc #192
+	tax
+	lda bmH
+	sbc #0
+	bcc .lo
+	lda bendUp              ; the second octave: X = k
+	bne .u2
+	lda sidUpL,x
+	sta mulB
+	lda sidUpH,x
+	ldy #1
+	jsr BendShr
+	clc
+	adc #$40                ; (+ 16384)
+	bne .hi
+.u2:
+	lda sidDnL,x
+	sta mulB
+	lda sidDnH,x
+	ldy #3
+	jsr BendShr
+	ora #$20
+	bne .hi
+.lo:
 	ldx bmL
 	lda bendUp
 	bne .u
-	lda bmH
-	bne .d2
-	lda nesDnL,x
+	lda sidUpL,x
 	sta mulB
-	lda nesDnH,x
-	sta mulB+1
-	jmp .mul
-.d2:
-	lda nesDnL+256,x
-	sta mulB
-	lda nesDnH+256,x
-	sta mulB+1
-	jmp .mul
+	lda sidUpH,x
+	jmp .q
 .u:
-	lda bmH
-	bne .u2
-	lda nesUpL,x
+	lda sidDnL,x
 	sta mulB
-	lda nesUpH,x
-	sta mulB+1
-	jmp .mul
-.u2:
-	lda nesUpL+256,x
-	sta mulB
-	lda nesUpH+256,x
+	lda sidDnH,x
+.q:
+	ldy #2
+	jsr BendShr
+.hi:
 	sta mulB+1
 .mul:
 	jsr Mul16
@@ -971,4 +988,14 @@ BendOut:
 	lda bT2
 	rol
 	sta mD2
+	rts
+
+; A = high, mulB = low: the two >> Y; A the high after (v0.69: NES bends)
+BendShr:
+	subroutine
+.s:
+	lsr
+	ror mulB
+	dey
+	bne .s
 	rts

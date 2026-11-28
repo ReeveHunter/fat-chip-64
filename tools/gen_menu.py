@@ -360,6 +360,8 @@ def build_pages(params, effects):
         None,
         enum("PAD MIDI CHANNEL", "padCh", ["OFF"] + [str(i) for i in range(1, 17)]),
         note("PAD BASE NOTE", "padBase", 128),
+        None,
+        enum("QUANTIZE", "lpQnt", ["OFF", "1/16", "1/8"]),
     ], parent="main")
     add_page("midi", "MIDI IN", "ANY CONTROLLER, ANY CHANNEL", [
         enum("CLOCK", "shsTempo", ["FOLLOW", "IGNORE"], hook="SyncDerive"),

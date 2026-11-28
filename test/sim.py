@@ -612,6 +612,20 @@ class C64:
     def set(self, name, val):
         self.raw[self.sym[name]] = val
 
+    def builtin_patch(self, i, size):
+        """Built-in patch i, whole (v0.69: stored as its name, then offset / value
+        pairs that differ from patchBase, then $FF)."""
+        name_len = 16
+        nf = size - name_len - 1
+        out = self.v("patchBase", nf)
+        a = self.raw[self.sym["patchLo"] + i] | self.raw[self.sym["patchHi"] + i] << 8
+        name = list(self.raw[a:a + name_len + 1])
+        p = a + name_len + 1
+        while self.raw[p] != 0xFF:
+            out[self.raw[p]] = self.raw[p + 1]
+            p += 2
+        return (out + name)[:size]
+
     def midi(self, since=0):
         """Decoded MIDI messages sent after cycle `since`: (cycle, status, d1, d2)."""
         out, status, need, data, t0 = [], None, 0, [], 0

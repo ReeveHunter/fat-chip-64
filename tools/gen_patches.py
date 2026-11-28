@@ -334,12 +334,21 @@ def build():
     for k, name in enumerate(names):
         out.append(f"{name:12s}equ livePatch+{k}")
     out.append(f"{'patchName':12s}equ livePatch+{len(names)}")
+    # v0.69: each patch is its name, then the fields that differ from patchBase
+    # (each field's most common value) as offset, value pairs, then $FF:
+    # PatchUnpack builds it whole (about 1 KB smaller than every field of all)
+    from collections import Counter
+    base = [Counter(rows[i][n] & 255 for i in range(len(PATCHES))).most_common(1)[0][0] for n in names]
+    assert len(names) < 255
     out.append("patchLo:    .byte " + ",".join(f"<patch{i}" for i in range(len(PATCHES))))
     out.append("patchHi:    .byte " + ",".join(f">patch{i}" for i in range(len(PATCHES))))
+    out.append("patchBase:  .byte " + ",".join(f"${b:02X}" for b in base))
     for i, p in enumerate(PATCHES):
         assert len(p["name"]) <= NAME_LEN, p["name"]
-        out.append(f"patch{i}:" + " " * (4 - len(str(i))) + ".byte " + ",".join(f"${rows[i][n] & 255:02X}" for n in names))
-        out.append(f'        .byte "{p["name"]:{NAME_LEN}s}",0')
+        pairs = [(k, rows[i][n] & 255) for k, n in enumerate(names) if rows[i][n] & 255 != base[k]]
+        assert NAME_LEN + 2 + 2 * len(pairs) < 256
+        out.append(f'patch{i}:' + " " * (4 - len(str(i))) + f'.byte "{p["name"]:{NAME_LEN}s}",0')
+        out.append("        .byte " + ",".join(f"{k},${v:02X}" for k, v in pairs) + ("," if pairs else "") + "$FF")
     out += banks_asm()
     open(os.path.join(ROOT, "src", "soundtab.asm"), "w").write("\n".join(out) + "\n")
     # for Chip Lab: the live patch's layout and the bytes of each built-in patch

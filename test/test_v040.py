@@ -42,7 +42,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
+check("header V0.69", "V0.69" in c.screen_row(0), c.screen_row(0))
 S = c.sym
 
 # ---------------------------------------------------------------- plain keys
@@ -160,6 +160,7 @@ check("<- : the effect back on", c.raw[0xD800 + 14 * 40 + 4] & 15 == 13)
 p_atk = c.v("efP0", 3)[2]
 mod(c, "cbm", "z")
 a1 = c.v("livePatch", 128)
+c.run_ms(60)                                                 # (v0.69: row 14 can be mid-redraw)
 check("C= + Z: ENVELOPE ATTACK (row 14)", "ATTACK" in c.screen_row(14), c.screen_row(14))
 mod(c, "cbm", "z")
 a2 = c.v("livePatch", 128)

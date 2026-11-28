@@ -21,7 +21,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(400)
-check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
+check("header V0.69", "V0.69" in c.screen_row(0), c.screen_row(0))
 c.set("playMode", 0)
 c.set("monoMode", 1)
 seen = []

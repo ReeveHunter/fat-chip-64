@@ -74,6 +74,7 @@ Loop:
 	jsr ClockTick           ; the keytar's clock: tempo
 	jsr BeatTick            ; beat demos
 	jsr DrumTick            ; noise hits end
+	jsr LoopTick            ; (v0.69: the looper's clock)
 	bit padLitP             ; (v0.68: a lit pad goes out)
 	bmi .nl
 	jsr SmpTick
@@ -205,12 +206,13 @@ InitState:
 	sta $CF00,x
 	inx
 	bne .ram
-	ldx #SMP_END-fxMemOk-1  ; (v0.66: no effect settings kept yet; v0.68: the
-	lda #0                  ;  sampler's variables, its pads empty)
+	ldx #0                  ; (v0.66: no effect settings kept yet; v0.68: the
+	txa                     ;  sampler's and looper's variables, its pads empty)
 .fm:
 	sta fxMemOk,x
-	dex
-	bpl .fm
+	inx
+	cpx #SMP_END-fxMemOk
+	bne .fm
 	ldx #63
 	lda #$FF
 .pk:
@@ -224,6 +226,8 @@ InitState:
 	sta padBase
 	lda #127                ; (the MidiNES's sample rate: full, as it starts)
 	sta dmcRate
+	lda #$FF
+	sta lpTapK
 	ldx #NUM_VOICES-1
 	lda #NO_NOTE
 .v:
@@ -525,6 +529,7 @@ Nmi:
 	include "attack.asm"
 	include "screen.asm"
 	include "sampler.asm"
+	include "looper.asm"
 	include "viz.asm"
 	include "nesfx.asm"
 	include "data.asm"
@@ -582,8 +587,55 @@ smpS        equ SMP+24
 smpX2       equ SMP+25
 smpN2       equ SMP+26
 smpTaken    equ SMP+27          ; 8: the keys whose press the sampler took
+puOff       equ SMP+35          ; (v0.69: PatchUnpack's)
+puSrc       equ SMP+36
 padKit      equ SMP+40          ; 2 kits x 16 pads x (sample or $FF, rate)
-SMP_END     equ SMP+104
+; v0.69: the looper's (looper.asm)
+LPV         equ SMP+104
+lpSel       equ LPV+0           ; the track the keys work
+lpQnt       equ LPV+1           ; QUANTIZE: 0 OFF, 1 1/16, 2 1/8
+lpPh        equ LPV+2           ; the clock in its bar, 0-95
+lpAtL       equ LPV+3           ; its next tick (ms)
+lpAtH       equ LPV+4
+lpFrac      equ LPV+5
+lpRel       equ LPV+6           ; ticks left this beat step (a beat going)
+lpBeatCue   equ LPV+7           ; a beat to start at the next bar
+lpDirty     equ LPV+8
+lpT         equ LPV+9
+lpT2        equ LPV+10
+lpI         equ LPV+11
+lpQn        equ LPV+12
+lpQd        equ LPV+13
+lpSk        equ LPV+14
+lpMute      equ LPV+15          ; a bit a track
+lpTapK      equ LPV+16          ; the last button pressed, when (F5 twice: stop)
+lpTapL      equ LPV+17
+lpTapH      equ LPV+18
+evL         equ LPV+19
+evH         equ LPV+20
+evP         equ LPV+21
+nwL         equ LPV+22
+nwH         equ LPV+23
+nwP         equ LPV+24
+lpQ         equ LPV+25          ; 8: hits due this tick
+trkSt       equ LPV+33          ; 6 each: state (LP_*)
+trkLenL     equ LPV+39          ;  length in ticks
+trkLenH     equ LPV+45
+trkPosL     equ LPV+51          ;  where it is
+trkPosH     equ LPV+57
+trkCnt      equ LPV+63          ;  hits
+trkCur      equ LPV+69          ;  the next to play
+trkUndo     equ LPV+75          ;  0, 1 an overdub kept, 2 undone
+lpB16L      equ LPV+81          ; the tempo the tick was worked out for, and it
+lpB16H      equ LPV+82
+lpTkL       equ LPV+83
+lpTkH       equ LPV+84
+lpAny       equ LPV+85          ; the clock's awake (LoopAny)
+SMP_END     equ LPV+86
+  if SMP_END - fxMemOk > 255
+    echo "the variables under the KERNAL: more than InitState clears"
+    err
+  endif
   if SMP_END > $FFF0
     echo "fxMem runs into the vectors"
     err
@@ -602,6 +654,11 @@ ioStart:
 	include "beatsio.asm"
 	include "smptab.asm"    ; (v0.68: the sampler's sample types)
 ioEnd:
+LPEV        equ ioEnd           ; v0.69: the loops' hits, a region a track
+  if LPEV + 6*3*76 > $DD00
+    echo "the loops' hits pass $DD00"
+    err
+  endif
 	rend
   if ioEnd > $DE00
     ; (Nmi reads the ACIA at $DE06: if one came while BeatLoad has the I/O

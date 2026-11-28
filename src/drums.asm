@@ -1103,7 +1103,7 @@ BeatRunKey:
 	subroutine
 	lda beatRun
 	bne .stop
-	jmp BeatBegin
+	jmp LoopBeatGo          ; (v0.69: with loops going, at their next bar)
 .stop:
 	lda #0
 	sta beatRun
@@ -1173,6 +1173,7 @@ BeatTick:
 	rts
 .due:
 	jsr BeatPlay
+	jsr LoopBeat            ; (v0.69: the loops step with it, after its hits)
 	; step length in 1/16 ms = beat / steps per beat
 	lda beat16L
 	sta dvdL

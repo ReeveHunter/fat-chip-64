@@ -65,10 +65,8 @@ SmpKeysUsed:
 	lda keyUsed+1           ; 4: column 1, row 3
 	and #$F7
 	sta keyUsed+1
-	lda smpOn
+	lda smpOn               ; (both layouts: C= + 1-6 mute the tracks)
 	beq .x
-	lda padKeys
-	bne .x
 	lda keyUsed+7
 	ora #$01
 	sta keyUsed+7
@@ -149,6 +147,12 @@ SmpKeyIn:
 	bne .no
 	ldx cbmDown
 	beq .plain
+	ldx #LP_TRACKS-1        ; C= + 1-6: mute a track (v0.69)
+.mu:
+	cmp lpNumKeys,x
+	beq .mute
+	dex
+	bpl .mu
 	cmp #K_CRSR_DOWN        ; C= + CRSR DOWN: the next TYPE
 	bne .cr
 	jmp SmpType
@@ -174,6 +178,14 @@ SmpKeyIn:
 .no:
 	lda smpCode
 	clc
+	rts
+.mute:
+	lda lpMute
+	eor bitT,x
+	sta lpMute
+	lda #1
+	sta screenDirty
+	sec
 	rts
 .plain:
 	jsr SmpPadOf            ; a pad?
@@ -201,10 +213,48 @@ SmpKeyIn:
 	bne .n3
 	jmp SmpSpace
 .n3:
+	ldx lpSel               ; v0.69: the looper's keys
+	cmp #K_F5
+	bne .n4
+	jsr LoopButton
+	jmp .took
+.n4:
+	cmp #K_F7
+	bne .n5
+	jsr LoopStopKey
+	jmp .took
+.n5:
+	cmp #K_LEFT
+	bne .n6
+	jsr TrkUndo
+	jmp .took
+.n6:
+	cmp #K_F1               ; F1 / F3: the track above / below
+	bne .n7
+	dex
+	bpl .sel
+	ldx #LP_TRACKS-1
+	bne .sel
+.n7:
+	cmp #K_F3
+	bne .n8
+	inx
+	cpx #LP_TRACKS
+	bcc .sel
+	ldx #0
+.sel:
+	stx lpSel
+	lda #1
+	sta screenDirty
+	jmp .took
+.n8:
 	cmp #K_RETURN
-	bne .no
+	bne .nr
 	lda shiftDown
-	bne .no
+	beq .ret
+.nr:
+	jmp .no
+.ret:
 	lda smpArm              ; RETURN: arm (again: never mind)
 	eor #1
 	sta smpArm
@@ -261,6 +311,7 @@ SmpPadOf:
 	rts
 ; GRID: pad 0-15's key; OVERLAY: overlay note 0-15 -> its pad
 smpGrid:    .byte K_1,1,3,K_4, 0,2,4,5, K_A,K_S,K_D,K_F, K_Z,K_X,K_C,K_V
+lpNumKeys:  .byte K_1,1,3,K_4,6,8           ; 1-6 (C= + them: mute)
 smpOvPad:   .byte 12,13,14,15, 8,9,10,11, 4,5,6,7, 0,1,2,3
 
 ; CRSR DOWN: the next sample of the TYPE (SHIFT: the one before)
@@ -406,8 +457,51 @@ PadPress:
 	sta screenDirty
 	ldx padNow
 .play:
-	txa
+	txa                     ; the hit: pad | kit << 4 | accent << 5
 	jsr KitSlot
+	lda padKit,y
+	cmp #$FF
+	beq .x
+	lda smpKit
+	asl
+	asl
+	asl
+	asl
+	ora padNow
+	ldy padVel
+	cpy #SMP_ACCENT
+	bcc .n
+	ora #$20
+.n:
+	pha
+	jsr LoopRec             ; (v0.69: a track recording takes it)
+	pla
+	jmp PadPlayV
+.x:
+	sec
+	rts
+
+; a loop's hit: A = pad | kit << 4 | accent << 5
+PadPlayEv:
+	subroutine
+	ldy #SMP_NORMAL
+	bit lpBit20
+	beq .v
+	ldy #SMP_ACCENT
+.v:
+	sty padVel
+	; (falls through)
+; A = the hit, padVel its velocity: its sample on the MidiNES, its drum on
+; the Game Boy (C set)
+PadPlayV:
+	subroutine
+	tax
+	and #15
+	sta padNow
+	txa
+	and #$1F
+	asl                     ; (pad x 2 + kit x 32: its two bytes)
+	tay
 	lda padKit,y
 	cmp #$FF
 	beq .x
@@ -452,6 +546,7 @@ PadPress:
 .x:
 	sec
 	rts
+lpBit20:    .byte $20
 
 ; light pad padNow (its first line white) until SMP_LIT_MS later
 PadLight:
@@ -565,11 +660,9 @@ SmpStatic:
 	PRINT 0, 0, txtSmpHdr
 	lda #0
 	sta t2
-	PRINT 18, 0, txtSmpH1
-	PRINT 19, 0, txtSmpH2
-	PRINT 20, 0, txtSmpH3
-	PRINT 21, 0, txtSmpH4
-	PRINT 22, 0, txtSmpH5
+	PRINT 22, 0, txtSmpH1
+	PRINT 23, 0, txtSmpH2
+	PRINT 24, 0, txtSmpH3
 	rts
 
 ; the pads, the kit and the browser (screenDirty), a pad row a step
@@ -803,22 +896,20 @@ SmpBrowse:
 	sta t2
 	lda smpArm
 	bne .arm
-	PRINT 16, 0, txtSmpIdle
-	rts
+	PRINT 15, 0, txtSmpIdle
+	jmp LoopRows
 .arm:
 	lda #$80
 	sta t2
-	PRINT 16, 0, txtSmpArm
+	PRINT 15, 0, txtSmpArm
 	lda #0
 	sta t2
-	rts
+	jmp LoopRows
 
 txtSmpHdr:  .byte " FAT CHIP SAMPLER       STOP+RETURN: OUT",0
-txtSmpH1:   .byte "CRSR DOWN: NEXT  C= CRSR: TYPE",0
-txtSmpH2:   .byte "CRSR RIGHT: RATE (SHIFT: BACK)",0
-txtSmpH3:   .byte "SPACE: PLAY IT   SHIFT + PAD: ACCENT",0
-txtSmpH4:   .byte "RETURN: PUT IT ON A PAD",0
-txtSmpH5:   .byte "C= F1 / F3: KIT 2 / 1   C= RETURN: MENU",0
+txtSmpH1:   .byte "F1 F3 TRACK  F5 REC/PLAY/DUB  F7 STOP",0
+txtSmpH2:   .byte "<- UNDO  C= 1-6 MUTE  C= F1 F3 KIT",0
+txtSmpH3:   .byte "CRSR SAMPLE, RATE  RETURN + PAD: SET",0
 txtSmpIdle: .byte "                                        ",0
 txtSmpArm:  .byte " PRESS A PAD (SPACE: ALL 16 PADS)       ",0
 txtKit:     .byte "KIT ",0

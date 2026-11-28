@@ -38,7 +38,7 @@ c = C64(channels=None)
 c.fkeys_036 = False
 c.keys_039 = False
 c.run_ms(400)
-check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
+check("header V0.69", "V0.69" in c.screen_row(0), c.screen_row(0))
 
 # ---------------------------------------------------------------- in and out
 mod(c, "runstop", "return", ms=60)
@@ -75,7 +75,7 @@ m = since(c, t0)
 check("SHIFT + CRSR RIGHT: rate 14 (CC 3 = 119), heard", c.v("smpRate") == 14 and (0xB4, 3, 119) in m, m[-4:])
 check("the browser line: SAMPLE A001, RATE 14", "SAMPLE A001" in c.screen_row(14) and "RATE 14" in c.screen_row(14), c.screen_row(14))
 c.tap("return", ms=60)
-check("RETURN: waiting for a pad", c.v("smpArm") == 1 and "PRESS A PAD" in c.screen_row(16), c.screen_row(16))
+check("RETURN: waiting for a pad", c.v("smpArm") == 1 and "PRESS A PAD" in c.screen_row(15), c.screen_row(15))
 t0 = c.cpu.processorCycles
 c.tap("q", ms=60)
 pads = c.v("padKit", 64)

@@ -25,7 +25,7 @@ P = json.load(open(os.path.join(ROOT, "patch", "patches.json")))
 B = os.path.join(ROOT, "bin")
 c = C64(prg=os.path.join(B, "fatchip64-image.prg"), sym=os.path.join(B, "fatchip64.sym"), channels=None)
 c.run_ms(400)
-check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
+check("header V0.69", "V0.69" in c.screen_row(0), c.screen_row(0))
 check("25 built-in patches", c.sym["NUM_SOUNDS"] == 25 and len(P["patches"]) == 25, c.sym["NUM_SOUNDS"])
 check("the banks: FAT, DREAM, GLARE, CYCLE, SPARK", [b["name"] for b in P["banks"]] == ["FAT", "DREAM", "GLARE", "CYCLE", "SPARK"])
 want = ["FAT CHIPS", "FAT ATTACK", "FAT VIBES", "FAT ORGAN", "FAT WARBLE", "CAVE MYSTERY PAD", "DUTIFUL PADDING",
@@ -38,7 +38,7 @@ size = c.sym["PATCH_SIZE"]
 ok = []
 for i, name in enumerate(want):
     c.midi_in(0xC0, i, ms=150)
-    ok.append(c.v("livePatch", size) == c.v(f"patch{i}", size) and name[:16] in c.screen_row(2))
+    ok.append(c.v("livePatch", size) == c.builtin_patch(i, size) and name[:16] in c.screen_row(2))
 check("each one plays (program change 0-24) with its name on screen", all(ok), [want[i] for i, k in enumerate(ok) if not k])
 gbs = open(os.path.join(ROOT, "..", "fat-chip-gb", "src", "gen", "fcsounds.c")).read()
 check("Fat Chip GB's copy has the same 25 (FAT CHIPS first)", "FC_SOUNDS_N 25" in gbs and "/* FAT CHIPS */" in gbs.split("fc_sound_names")[1][:200])

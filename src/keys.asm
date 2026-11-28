@@ -212,6 +212,21 @@ KeyDown:
 	bcc .ns
 	rts
 .ns:
+	ldx stopDown            ; v0.69: RUN/STOP + Q W E R T Y: loop track 1-6's button
+	beq .nl
+	ldx #5
+.lk:
+	cmp lpStopKeys,x
+	beq .lb
+	dex
+	bpl .lk
+	bmi .nl
+.lb:
+	lda #1
+	sta stopUsed
+	jmp LoopButton
+lpStopKeys: .byte 0,2,4,5,7,9
+.nl:
 	cmp #24
 	bcc NoteDown
 	jmp .cmd

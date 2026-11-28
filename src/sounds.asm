@@ -83,17 +83,65 @@ SlotOf:
 
 ;  built-in patch X -> livePatch, the patch everything plays from (keeps X)
 PatchLoad:
+	lda #<livePatch
+	ldy #>livePatch
+	; (falls through)
+
+; X = built-in patch, A/Y = where to: the whole patch there (keeps X). v0.69:
+; a built-in patch is stored as its name, then the fields that differ from
+; patchBase as offset, value pairs, then $FF (tools/gen_patches.py)
+PatchUnpack:
 	subroutine
+	sta .b1+1
+	sty .b1+2
+	sta .d+1
+	sty .d+2
+	clc
+	adc #PATCH_SIZE-NAME_LEN-1
+	sta .n2+1
+	tya
+	adc #0
+	sta .n2+2
 	lda patchLo,x
-	sta .src+1
+	sta .n1+1
+	sta .s1+1
+	sta .s2+1
 	lda patchHi,x
-	sta .src+2
-	ldy #PATCH_SIZE-1
-.src:
-	lda $FFFF,y
-	sta livePatch,y
+	sta .n1+2
+	sta .s1+2
+	sta .s2+2
+	ldy #PATCH_SIZE-NAME_LEN-2
+.b:
+	lda patchBase,y
+.b1:
+	sta $FFFF,y
 	dey
-	bpl .src
+	bpl .b
+	ldy #NAME_LEN
+.n1:
+	lda $FFFF,y
+.n2:
+	sta $FFFF,y
+	dey
+	bpl .n1
+	ldy #NAME_LEN+1
+.p:
+.s1:
+	lda $FFFF,y
+	cmp #$FF
+	beq .x
+	sta puOff
+	iny
+.s2:
+	lda $FFFF,y
+	iny
+	sty puSrc
+	ldy puOff
+.d:
+	sta $FFFF,y
+	ldy puSrc
+	bne .p
+.x:
 	rts
 
 ; F5 (v0.37): Fat Bass on / off (until the next sound)
@@ -987,19 +1035,18 @@ GbStatus:
 	ldx soundMode
 	cpx #NUM_SOUNDS
 	bcs .c
-	lda patchLo,x
+	lda patchLo,x           ; (v0.69: a built-in patch starts with its name)
 	sta .nm+1
 	lda patchHi,x
 	sta .nm+2
-	ldy #patchName-livePatch+NAME_LEN-1
+	ldy #NAME_LEN-1
 .l:
 .nm:
 	lda $FFFF,y
-	cmp livePatch,y
+	cmp patchName,y
 	bne .c
 	dey
-	cpy #patchName-livePatch
-	bcs .l
+	bpl .l
 	txa
 	ora #64
 	tax

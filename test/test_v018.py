@@ -20,18 +20,18 @@ def check(name, cond, info=""):
 
 c = C64(channels=None)
 c.run_ms(400)
-check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
+check("header V0.69", "V0.69" in c.screen_row(0), c.screen_row(0))
 size = c.sym["PATCH_SIZE"] if "PATCH_SIZE" in c.sym else None
 n = c.sym.get("NUM_SOUNDS", 19)
 import json  # noqa: E402
 names = [p["name"][:16] for p in json.load(open(os.environ["FATCHIP_PATCHES"]))["patches"]]   # (v0.65: the tests' patches)
 check("19 built-in patches", len(names) == 19, len(names))
-check("at start: FAT in the live patch", c.v("livePatch", size) == c.v("patch0", size))
+check("at start: FAT in the live patch", c.v("livePatch", size) == c.builtin_patch(0, size))
 
 ok = []
 for i in range(len(names)):
     c.midi_in(0xC0, i, ms=150)
-    ok.append(c.v("livePatch", size) == c.v(f"patch{i}", size) and names[i] in c.screen_row(2))
+    ok.append(c.v("livePatch", size) == c.builtin_patch(i, size) and names[i] in c.screen_row(2))
 check("each patch (program change 0-18) copied in whole, its name on screen", all(ok),
       [names[i] for i, k in enumerate(ok) if not k])
 
@@ -48,7 +48,7 @@ c.release("q", ms=200)
 c.midi_in(0xC0, 0, ms=200)
 c.midi_in(0xC0, 1, ms=200)
 c.press("q", ms=200)
-check("choosing it again (after another) restores it", c.v("livePatch", size) == c.v("patch1", size) and c.raw[0xD416] < 0x80)
+check("choosing it again (after another) restores it", c.v("livePatch", size) == c.builtin_patch(1, size) and c.raw[0xD416] < 0x80)
 c.release("q", ms=100)
 
 # RAW's own widths now come from the patch, not from its number

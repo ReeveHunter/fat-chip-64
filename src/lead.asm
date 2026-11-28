@@ -492,16 +492,9 @@ LeadSlot:
 LeadLoad:
 	subroutine
 	tax
-	lda patchLo,x
-	sta .src+1
-	lda patchHi,x
-	sta .src+2
-	ldy #PATCH_SIZE-1
-.src:
-	lda $FFFF,y
-	sta leadPatch,y
-	dey
-	bpl .src
+	lda #<leadPatch
+	ldy #>leadPatch
+	jsr PatchUnpack         ; (v0.69)
 	ldx #NUM_VOICES-1       ; the lead's channels: theirs again when next used
 .v:
 	lda vPat,x

@@ -50,7 +50,7 @@ c = C64(channels=None)
 c.keys_039 = False
 c.fkeys_036 = False
 c.run_ms(500)
-check("header V0.68", "V0.68" in c.screen_row(0), c.screen_row(0))
+check("header V0.69", "V0.69" in c.screen_row(0), c.screen_row(0))
 t0 = send(c, vibrato={"depth": 30, "vibRate": 5.5, "vibSync": 3})
 bm = beat(c)
 check("VIBRATO SYNC 1/4: the SID / NES vibrato step from the tempo (262144 / beat ms)", abs(u16(c, "vibRL", "vibRH") - 262144 // bm) <= 1,
